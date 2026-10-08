@@ -35,6 +35,7 @@ Route::post('attendance/toggle-strict', [AttendanceController::class, 'toggleStr
 Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
 
 Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
+Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
 
 Route::get('tv', [\App\Http\Controllers\TvController::class, 'index'])->name('tv.index');
 

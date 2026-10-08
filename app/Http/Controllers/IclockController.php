@@ -54,6 +54,10 @@ class IclockController extends Controller
         $count = 0;
         if ($table === 'ATTLOG') {
             $count = $this->processAttendanceLogs($body, $sn, $ip);
+        } elseif ($table === 'USER' || $table === 'BIODATA') {
+            $count = $this->processUserLogs($body, $sn);
+        } elseif ($table === 'FINGERTMP' || $table === 'TEMPLATE' || $table === 'FP') {
+            $count = $this->processFingerprintLogs($body, $sn);
         }
 
         return response("OK: {$count}\n", 200)->header('Content-Type', 'text/plain');
@@ -209,6 +213,85 @@ class IclockController extends Controller
         }
 
         return $savedCount;
+    }
+
+    /**
+     * Parse data pendaftaran User dari mesin dan sebar ke mesin lain
+     */
+    private function processUserLogs(string $rawBody, string $sn): int
+    {
+        Log::info("ADMS User Data from SN {$sn}:\n" . $rawBody);
+        $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
+        $count = 0;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            parse_str(str_replace("\t", '&', $line), $parsed);
+            $pin = $parsed['PIN'] ?? $parsed['USERID'] ?? null;
+            $name = $parsed['Name'] ?? $parsed['NAME'] ?? null;
+            $pri = $parsed['Pri'] ?? $parsed['Privilege'] ?? 0;
+
+            if ($pin) {
+                $student = Student::firstOrCreate(
+                    ['device_user_id' => (string) $pin],
+                    [
+                        'name' => $name ?: 'Siswa ' . $pin,
+                        'school_class_id' => \App\Models\SchoolClass::first()->id ?? 1,
+                        'privilege' => (string) $pri
+                    ]
+                );
+
+                // Replicate ke mesin lain
+                self::queueCommand("DATA USER PIN={$pin}\tName=" . ($student->name ?? $name) . "\tPri={$pri}\tGrp=1");
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Parse template sidik jari baru dari mesin dan sebar ke mesin lain
+     */
+    private function processFingerprintLogs(string $rawBody, string $sn): int
+    {
+        Log::info("ADMS Fingerprint Template from SN {$sn}:\n" . $rawBody);
+        $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
+        $count = 0;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            parse_str(str_replace("\t", '&', $line), $parsed);
+            $pin = $parsed['PIN'] ?? null;
+            $fid = $parsed['FID'] ?? 0;
+            $size = $parsed['Size'] ?? 0;
+            $tmp = $parsed['TMP'] ?? null;
+
+            if ($pin && $tmp) {
+                $student = Student::where('device_user_id', (string) $pin)->first();
+
+                \App\Models\FingerprintTemplate::updateOrCreate(
+                    [
+                        'device_user_id' => (string) $pin,
+                        'finger_index' => (int) $fid
+                    ],
+                    [
+                        'student_id' => $student ? $student->id : null,
+                        'size' => (int) $size,
+                        'valid' => 1,
+                        'template_data' => $tmp
+                    ]
+                );
+
+                // Replicate template sidik jari ke mesin lain
+                self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}");
+                $count++;
+            }
+        }
+        return $count;
     }
 
     /**
