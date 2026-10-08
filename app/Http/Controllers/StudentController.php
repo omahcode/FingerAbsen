@@ -55,31 +55,7 @@ class StudentController extends Controller
             'school_class_id' => 'required|exists:school_classes,id'
         ]);
 
-        $devices = Device::all();
-        $successCount = 0;
-        $failCount = 0;
-
-        foreach ($devices as $device) {
-            try {
-                $response = Http::timeout(5)->post('http://127.0.0.1:5000/api/set_user', [
-                    'ip_address' => $device->ip_address,
-                    'port' => $device->port,
-                    'device_user_id' => $request->device_user_id,
-                    'name' => $request->name,
-                    'privilege' => 0
-                ]);
-
-                if ($response->successful() && $response->json('status') === 'success') {
-                    $successCount++;
-                } else {
-                    $failCount++;
-                }
-            } catch (\Exception $e) {
-                $failCount++;
-            }
-        }
-
-        // Tetap simpan ke database meskipun ada mesin yang gagal/mati
+        // Simpan ke database
         Student::updateOrCreate(
             ['device_user_id' => $request->device_user_id],
             [
@@ -89,10 +65,25 @@ class StudentController extends Controller
             ]
         );
 
-        $msg = "Siswa berhasil disimpan. Dikirim ke $successCount mesin.";
-        if ($failCount > 0) $msg .= " (Gagal ke $failCount mesin).";
+        // Kirim ke antrean ADMS
+        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$request->device_user_id}\tName={$request->name}\tPri=0\tGrp=1");
+
+        // Coba via service Python jika aktif
+        $devices = Device::all();
+        foreach ($devices as $device) {
+            try {
+                $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+                Http::timeout(2)->post($serviceUrl . '/api/set_user', [
+                    'ip_address' => $device->ip_address,
+                    'port' => $device->port,
+                    'device_user_id' => $request->device_user_id,
+                    'name' => $request->name,
+                    'privilege' => 0
+                ]);
+            } catch (\Exception $e) {}
+        }
         
-        return redirect()->route('students.index')->with('success', $msg);
+        return redirect()->route('students.index')->with('success', "Data siswa {$request->name} berhasil disimpan dan dikirim ke mesin.");
     }
 
     public function edit(Student $student)
@@ -109,46 +100,51 @@ class StudentController extends Controller
             'school_class_id' => 'required|exists:school_classes,id'
         ]);
 
+        $student->update([
+            'name' => $request->name,
+            'school_class_id' => $request->school_class_id
+        ]);
+
+        // Kirim ke antrean ADMS
+        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$request->name}\tPri=0\tGrp=1");
+
+        // Coba via service Python jika aktif
         $devices = Device::all();
         foreach ($devices as $device) {
             try {
-                Http::timeout(5)->post('http://127.0.0.1:5000/api/set_user', [
+                $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+                Http::timeout(2)->post($serviceUrl . '/api/set_user', [
                     'ip_address' => $device->ip_address,
                     'port' => $device->port,
                     'device_user_id' => $student->device_user_id,
                     'name' => $request->name,
                     'privilege' => 0
                 ]);
-            } catch (\Exception $e) {
-                // Lanjut ke mesin berikutnya jika error
-            }
+            } catch (\Exception $e) {}
         }
-
-        $student->update([
-            'name' => $request->name,
-            'school_class_id' => $request->school_class_id
-        ]);
         
-        return redirect()->route('students.index')->with('success', 'Data siswa berhasil diperbarui di sistem dan seluruh mesin yang aktif.');
+        return redirect()->route('students.index')->with('success', 'Data siswa berhasil diperbarui.');
     }
 
     public function destroy(Request $request, Student $student)
     {
+        // Kirim ke antrean ADMS untuk hapus user di mesin
+        \App\Http\Controllers\IclockController::queueCommand("DATA DELETE USER PIN={$student->device_user_id}");
+
         $devices = Device::all();
         foreach ($devices as $device) {
             try {
-                Http::timeout(5)->post('http://127.0.0.1:5000/api/delete_user', [
+                $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+                Http::timeout(2)->post($serviceUrl . '/api/delete_user', [
                     'ip_address' => $device->ip_address,
                     'port' => $device->port,
                     'device_user_id' => $student->device_user_id
                 ]);
-            } catch (\Exception $e) {
-                // Abaikan jika mesin offline
-            }
+            } catch (\Exception $e) {}
         }
 
         $student->delete();
-        return redirect()->route('students.index')->with('success', 'Siswa berhasil dihapus dari sistem dan seluruh mesin yang aktif.');
+        return redirect()->route('students.index')->with('success', 'Siswa berhasil dihapus dari sistem dan mesin.');
     }
 
     public function destroyMultiple(Request $request)

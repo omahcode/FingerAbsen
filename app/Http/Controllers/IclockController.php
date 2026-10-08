@@ -71,6 +71,16 @@ class IclockController extends Controller
     }
 
     /**
+     * Helper untuk menambahkan perintah ke antrean ADMS
+     */
+    public static function queueCommand(string $command)
+    {
+        $queue = \Illuminate\Support\Facades\Cache::get('adms_cmd_queue', []);
+        $queue[] = $command;
+        \Illuminate\Support\Facades\Cache::put('adms_cmd_queue', $queue, now()->addDays(1));
+    }
+
+    /**
      * Antrean perintah ke mesin (Get Request)
      */
     public function getRequest(Request $request)
@@ -78,15 +88,14 @@ class IclockController extends Controller
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
 
-        // Cek apakah ada antrean perintah ADMS untuk mesin ini
-        $cmdKey = "adms_cmd_" . ($sn !== 'UNKNOWN' ? $sn : 'ALL');
-        $pendingCmd = \Illuminate\Support\Facades\Cache::pull($cmdKey) 
-                   ?: \Illuminate\Support\Facades\Cache::pull("adms_cmd_ALL");
-
-        if ($pendingCmd) {
+        // Cek apakah ada antrean perintah ADMS
+        $queue = \Illuminate\Support\Facades\Cache::get('adms_cmd_queue', []);
+        if (!empty($queue)) {
+            $cmd = array_shift($queue);
+            \Illuminate\Support\Facades\Cache::put('adms_cmd_queue', $queue, now()->addDays(1));
             $cmdId = rand(100, 999);
-            Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$pendingCmd}");
-            return response("C:{$cmdId}:{$pendingCmd}\n", 200)
+            Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$cmd}");
+            return response("C:{$cmdId}:{$cmd}\n", 200)
                 ->header('Content-Type', 'text/plain');
         }
 
