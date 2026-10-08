@@ -107,13 +107,6 @@
                     <i class="fas fa-arrow-right text-xs"></i>
                 </button>
             </form>
-
-            <!-- Default Credential Helper Note -->
-            <div class="mt-6 pt-6 border-t border-slate-800/80 text-center">
-                <p class="text-xs text-slate-500">
-                    Default Login: <code class="text-indigo-300 font-mono">admin@sekolah.sch.id</code> / <code class="text-indigo-300 font-mono">admin123</code>
-                </p>
-            </div>
         </div>
 
         <!-- Footer -->

@@ -27,6 +27,9 @@
                 <a href="{{ route('sync.index') }}" class="text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-3 py-1 rounded-full shadow-sm transition">
                     <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi
                 </a>
+                <a href="{{ route('settings.index') }}" class="text-sm font-medium hover:text-blue-200 transition">
+                    <i class="fas fa-cog mr-0.5"></i> Pengaturan
+                </a>
 
                 @auth
                 <!-- User Profile & Logout -->

@@ -368,6 +368,14 @@ class IclockController extends Controller
 
             // Validasi tanggal
             $timestamp = date('Y-m-d H:i:s', strtotime($timestamp));
+            $timeOnly = date('H:i', strtotime($timestamp));
+            $checkoutStart = \App\Models\Setting::get('checkout_start', '14:00');
+
+            // Jika mesin mengirim status default (0) tapi sudah masuk jam pulang sekolah, ubah status jadi Pulang (1)
+            if ($status == 0 && $timeOnly >= $checkoutStart) {
+                $status = 1;
+            }
+
             $student = Student::where('device_user_id', (string) $userId)->first();
             $isStrict = env('STRICT_ATTENDANCE', true);
 

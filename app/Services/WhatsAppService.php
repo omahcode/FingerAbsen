@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Student;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -14,6 +15,12 @@ class WhatsAppService
      */
     public static function sendAttendanceNotification(Student $student, string $timestamp, int $statusCode, ?string $deviceName = null): bool
     {
+        // Cek apakah fitur notifikasi WhatsApp aktif di pengaturan
+        if (Setting::get('wa_notification', '1') !== '1') {
+            Log::info("WhatsApp Skip: Notifikasi WhatsApp dinonaktifkan di Pengaturan Sistem.");
+            return false;
+        }
+
         if (empty($student->parent_phone)) {
             Log::info("WhatsApp Skip: Siswa {$student->name} (PIN: {$student->device_user_id}) tidak memiliki nomor WA ortu.");
             return false;
@@ -25,14 +32,34 @@ class WhatsAppService
             return false;
         }
 
-        $statusText = ($statusCode == 0) ? 'MASUK' : (($statusCode == 1) ? 'PULANG' : 'PRESENSI');
-        $jamMasuk = Carbon::parse($timestamp)->translatedFormat('l, d F Y - H:i') . ' WIB';
+        // Ambil jam presensi
+        $scanTime = Carbon::parse($timestamp);
+        $timeOnly = $scanTime->format('H:i');
+
+        // Ambil pengaturan jam
+        $checkinEnd = Setting::get('checkin_end', '07:15');
+        $checkoutStart = Setting::get('checkout_start', '14:00');
+        $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
+
+        // Tentukan label status berdasarkan kode dan jam presensi
+        if ($statusCode == 1 || $timeOnly >= $checkoutStart) {
+            $statusText = 'PULANG';
+        } elseif ($timeOnly > $checkinEnd) {
+            $statusText = 'MASUK (TERLAMBAT)';
+        } else {
+            $statusText = 'MASUK (TEPAT WAKTU)';
+        }
+
+        $jamFormatted = $scanTime->translatedFormat('l, d F Y - H:i') . ' WIB';
         $location = $deviceName ? " pada {$deviceName}" : "";
         $className = $student->schoolClass->name ?? '-';
 
-        $message = "Yth. Orang Tua / Wali Murid dari *{$student->name}*,\n\n"
-                 . "Menginformasikan bahwa ananda telah presensi *{$statusText}* pada {$jamMasuk}{$location}.\n"
-                 . "Kelas: *{$className}*\n\n"
+        $message = "📢 *NOTIFIKASI PRESENSI SISWA*\n\n"
+                 . "Yth. Orang Tua / Wali Murid dari *{$student->name}*,\n\n"
+                 . "Menginformasikan bahwa ananda telah presensi *{$statusText}* pada:\n"
+                 . "📅 Waktu: {$jamFormatted}{$location}\n"
+                 . "🏫 Kelas: *{$className}*\n"
+                 . "🏢 {$schoolName}\n\n"
                  . "_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._";
 
         try {
