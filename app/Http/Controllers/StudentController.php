@@ -66,7 +66,8 @@ class StudentController extends Controller
         );
 
         // Kirim ke antrean ADMS
-        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$request->device_user_id}\tName={$request->name}\tPri=0\tGrp=1");
+        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$request->device_user_id}\tName={$request->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
+        \App\Http\Controllers\IclockController::queueCommand("DATA UPDATE USER PIN={$request->device_user_id}\tName={$request->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
 
         // Coba via service Python jika aktif
         $devices = Device::all();
@@ -106,7 +107,8 @@ class StudentController extends Controller
         ]);
 
         // Kirim ke antrean ADMS
-        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$request->name}\tPri=0\tGrp=1");
+        \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$request->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
+        \App\Http\Controllers\IclockController::queueCommand("DATA UPDATE USER PIN={$student->device_user_id}\tName={$request->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
 
         // Coba via service Python jika aktif
         $devices = Device::all();

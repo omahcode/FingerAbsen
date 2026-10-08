@@ -30,6 +30,10 @@ class IclockController extends Controller
                 "ATTLOGStamp=None\n" .
                 "OPERLOGStamp=None\n" .
                 "ATTPHOTOStamp=None\n" .
+                "ServerVersion=3.1.1\n" .
+                "PushOptionsFlag=1\n" .
+                "PushProtVer=2.4.1\n" .
+                "PushOptions=User,FP,AttLog,BioData\n" .
                 "ErrorDelay=15\n" .
                 "Delay=5\n" .
                 "TransTimes=00:00;14:05\n" .
