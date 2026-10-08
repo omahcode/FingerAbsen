@@ -55,11 +55,14 @@ class SyncController extends Controller
         $device = Device::find($deviceId);
         $targetSn = $device ? $device->serial_number : null;
 
-        // Kirim perintah ADMS untuk meminta mesin mengunggah seluruh sidik jari
+        // Kirim semua variasi perintah penarikan sidik jari ADMS
+        \App\Http\Controllers\IclockController::queueCommand("CHECK", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("QUERY FINGERTMP PIN=0", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("CHECK", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("QUERY USER PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USER PIN=0", $targetSn);
 
-        return redirect()->back()->with('success', "Perintah backup sidik jari telah dikirim ke " . ($device->name ?? 'Semua Mesin') . ". Mesin akan segera mengunggah data sidik jari ke database web.");
+        return redirect()->back()->with('success', "Perintah backup sidik jari & data siswa telah dikirim ke " . ($device->name ?? 'Semua Mesin') . ". Mesin akan segera mengunggah data ke server.");
     }
 }

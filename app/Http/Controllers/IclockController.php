@@ -38,7 +38,7 @@ class IclockController extends Controller
                 "Delay=5\n" .
                 "TransTimes=00:00;14:05\n" .
                 "TransInterval=1\n" .
-                "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollFP\tEnrollUser\n" .
+                "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollFP\tEnrollUser\tFP\tUser\tBioData\tFPTmp\tBioPhoto\n" .
                 "TimeZone=7\n" .
                 "Realtime=1\n" .
                 "Encrypt=0\n";
