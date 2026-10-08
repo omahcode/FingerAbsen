@@ -346,11 +346,11 @@ class IclockController extends Controller
     }
 
     /**
-     * Parse template sidik jari baru dari mesin dan sebar ke mesin lain
+     * Parse template sidik jari baru dari mesin dan sebar ke mesin lain (Base64 Safe)
      */
     private function processFingerprintLogs(string $rawBody, string $sn): int
     {
-        Log::info("ADMS Fingerprint Template from SN {$sn}:\n" . $rawBody);
+        Log::info("ADMS Fingerprint Template received from SN {$sn}:\n" . substr($rawBody, 0, 300) . "...");
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $count = 0;
 
@@ -358,11 +358,37 @@ class IclockController extends Controller
             $line = trim($line);
             if (empty($line)) continue;
 
-            parse_str(str_replace("\t", '&', $line), $parsed);
-            $pin = $parsed['PIN'] ?? null;
-            $fid = $parsed['FID'] ?? 0;
-            $size = $parsed['Size'] ?? 0;
-            $tmp = $parsed['TMP'] ?? null;
+            $pin = null;
+            $fid = 0;
+            $size = 0;
+            $tmp = null;
+
+            // Ekstrak via Regex aman agar karakter base64 tidak rusak
+            if (preg_match('/PIN=([^\t\r\n]+)/i', $line, $m)) {
+                $pin = trim($m[1]);
+            }
+            if (preg_match('/FID=([0-9]+)/i', $line, $m)) {
+                $fid = (int) $m[1];
+            } elseif (preg_match('/Index=([0-9]+)/i', $line, $m) || preg_match('/No=([0-9]+)/i', $line, $m)) {
+                $fid = (int) $m[1];
+            }
+            if (preg_match('/Size=([0-9]+)/i', $line, $m)) {
+                $size = (int) $m[1];
+            }
+            if (preg_match('/TMP=([^\t\r\n]+)/i', $line, $m)) {
+                $tmp = trim($m[1]);
+            }
+
+            // Fallback: positional TSV
+            if (!$pin || !$tmp) {
+                $parts = explode("\t", $line);
+                if (count($parts) >= 3) {
+                    $pin = trim($parts[0]);
+                    $fid = isset($parts[1]) ? (int)trim($parts[1]) : 0;
+                    $tmp = trim(end($parts));
+                    $size = strlen($tmp);
+                }
+            }
 
             if ($pin && $tmp) {
                 $student = Student::where('device_user_id', (string) $pin)->first();
@@ -374,14 +400,17 @@ class IclockController extends Controller
                     ],
                     [
                         'student_id' => $student ? $student->id : null,
-                        'size' => (int) $size,
+                        'size' => (int) $size ?: strlen($tmp),
                         'valid' => 1,
                         'template_data' => $tmp
                     ]
                 );
 
+                Log::info("ADMS Template Saved: PIN {$pin}, Finger {$fid}, Size: " . strlen($tmp));
+
                 // Replicate template sidik jari ke mesin lain
-                self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}");
+                self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
+                self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
                 $count++;
             }
         }
