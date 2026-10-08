@@ -38,6 +38,10 @@ Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
 Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
 Route::post('sync/backup-templates', [SyncController::class, 'backupTemplates'])->name('sync.backupTemplates');
 
+Route::get('reports', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
+Route::get('reports/pdf', [\App\Http\Controllers\ReportController::class, 'exportPdf'])->name('reports.pdf');
+Route::get('reports/matrix-pdf', [\App\Http\Controllers\ReportController::class, 'exportMatrixPdf'])->name('reports.matrix_pdf');
+
 Route::get('tv', [\App\Http\Controllers\TvController::class, 'index'])->name('tv.index');
 
 // Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco)

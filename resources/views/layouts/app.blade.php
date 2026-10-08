@@ -23,6 +23,7 @@
                 <a href="{{ route('classes.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Kelas</a>
                 <a href="{{ route('students.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Siswa</a>
                 <a href="{{ route('attendance.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Absensi</a>
+                <a href="{{ route('reports.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Rekap Siswa</a>
                 <a href="{{ route('sync.index') }}" class="text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-3 py-1 rounded-full shadow-sm transition">
                     <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi
                 </a>
