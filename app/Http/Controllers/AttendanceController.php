@@ -113,6 +113,9 @@ class AttendanceController extends Controller
                                 'student_id' => $student->id,
                                 'status_code' => $statusCode
                             ]);
+                            if ($student && !empty($student->parent_phone)) {
+                                \App\Jobs\SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
+                            }
                             $newCount++;
                         }
                     } else {
@@ -131,6 +134,9 @@ class AttendanceController extends Controller
                                 'student_id' => $student ? $student->id : null,
                                 'status_code' => $statusCode
                             ]);
+                            if ($student && !empty($student->parent_phone)) {
+                                \App\Jobs\SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
+                            }
                             $newCount++;
                         }
                     }
