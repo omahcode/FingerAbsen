@@ -84,20 +84,12 @@ class DeviceController extends Controller
     {
         $device = Device::findOrFail($id);
         
-        // Simpan ke antrean perintah ADMS
-        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', 'CLEAR ADMIN', now()->addMinutes(10));
+        // Kirim ke antrean ADMS
+        \App\Http\Controllers\IclockController::queueCommand("CLEAR ADMIN", $device->serial_number);
+        \App\Http\Controllers\IclockController::queueCommand("DATA DELETE USER PIN=0", $device->serial_number);
         
         // Hapus juga hak admin di database lokal
         \App\Models\Student::where('privilege', '!=', '0')->update(['privilege' => '0']);
-
-        // Coba via service python jika aktif
-        try {
-            $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
-            Http::timeout(3)->post($serviceUrl . '/api/clear_admins', [
-                'ip_address' => $device->ip_address,
-                'port' => $device->port
-            ]);
-        } catch (\Exception $e) {}
 
         return redirect()->back()->with('success', 'Perintah buka kunci mesin telah dikirim ke antrean mesin.');
     }
@@ -107,17 +99,9 @@ class DeviceController extends Controller
         $device = Device::findOrFail($id);
         $time = now()->format('Y-m-d H:i:s');
 
-        // Simpan ke antrean perintah ADMS
-        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', "SET OPTIONS DateTime={$time}", now()->addMinutes(10));
-
-        // Coba via service python jika aktif
-        try {
-            $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
-            Http::timeout(3)->post($serviceUrl . '/api/sync_time', [
-                'ip_address' => $device->ip_address,
-                'port' => $device->port
-            ]);
-        } catch (\Exception $e) {}
+        // Kirim ke antrean ADMS
+        \App\Http\Controllers\IclockController::queueCommand("SET OPTIONS DateTime={$time}", $device->serial_number);
+        \App\Http\Controllers\IclockController::queueCommand("SET TIME {$time}", $device->serial_number);
 
         return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke mesin.");
     }
@@ -125,7 +109,8 @@ class DeviceController extends Controller
     public function syncTimeAll()
     {
         $time = now()->format('Y-m-d H:i:s');
-        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', "SET OPTIONS DateTime={$time}", now()->addMinutes(10));
+        \App\Http\Controllers\IclockController::queueCommand("SET OPTIONS DateTime={$time}");
+        \App\Http\Controllers\IclockController::queueCommand("SET TIME {$time}");
 
         return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke semua mesin.");
     }
