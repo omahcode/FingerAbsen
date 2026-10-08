@@ -107,13 +107,22 @@ def set_user():
         users = conn.get_users()
         target_uid = None
         max_uid = 0
+        already_exists_and_identical = False
+
         for u in users:
-            if u.user_id == raw_id:
+            if str(u.user_id) == raw_id:
                 target_uid = u.uid
+                # Cek jika nama dan privilege sudah sama persis, kita tak perlu update lagi
+                if u.name == name and u.privilege == privilege:
+                    already_exists_and_identical = True
                 break
             if u.uid > max_uid:
                 max_uid = u.uid
                 
+        # Jika data sudah persis sama, skip proses penulisan ke mesin untuk hemat resource
+        if already_exists_and_identical:
+            return jsonify({"status": "success", "message": "Already exists, skipped."})
+
         if target_uid is None:
             target_uid = max_uid + 1
             if target_uid > 65535:
@@ -135,14 +144,20 @@ def get_templates():
     conn = None
     try:
         conn, _, _ = get_zk_conn(request.json)
+        users = conn.get_users()
+        uid_to_userid = {u.uid: str(u.user_id) for u in users}
+        
         fingers = conn.get_templates()
         finger_list = []
         if fingers:
             for f in fingers:
+                device_user_id = uid_to_userid.get(f.uid)
+                if not device_user_id: continue # Abaikan jika user tidak dikenali
+                
                 t_bytes = f.template.encode('latin1') if isinstance(f.template, str) else f.template
                 t_str = base64.b64encode(t_bytes).decode('utf-8')
                 finger_list.append({
-                    "uid": f.uid,
+                    "uid": device_user_id, # Kirim NIS, bukan UID internal
                     "fid": f.fid,
                     "valid": f.valid,
                     "size": getattr(f, 'size', len(t_bytes)),
@@ -329,15 +344,22 @@ def auto_sync_templates(devices):
                 conn = None
                 try:
                     conn = zk.connect()
+                    
+                    users = conn.get_users()
+                    uid_to_userid = {u.uid: str(u.user_id) for u in users}
+                    
                     fingers = conn.get_templates()
                     finger_list = []
                     
                     if fingers:
                         for f in fingers:
+                            device_user_id = uid_to_userid.get(f.uid)
+                            if not device_user_id: continue
+                            
                             t_bytes = f.template.encode('latin1') if isinstance(f.template, str) else f.template
                             t_str = base64.b64encode(t_bytes).decode('utf-8')
                             finger_list.append({
-                                "uid": f.uid,
+                                "uid": device_user_id, # NIS
                                 "fid": f.fid,
                                 "valid": f.valid,
                                 "size": getattr(f, 'size', len(t_bytes)),
@@ -385,8 +407,19 @@ def auto_sync_templates(devices):
                                             target_uid = max_uid + 1
                                         
                                         t_bytes = base64.b64decode(nt['template'])
-                                        user = User(uid=target_uid, name=nt['name'], privilege=nt['privilege'], user_id=nt['device_user_id'])
-                                        finger = Finger(uid=target_uid, fid=nt['fid'], valid=nt['valid'], template=t_bytes)
+                                        
+                                        uid_int = int(target_uid)
+                                        priv_int = int(nt['privilege'])
+                                        fid_int = int(nt['fid'])
+                                        valid_int = int(nt['valid'])
+                                        userid_str = str(nt['device_user_id'])
+                                        name_str = str(nt['name'])
+
+                                        # Pastikan nama siswa juga diset/diperbarui di mesin tujuan
+                                        t_conn.set_user(uid=uid_int, name=name_str, privilege=priv_int, password='', group_id='', user_id=userid_str)
+
+                                        user = User(uid=uid_int, name=name_str, privilege=priv_int, user_id=userid_str)
+                                        finger = Finger(uid=uid_int, fid=fid_int, valid=valid_int, template=t_bytes)
                                         
                                         t_conn.save_user_template(user, [finger])
                                     

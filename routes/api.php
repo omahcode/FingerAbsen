@@ -86,12 +86,12 @@ Route::post('/sync/templates', function(Request $request) {
     $newTemplates = [];
 
     foreach ($templates as $t) {
-        // Abaikan template admin (uid = 1 atau privilege tinggi yang bukan murid)
-        // Kita cocokan uid string (NIS)
-        $student = Student::where('device_user_id', (string) $t['uid'])->first();
+        $student = Student::where('device_user_id', $t['uid'])
+                          ->orWhere('device_user_id', (int)$t['uid'])
+                          ->orWhere('device_user_id', (string)$t['uid'])
+                          ->first();
         if (!$student) continue;
 
-        // Cek apakah template sudah ada di database berdasarkan NIS & Jari
         $finger = FingerprintTemplate::where('device_user_id', (string) $t['uid'])
                     ->where('finger_index', $t['fid'])
                     ->first();
