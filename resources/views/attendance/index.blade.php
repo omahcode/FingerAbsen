@@ -1,7 +1,13 @@
 @extends('layouts.app')
 @section('content')
 <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold">Log Absensi Siswa</h2>
+    <div class="flex items-center space-x-3">
+        <h2 class="text-2xl font-bold">Log Absensi Siswa</h2>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+            <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            Live Realtime
+        </span>
+    </div>
 </div>
 
 <div class="mb-4 flex justify-between items-end">
@@ -148,10 +154,11 @@
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         const currentFilter = "{{ $filter }}";
-        // Ambil ID log tertinggi yang saat ini ada di halaman
-        let maxLogId = {{ $logs->first() ? $logs->first()->id : 0 }};
+        // Ambil ID log tertinggi yang saat ini ada di halaman atau DB
+        let maxLogId = {{ $maxLogId ?? ($logs->first() ? $logs->first()->id : 0) }};
 
         function insertLogRow(log, isNew = true) {
+            if (!log || !log.id) return;
             // Hindari duplikasi baris
             if (document.getElementById(`log-${log.id}`)) return;
 
@@ -171,7 +178,7 @@
             const className = (log.student && (log.student.school_class || log.student.schoolClass)) 
                 ? (log.student.school_class?.name || log.student.schoolClass?.name) 
                 : '-';
-            const deviceName = log.device ? log.device.name : '-';
+            const deviceName = log.device ? log.device.name : 'Mesin';
             
             let statusHtml = log.status_code;
             if (log.status_code == 0) statusHtml = '<span class="text-blue-600 font-semibold">Masuk</span>';
@@ -204,25 +211,28 @@
             }
         }
 
-        // 1. Live Smart Polling (Otomatis cek data baru setiap 2.5 detik tanpa reload halaman)
-        setInterval(async () => {
+        // Live Auto-Poll setiap 2 detik
+        async function checkLiveAttendance() {
             try {
-                const response = await fetch(`{{ route('attendance.latest') }}?since_id=${maxLogId}&filter=${currentFilter}`);
+                const url = `{{ route('attendance.latest') }}?since_id=${maxLogId}&filter=${currentFilter}`;
+                const response = await fetch(url);
                 if (!response.ok) return;
                 const data = await response.json();
                 
                 if (data.status === 'success' && data.logs && data.logs.length > 0) {
-                    // Masukkan data baru berurutan
                     data.logs.forEach(log => {
                         insertLogRow(log, true);
                     });
                 }
             } catch (err) {
-                // Ignore silent network errors
+                console.error("Live poll error:", err);
             }
-        }, 2500);
+        }
 
-        // 2. WebSocket Fallback (Jika Laravel Echo aktif)
+        // Jalankan poll live
+        setInterval(checkLiveAttendance, 2000);
+
+        // WebSocket Fallback
         if (window.Echo) {
             window.Echo.channel('attendance')
                 .listen('.AttendanceCreated', (e) => {

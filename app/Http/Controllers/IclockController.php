@@ -30,8 +30,8 @@ class IclockController extends Controller
                 "ATTLOGStamp=None\n" .
                 "OPERLOGStamp=None\n" .
                 "ATTPHOTOStamp=None\n" .
-                "ErrorDelay=60\n" .
-                "Delay=30\n" .
+                "ErrorDelay=15\n" .
+                "Delay=5\n" .
                 "TransTimes=00:00;14:05\n" .
                 "TransInterval=1\n" .
                 "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollFP\tEnrollUser\n" .

@@ -25,8 +25,9 @@ class AttendanceController extends Controller
         $logs = $query->paginate(50)->appends(['filter' => $filter]);
         $devices = Device::all();
         $isStrict = env('STRICT_ATTENDANCE', true);
+        $maxLogId = AttendanceLog::max('id') ?? 0;
         
-        return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict'));
+        return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict', 'maxLogId'));
     }
 
     public function latest(Request $request)
