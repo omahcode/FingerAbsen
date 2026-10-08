@@ -44,6 +44,10 @@ Route::get('tv', [\App\Http\Controllers\TvController::class, 'index'])->name('tv
 Route::match(['get', 'post'], 'iclock/cdata', [\App\Http\Controllers\IclockController::class, 'cdata']);
 Route::match(['get', 'post'], 'iclock/cdata.aspx', [\App\Http\Controllers\IclockController::class, 'cdata']);
 Route::match(['get', 'post'], 'iclock/cdata.php', [\App\Http\Controllers\IclockController::class, 'cdata']);
+Route::match(['get', 'post'], 'iclock/fdata', [\App\Http\Controllers\IclockController::class, 'fdata']);
+Route::match(['get', 'post'], 'iclock/fdata.aspx', [\App\Http\Controllers\IclockController::class, 'fdata']);
+Route::match(['get', 'post'], 'iclock/fdata.php', [\App\Http\Controllers\IclockController::class, 'fdata']);
 Route::match(['get', 'post'], 'iclock/ping', [\App\Http\Controllers\IclockController::class, 'ping']);
 Route::match(['get', 'post'], 'iclock/getrequest', [\App\Http\Controllers\IclockController::class, 'getRequest']);
 Route::match(['get', 'post'], 'iclock/devicecmd', [\App\Http\Controllers\IclockController::class, 'deviceCmd']);
+Route::match(['get', 'post'], 'iclock/registry', [\App\Http\Controllers\IclockController::class, 'registry']);

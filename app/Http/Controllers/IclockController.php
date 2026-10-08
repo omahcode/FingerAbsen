@@ -68,6 +68,40 @@ class IclockController extends Controller
     }
 
     /**
+     * Endpoint /iclock/fdata khusus pengunggahan template sidik jari (FINGERTMP / BIODATA)
+     */
+    public function fdata(Request $request)
+    {
+        $sn = $request->query('SN', 'UNKNOWN');
+        $ip = $request->ip();
+        $this->updateDeviceStatus($sn, $ip);
+
+        $table = strtoupper($request->query('table', 'FINGERTMP'));
+        $body = $request->getContent();
+
+        Log::info("ADMS fdata from SN {$sn}, Table: {$table}, Length: " . strlen($body));
+
+        if (empty($body)) {
+            return response("OK\n", 200)->header('Content-Type', 'text/plain');
+        }
+
+        $count = $this->processFingerprintLogs($body, $sn);
+        return response("OK: {$count}\n", 200)->header('Content-Type', 'text/plain');
+    }
+
+    /**
+     * Endpoint /iclock/registry untuk pendaftaran awal mesin
+     */
+    public function registry(Request $request)
+    {
+        $sn = $request->query('SN', 'UNKNOWN');
+        $this->updateDeviceStatus($sn, $request->ip());
+
+        return response("RegistryCode=1\nServerVersion=3.1.1\n", 200)
+            ->header('Content-Type', 'text/plain');
+    }
+
+    /**
      * Heartbeat / Ping dari mesin
      */
     public function ping(Request $request)
