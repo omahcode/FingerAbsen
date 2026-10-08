@@ -19,6 +19,8 @@ class IclockController extends Controller
         $sn = $request->query('SN', 'UNKNOWN');
         $ip = $request->ip();
 
+        Log::info("ADMS cdata request from IP: {$ip}, SN: {$sn}, Method: " . $request->method());
+
         // Cari atau update status mesin
         $this->updateDeviceStatus($sn, $ip);
 

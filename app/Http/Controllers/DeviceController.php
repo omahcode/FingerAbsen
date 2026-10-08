@@ -47,27 +47,35 @@ class DeviceController extends Controller
     {
         $device = Device::findOrFail($id);
 
+        // 1. Cek apakah mesin aktif via ADMS dalam 5 menit terakhir
+        $isRecentlyActive = $device->last_seen_at && \Carbon\Carbon::parse($device->last_seen_at)->gt(now()->subMinutes(5));
+
+        if ($isRecentlyActive) {
+            $device->update(['status' => 'online']);
+            return redirect()->back()->with('success', 'Mesin terdeteksi ONLINE (ADMS Aktif: ' . \Carbon\Carbon::parse($device->last_seen_at)->diffForHumans() . ')');
+        }
+
+        // 2. Coba cek via Service Python jika ada URL service
         try {
-            // Panggil API Python
-            $response = Http::timeout(6)->post('http://127.0.0.1:5000/api/check_status', [
+            $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+            $response = Http::timeout(3)->post($serviceUrl . '/api/check_status', [
                 'ip_address' => $device->ip_address,
                 'port' => $device->port
             ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
+            if ($response->successful() && ($response->json('status') === 'online')) {
                 $device->update([
-                    'status' => $data['status'] ?? 'offline',
-                    'last_seen_at' => (isset($data['status']) && $data['status'] === 'online') ? now() : $device->last_seen_at
+                    'status' => 'online',
+                    'last_seen_at' => now()
                 ]);
-            } else {
-                $device->update(['status' => 'offline']);
+                return redirect()->back()->with('success', 'Mesin terdeteksi ONLINE via Bridge.');
             }
         } catch (\Exception $e) {
-            $device->update(['status' => 'offline']);
+            // Service bridge tidak aktif
         }
 
-        return redirect()->back()->with('success', 'Status koneksi diperbarui.');
+        $device->update(['status' => 'offline']);
+        return redirect()->back()->with('error', 'Mesin belum mengirim sinyal (OFFLINE). Pastikan setting ADMS dan Gateway/Internet di mesin sudah benar.');
     }
 
     public function clearAdmin($id)
