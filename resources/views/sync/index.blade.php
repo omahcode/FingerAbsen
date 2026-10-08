@@ -98,4 +98,58 @@
         </form>
     </div>
 </div>
+
+<!-- Live ADMS Monitor Panel -->
+<div class="mt-8 bg-white p-6 shadow rounded border-t-4 border-indigo-600">
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h3 class="font-bold text-lg text-gray-800 flex items-center">
+                <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
+                📡 Log Komunikasi ADMS Mesin (Live Traffic)
+            </h3>
+            <p class="text-xs text-gray-500">Memantau request dan respon data antara Mesin Fingerprint dan Server Cloud secara realtime.</p>
+        </div>
+        <button onclick="window.location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-1.5 px-3 rounded border">
+            🔄 Refresh Log
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b text-gray-600">
+                    <th class="p-2.5">Waktu</th>
+                    <th class="p-2.5">Serial Number (SN)</th>
+                    <th class="p-2.5">Endpoint</th>
+                    <th class="p-2.5">Metode</th>
+                    <th class="p-2.5">Keterangan / Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($admsLogs ?? [] as $log)
+                <tr class="border-b hover:bg-gray-50 font-mono">
+                    <td class="p-2.5 text-gray-500">{{ $log['time'] }}</td>
+                    <td class="p-2.5 font-bold text-indigo-700">{{ $log['sn'] }}</td>
+                    <td class="p-2.5 text-gray-700">{{ $log['endpoint'] }}</td>
+                    <td class="p-2.5">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $log['method'] === 'POST' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }}">
+                            {{ $log['method'] }}
+                        </span>
+                    </td>
+                    <td class="p-2.5 font-sans font-medium text-gray-800">
+                        {{ $log['info'] }}
+                        @if(!empty($log['preview']))
+                            <span class="block text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-md">{{ $log['preview'] }}</span>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="5" class="p-4 text-center text-gray-400 font-sans">Belum ada aktivitas request dari mesin fisik.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection

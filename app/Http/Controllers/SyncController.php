@@ -14,7 +14,8 @@ class SyncController extends Controller
         $classes = SchoolClass::with('major')->get();
         $studentsCount = \App\Models\Student::count();
         $templatesCount = \App\Models\FingerprintTemplate::count();
-        return view('sync.index', compact('devices', 'classes', 'studentsCount', 'templatesCount'));
+        $admsLogs = \Illuminate\Support\Facades\Cache::get('adms_recent_logs', []);
+        return view('sync.index', compact('devices', 'classes', 'studentsCount', 'templatesCount', 'admsLogs'));
     }
 
     /**
@@ -60,8 +61,13 @@ class SyncController extends Controller
         \App\Http\Controllers\IclockController::queueCommand("QUERY FINGERTMP PIN=0", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP PIN=0", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("QUERY BIODATA PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY BIODATA", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("QUERY USER PIN=0", $targetSn);
         \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USER PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("QUERY USERINFO PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USERINFO PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USERINFO", $targetSn);
 
         return redirect()->back()->with('success', "Perintah backup sidik jari & data siswa telah dikirim ke " . ($device->name ?? 'Semua Mesin') . ". Mesin akan segera mengunggah data ke server.");
     }

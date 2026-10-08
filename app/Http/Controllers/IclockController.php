@@ -4,13 +4,64 @@ namespace App\Http\Controllers;
 
 use App\Models\Device;
 use App\Models\Student;
+use App\Models\FingerprintTemplate;
 use App\Models\AttendanceLog;
+use App\Models\SchoolClass;
 use App\Events\AttendanceCreated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class IclockController extends Controller
 {
+    /**
+     * Catat log komunikasi ADMS ke memori web untuk monitoring
+     */
+    public static function recordAdmsLog(string $endpoint, string $method, string $sn, string $info, ?string $body = null)
+    {
+        try {
+            $logs = Cache::get('adms_recent_logs', []);
+            array_unshift($logs, [
+                'time' => now()->format('H:i:s'),
+                'endpoint' => $endpoint,
+                'method' => $method,
+                'sn' => $sn,
+                'info' => $info,
+                'preview' => $body ? substr(trim($body), 0, 150) : null
+            ]);
+            $logs = array_slice($logs, 0, 30);
+            Cache::put('adms_recent_logs', $logs, now()->addDays(1));
+        } catch (\Exception $e) {}
+    }
+
+    /**
+     * Ekstrak isi request body dari mesin (raw text, form-data, atau stream)
+     */
+    private function extractRequestBody(Request $request): string
+    {
+        $content = $request->getContent();
+        if (!empty($content)) {
+            return (string) $content;
+        }
+
+        $input = @file_get_contents('php://input');
+        if (!empty($input)) {
+            return (string) $input;
+        }
+
+        if (!empty($request->all())) {
+            $parts = [];
+            foreach ($request->all() as $k => $v) {
+                if (is_string($v) && strlen($v) > 0) {
+                    $parts[] = "{$k}={$v}";
+                }
+            }
+            return implode("\n", $parts);
+        }
+
+        return '';
+    }
+
     /**
      * Handshake (GET) dan Data Push (POST) dari mesin ADMS
      */
@@ -26,6 +77,7 @@ class IclockController extends Controller
 
         // Jika request GET: Mesin meminta parameter inisialisasi / handshake
         if ($request->isMethod('get')) {
+            self::recordAdmsLog('/iclock/cdata', 'GET', $sn, 'Inisialisasi Handshake ADMS');
             $responseContent = "GET OPTION FROM: {$sn}\n" .
                 "ATTLOGStamp=None\n" .
                 "OPERLOGStamp=None\n" .
@@ -47,21 +99,26 @@ class IclockController extends Controller
                 ->header('Content-Type', 'text/plain');
         }
 
-        // Jika request POST: Mesin mengirim data (ATTLOG / User / Template)
+        // Jika request POST: Mesin mengirim data
         $table = strtoupper($request->query('table', 'ATTLOG'));
-        $body = $request->getContent();
+        $body = $this->extractRequestBody($request);
 
         if (empty($body)) {
             return response("OK\n", 200)->header('Content-Type', 'text/plain');
         }
 
         $count = 0;
-        if ($table === 'ATTLOG') {
-            $count = $this->processAttendanceLogs($body, $sn, $ip);
-        } elseif ($table === 'USER' || $table === 'BIODATA') {
-            $count = $this->processUserLogs($body, $sn);
-        } elseif ($table === 'FINGERTMP' || $table === 'TEMPLATE' || $table === 'FP') {
+        if (str_contains($table, 'TMP') || str_contains($table, 'FP') || str_contains($table, 'TEMPLATE') || str_contains($body, 'TMP=')) {
             $count = $this->processFingerprintLogs($body, $sn);
+            self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Kirim Template Sidik Jari (Table: {$table}) - {$count} data", $body);
+        } elseif (str_contains($table, 'USER') || str_contains($table, 'BIODATA') || str_contains($body, 'Name=')) {
+            $count = $this->processUserLogs($body, $sn);
+            self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Kirim Data User (Table: {$table}) - {$count} data", $body);
+        } elseif ($table === 'ATTLOG' || preg_match('/\d{4}-\d{2}-\d{2}/', $body)) {
+            $count = $this->processAttendanceLogs($body, $sn, $ip);
+            self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Kirim Log Absensi (Table: {$table}) - {$count} data", $body);
+        } else {
+            self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Kirim Data Lain (Table: {$table})", $body);
         }
 
         return response("OK: {$count}\n", 200)->header('Content-Type', 'text/plain');
@@ -90,14 +147,23 @@ class IclockController extends Controller
             $size = $request->query('size', strlen($body));
             $tmp = base64_encode($body);
 
-            $student = Student::where('device_user_id', (string) $pin)->first();
-            \App\Models\FingerprintTemplate::updateOrCreate(
+            $defaultClass = SchoolClass::first();
+            $student = Student::firstOrCreate(
+                ['device_user_id' => (string) $pin],
+                [
+                    'name' => 'Siswa ' . $pin,
+                    'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                    'privilege' => '0'
+                ]
+            );
+
+            FingerprintTemplate::updateOrCreate(
                 [
                     'device_user_id' => (string) $pin,
                     'finger_index' => (int) $fid
                 ],
                 [
-                    'student_id' => $student ? $student->id : null,
+                    'student_id' => $student->id,
                     'size' => (int) $size,
                     'valid' => 1,
                     'template_data' => $tmp
@@ -107,28 +173,14 @@ class IclockController extends Controller
             self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
             self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
             $count = 1;
+            self::recordAdmsLog('/iclock/fdata', 'POST', $sn, "Kirim Template Sidik Jari PIN: {$pin}, Finger: {$fid}", $tmp);
         } elseif (!empty($body)) {
             // Format 2: Multi-line text template di body
             $count = $this->processFingerprintLogs($body, $sn);
+            self::recordAdmsLog('/iclock/fdata', 'POST', $sn, "Kirim Multi Template Sidik Jari - {$count} data", $body);
         }
 
         return response("OK: {$count}\n", 200)->header('Content-Type', 'text/plain');
-    }
-
-    private function extractRequestBody(Request $request): string
-    {
-        $body = $request->getContent();
-        if (!empty($body)) return $body;
-
-        if ($request->has('data')) return (string) $request->input('data');
-        if ($request->has('content')) return (string) $request->input('content');
-        if (!empty($request->allFiles())) {
-            $file = current($request->allFiles());
-            if ($file && file_exists($file->getPathname())) {
-                return (string) file_get_contents($file->getPathname());
-            }
-        }
-        return '';
     }
 
     /**
@@ -138,6 +190,7 @@ class IclockController extends Controller
     {
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
+        self::recordAdmsLog('/iclock/registry', 'GET', $sn, 'Pendaftaran Otomatis Mesin (Registry)');
 
         return response("RegistryCode=1\nServerVersion=3.1.1\n", 200)
             ->header('Content-Type', 'text/plain');
@@ -163,9 +216,9 @@ class IclockController extends Controller
 
         if ($targetSn) {
             $queueKey = "adms_queue_" . $targetSn;
-            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+            $queue = Cache::get($queueKey, []);
             $queue[] = $command;
-            \Illuminate\Support\Facades\Cache::put($queueKey, $queue, now()->addDays(2));
+            Cache::put($queueKey, $queue, now()->addDays(2));
             return;
         }
 
@@ -183,18 +236,18 @@ class IclockController extends Controller
                 $keys[] = "adms_queue_DEVICE_" . $device->id;
 
                 foreach ($keys as $k) {
-                    $q = \Illuminate\Support\Facades\Cache::get($k, []);
+                    $q = Cache::get($k, []);
                     $q[] = $command;
-                    \Illuminate\Support\Facades\Cache::put($k, $q, now()->addDays(2));
+                    Cache::put($k, $q, now()->addDays(2));
                 }
             }
         }
 
         // Antrean global fallback
         $globalKey = "adms_queue_GLOBAL";
-        $globalQueue = \Illuminate\Support\Facades\Cache::get($globalKey, []);
+        $globalQueue = Cache::get($globalKey, []);
         $globalQueue[] = $command;
-        \Illuminate\Support\Facades\Cache::put($globalKey, $globalQueue, now()->addDays(2));
+        Cache::put($globalKey, $globalQueue, now()->addDays(2));
     }
 
     /**
@@ -207,16 +260,16 @@ class IclockController extends Controller
 
         // Ambil antrean spesifik untuk mesin ini
         $queueKey = "adms_queue_" . $sn;
-        $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+        $queue = Cache::get($queueKey, []);
 
         if (empty($queue) && $device) {
             $queueKey = "adms_queue_DEVICE_" . $device->id;
-            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+            $queue = Cache::get($queueKey, []);
         }
 
         if (empty($queue)) {
             $queueKey = "adms_queue_GLOBAL";
-            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+            $queue = Cache::get($queueKey, []);
         }
 
         if (!empty($queue)) {
@@ -226,7 +279,7 @@ class IclockController extends Controller
             for ($i = 0; $i < $batchCount; $i++) {
                 $batch[] = array_shift($queue);
             }
-            \Illuminate\Support\Facades\Cache::put($queueKey, $queue, now()->addDays(2));
+            Cache::put($queueKey, $queue, now()->addDays(2));
 
             $responseOutput = "";
             foreach ($batch as $cmd) {
@@ -234,6 +287,8 @@ class IclockController extends Controller
                 Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$cmd}");
                 $responseOutput .= "C:{$cmdId}:{$cmd}\n";
             }
+
+            self::recordAdmsLog('/iclock/getrequest', 'GET', $sn, "Kirim " . count($batch) . " Perintah Sinkronisasi ke Mesin", $responseOutput);
 
             return response($responseOutput, 200)
                 ->header('Content-Type', 'text/plain');
@@ -249,7 +304,24 @@ class IclockController extends Controller
     {
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
-        Log::info("Hasil ADMS Command dari mesin {$sn}: " . $request->getContent());
+        $body = $this->extractRequestBody($request);
+        Log::info("Hasil ADMS Command dari mesin {$sn}: " . $body);
+
+        $fpCount = 0;
+        $userCount = 0;
+
+        if (str_contains($body, 'TMP=') || str_contains($body, 'FID=')) {
+            $fpCount = $this->processFingerprintLogs($body, $sn);
+        }
+        if (str_contains($body, 'USER') || str_contains($body, 'PIN=')) {
+            $userCount = $this->processUserLogs($body, $sn);
+        }
+
+        $info = 'Hasil Eksekusi Perintah Mesin';
+        if ($fpCount > 0) $info .= " (Ditemukan {$fpCount} sidik jari)";
+        if ($userCount > 0) $info .= " (Ditemukan {$userCount} user)";
+
+        self::recordAdmsLog('/iclock/devicecmd', 'POST', $sn, $info, $body);
 
         return response("OK\n", 200)->header('Content-Type', 'text/plain');
     }
@@ -364,23 +436,43 @@ class IclockController extends Controller
             $line = trim($line);
             if (empty($line)) continue;
 
-            parse_str(str_replace("\t", '&', $line), $parsed);
-            $pin = $parsed['PIN'] ?? $parsed['USERID'] ?? null;
-            $name = $parsed['Name'] ?? $parsed['NAME'] ?? null;
-            $pri = $parsed['Pri'] ?? $parsed['Privilege'] ?? 0;
+            $tokens = preg_split('/\t+|\s{2,}/', $line);
+            $params = [];
+            foreach ($tokens as $token) {
+                if (strpos($token, '=') !== false) {
+                    [$k, $v] = explode('=', $token, 2);
+                    $params[strtoupper(trim($k))] = trim($v);
+                }
+            }
+
+            $pin = $params['PIN'] ?? $params['USERID'] ?? null;
+            $name = $params['NAME'] ?? null;
+            $pri = $params['PRI'] ?? $params['PRIVILEGE'] ?? 0;
+
+            if (!$pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
+                $pin = trim($m[1]);
+            }
+            if (!$name && preg_match('/Name=([^\t\r\n]+)/i', $line, $m)) {
+                $name = trim($m[1]);
+            }
 
             if ($pin) {
+                $defaultClass = SchoolClass::first();
                 $student = Student::firstOrCreate(
                     ['device_user_id' => (string) $pin],
                     [
                         'name' => $name ?: 'Siswa ' . $pin,
-                        'school_class_id' => \App\Models\SchoolClass::first()->id ?? 1,
+                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
                         'privilege' => (string) $pri
                     ]
                 );
 
+                if ($name && $student->name === 'Siswa ' . $pin) {
+                    $student->update(['name' => $name]);
+                }
+
                 // Replicate ke mesin lain
-                self::queueCommand("DATA USER PIN={$pin}\tName=" . ($student->name ?? $name) . "\tPri={$pri}\tGrp=1");
+                self::queueCommand("DATA USER PIN={$pin}\tName=" . ($student->name ?? $name) . "\tPri={$pri}\tGrp=1", null, $sn);
                 $count++;
             }
         }
@@ -405,43 +497,65 @@ class IclockController extends Controller
             $size = 0;
             $tmp = null;
 
-            // Ekstrak via Regex aman agar karakter base64 tidak rusak
-            if (preg_match('/PIN=([^\t\r\n]+)/i', $line, $m)) {
+            // Ekstrak via token pemisah tab terlebih dahulu
+            $tokens = explode("\t", $line);
+            $params = [];
+            foreach ($tokens as $token) {
+                $token = trim($token);
+                if (strpos($token, '=') !== false) {
+                    [$k, $v] = explode('=', $token, 2);
+                    $params[strtoupper(trim($k))] = trim($v);
+                }
+            }
+
+            $pin = $params['PIN'] ?? $params['USERID'] ?? null;
+            $fid = isset($params['FID']) ? (int) $params['FID'] : (isset($params['INDEX']) ? (int) $params['INDEX'] : (isset($params['NO']) ? (int) $params['NO'] : null));
+            $size = isset($params['SIZE']) ? (int) $params['SIZE'] : 0;
+            $tmp = $params['TMP'] ?? $params['TEMPLATE'] ?? null;
+
+            // Ekstrak via Regex aman jika tidak terdeteksi via token
+            if (!$pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
                 $pin = trim($m[1]);
             }
-            if (preg_match('/FID=([0-9]+)/i', $line, $m)) {
-                $fid = (int) $m[1];
-            } elseif (preg_match('/Index=([0-9]+)/i', $line, $m) || preg_match('/No=([0-9]+)/i', $line, $m)) {
+            if ($fid === null && (preg_match('/FID=([0-9]+)/i', $line, $m) || preg_match('/Index=([0-9]+)/i', $line, $m) || preg_match('/No=([0-9]+)/i', $line, $m))) {
                 $fid = (int) $m[1];
             }
-            if (preg_match('/Size=([0-9]+)/i', $line, $m)) {
+            if (!$size && preg_match('/Size=([0-9]+)/i', $line, $m)) {
                 $size = (int) $m[1];
             }
-            if (preg_match('/TMP=([^\t\r\n]+)/i', $line, $m)) {
+            if (!$tmp && preg_match('/TMP=([A-Za-z0-9+\/=_~-]+)/i', $line, $m)) {
                 $tmp = trim($m[1]);
             }
 
-            // Fallback: positional TSV
+            // Fallback: positional TSV (PIN\tFID\tSize\tValid\tTMP atau PIN\tFID\tTMP)
             if (!$pin || !$tmp) {
-                $parts = explode("\t", $line);
-                if (count($parts) >= 3) {
-                    $pin = trim($parts[0]);
-                    $fid = isset($parts[1]) ? (int)trim($parts[1]) : 0;
-                    $tmp = trim(end($parts));
+                if (count($tokens) >= 3) {
+                    $pin = trim($tokens[0]);
+                    $fid = (int) trim($tokens[1]);
+                    $tmp = trim(end($tokens));
                     $size = strlen($tmp);
                 }
             }
 
             if ($pin && $tmp) {
-                $student = Student::where('device_user_id', (string) $pin)->first();
+                $fid = $fid ?? 0;
+                $defaultClass = SchoolClass::first();
+                $student = Student::firstOrCreate(
+                    ['device_user_id' => (string) $pin],
+                    [
+                        'name' => 'Siswa ' . $pin,
+                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                        'privilege' => '0'
+                    ]
+                );
 
-                \App\Models\FingerprintTemplate::updateOrCreate(
+                FingerprintTemplate::updateOrCreate(
                     [
                         'device_user_id' => (string) $pin,
                         'finger_index' => (int) $fid
                     ],
                     [
-                        'student_id' => $student ? $student->id : null,
+                        'student_id' => $student->id,
                         'size' => (int) $size ?: strlen($tmp),
                         'valid' => 1,
                         'template_data' => $tmp
