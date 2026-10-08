@@ -125,6 +125,8 @@ class IclockController extends Controller
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $savedCount = 0;
 
+        Log::info("ADMS Raw ATTLOG Body from SN {$sn} (IP: {$ip}):\n" . $rawBody);
+
         foreach ($lines as $line) {
             $line = trim($line);
             if (empty($line)) continue;
@@ -148,6 +150,7 @@ class IclockController extends Controller
             }
 
             if (!$userId || !$timestamp) {
+                Log::warning("ADMS: Format line tidak valid: {$line}");
                 continue;
             }
 
@@ -166,6 +169,7 @@ class IclockController extends Controller
                     ->exists();
 
                 if ($exists) {
+                    Log::info("ADMS Skip: Siswa {$student->name} sudah absen status {$status} hari ini.");
                     $savedCount++;
                     continue;
                 }
@@ -177,6 +181,7 @@ class IclockController extends Controller
                     ->exists();
 
                 if ($exists) {
+                    Log::info("ADMS Skip: Duplikat timestamp {$timestamp} untuk user {$userId}");
                     $savedCount++;
                     continue;
                 }
@@ -190,6 +195,8 @@ class IclockController extends Controller
                 'student_id' => $student ? $student->id : null,
                 'status_code' => $status
             ]);
+
+            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: " . ($student->name ?? 'Belum terdaftar') . ")");
 
             // Broadcast event websocket / realtime jika ada
             try {
