@@ -30,7 +30,12 @@
         <tbody>
             @forelse($devices as $device)
             <tr class="hover:bg-gray-100 border-b">
-                <td class="py-4 px-6">{{ $device->name }}</td>
+                <td class="py-4 px-6 font-semibold">
+                    {{ $device->name }}
+                    @if($device->serial_number)
+                        <span class="text-xs text-gray-400 font-mono block">SN: {{ $device->serial_number }}</span>
+                    @endif
+                </td>
                 <td class="py-4 px-6">{{ $device->ip_address }}:{{ $device->port }}</td>
                 <td class="py-4 px-6">
                     @if($device->status == 'online')

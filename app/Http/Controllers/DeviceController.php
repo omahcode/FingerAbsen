@@ -23,12 +23,14 @@ class DeviceController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'ip_address' => 'required|ip',
-            'port' => 'required|integer'
+            'ip_address' => 'required',
+            'port' => 'required|integer',
+            'serial_number' => 'nullable|string'
         ]);
 
         Device::create([
             'name' => $request->name,
+            'serial_number' => $request->serial_number,
             'ip_address' => $request->ip_address,
             'port' => $request->port,
             'status' => 'offline'

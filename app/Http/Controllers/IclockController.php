@@ -119,7 +119,7 @@ class IclockController extends Controller
      */
     private function processAttendanceLogs(string $rawBody, string $sn, string $ip): int
     {
-        $device = Device::where('ip_address', $ip)->first() ?: Device::first();
+        $device = $this->updateDeviceStatus($sn, $ip) ?: Device::first();
         $deviceId = $device ? $device->id : null;
 
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
@@ -205,20 +205,53 @@ class IclockController extends Controller
     }
 
     /**
-     * Update status mesin jadi online & last_seen_at
+     * Update status mesin jadi online & last_seen_at dengan pencocokan SN
      */
-    private function updateDeviceStatus(string $sn, string $ip)
+    private function updateDeviceStatus(string $sn, string $ip): ?Device
     {
         try {
-            $device = Device::where('ip_address', $ip)->first() ?: Device::first();
+            $device = null;
+
+            // 1. Cari berdasarkan Serial Number (SN) jika ada
+            if ($sn !== 'UNKNOWN' && !empty($sn)) {
+                $device = Device::where('serial_number', $sn)->first();
+            }
+
+            // 2. Jika belum ditemukan dengan SN, cari device yang belum punya SN atau cari berdasarkan IP
+            if (!$device) {
+                $device = Device::where('ip_address', $ip)->first()
+                       ?: Device::whereNull('serial_number')->first();
+
+                // Simpan SN ke device tersebut jika SN valid
+                if ($device && $sn !== 'UNKNOWN' && !empty($sn) && empty($device->serial_number)) {
+                    $device->update(['serial_number' => $sn]);
+                }
+            }
+
+            // 3. Jika tetap belum ada device sama sekali di DB, buatkan otomatis
+            if (!$device && $sn !== 'UNKNOWN') {
+                $device = Device::create([
+                    'name' => 'Mesin ' . substr($sn, -4),
+                    'serial_number' => $sn,
+                    'ip_address' => $ip,
+                    'port' => 4370,
+                    'status' => 'online',
+                    'last_seen_at' => now(),
+                ]);
+                return $device;
+            }
+
             if ($device) {
                 $device->update([
                     'status' => 'online',
                     'last_seen_at' => now(),
                 ]);
             }
+
+            return $device;
         } catch (\Exception $e) {
             Log::warning("Gagal update device status ADMS: " . $e->getMessage());
+            return null;
         }
     }
 }
