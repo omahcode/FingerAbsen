@@ -27,6 +27,8 @@ class AttendanceController extends Controller
         $isStrict = env('STRICT_ATTENDANCE', true);
         
         return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict'));
+    }
+
     public function latest(Request $request)
     {
         $sinceId = (int) $request->query('since_id', 0);
