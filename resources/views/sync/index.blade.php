@@ -25,7 +25,7 @@
 
 <h3 class="font-bold text-gray-700 text-lg mb-4">Fitur Tambahan (Tarik Data Mesin)</h3>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- Card Tarik Siswa -->
     <div class="bg-white p-6 shadow rounded border-t-4 border-blue-500">
         <h3 class="font-bold mb-2 text-lg text-blue-700">1. Tarik Data Siswa dari Mesin</h3>
@@ -56,9 +56,30 @@
         </form>
     </div>
 
+    <!-- Card Tarik Sidik Jari -->
+    <div class="bg-white p-6 shadow rounded border-t-4 border-purple-500">
+        <h3 class="font-bold mb-2 text-lg text-purple-700">2. Backup Sidik Jari dari Mesin</h3>
+        <p class="text-sm text-gray-500 mb-4">Menarik template sidik jari fisik dari mesin ke database cloud (untuk disebar ke mesin lain).</p>
+        <form action="{{ route('sync.backupTemplates') }}" method="POST">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-xs font-bold mb-1">Pilih Mesin Asal</label>
+                <select name="device_id" class="border w-full p-2 rounded" required>
+                    <option value="">-- Pilih Mesin --</option>
+                    @foreach($devices as $d)
+                        <option value="{{ $d->id }}">{{ $d->name }} ({{ $d->serial_number ?? $d->ip_address }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded w-full mt-[68px]">
+                Backup Template Sidik Jari
+            </button>
+        </form>
+    </div>
+
     <!-- Card Tarik Absen -->
     <div class="bg-white p-6 shadow rounded border-t-4 border-green-500">
-        <h3 class="font-bold mb-2 text-lg text-green-700">2. Tarik Data Absensi Tertinggal</h3>
+        <h3 class="font-bold mb-2 text-lg text-green-700">3. Tarik Data Absensi Tertinggal</h3>
         <p class="text-sm text-gray-500 mb-4">Menarik log sidik jari dari mesin yang belum sempat masuk ke web secara Realtime.</p>
         <form action="{{ route('attendance.sync') }}" method="POST">
             @csrf

@@ -39,9 +39,27 @@ class SyncController extends Controller
         $fpCount = 0;
         foreach ($templates as $t) {
             \App\Http\Controllers\IclockController::queueCommand("DATA FP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
+            \App\Http\Controllers\IclockController::queueCommand("DATA UPDATE FINGERTMP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
             $fpCount++;
         }
 
         return redirect()->back()->with('success', "Berhasil memasukkan {$userCount} data siswa dan {$fpCount} template sidik jari ke antrean sinkronisasi seluruh mesin.");
+    }
+
+    /**
+     * Minta mesin mengirimkan seluruh template sidik jari ke database web
+     */
+    public function backupTemplates(Request $request)
+    {
+        $deviceId = $request->input('device_id');
+        $device = Device::find($deviceId);
+        $targetSn = $device ? $device->serial_number : null;
+
+        // Kirim perintah ADMS untuk meminta mesin mengunggah seluruh sidik jari
+        \App\Http\Controllers\IclockController::queueCommand("QUERY FINGERTMP PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP PIN=0", $targetSn);
+        \App\Http\Controllers\IclockController::queueCommand("CHECK", $targetSn);
+
+        return redirect()->back()->with('success', "Perintah backup sidik jari telah dikirim ke " . ($device->name ?? 'Semua Mesin') . ". Mesin akan segera mengunggah data sidik jari ke database web.");
     }
 }
