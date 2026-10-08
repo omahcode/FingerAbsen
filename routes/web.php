@@ -36,3 +36,11 @@ Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name
 Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
 
 Route::get('tv', [\App\Http\Controllers\TvController::class, 'index'])->name('tv.index');
+
+// Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco)
+Route::match(['get', 'post'], 'iclock/cdata', [\App\Http\Controllers\IclockController::class, 'cdata']);
+Route::match(['get', 'post'], 'iclock/cdata.aspx', [\App\Http\Controllers\IclockController::class, 'cdata']);
+Route::match(['get', 'post'], 'iclock/cdata.php', [\App\Http\Controllers\IclockController::class, 'cdata']);
+Route::match(['get', 'post'], 'iclock/ping', [\App\Http\Controllers\IclockController::class, 'ping']);
+Route::match(['get', 'post'], 'iclock/getrequest', [\App\Http\Controllers\IclockController::class, 'getRequest']);
+Route::match(['get', 'post'], 'iclock/devicecmd', [\App\Http\Controllers\IclockController::class, 'deviceCmd']);
