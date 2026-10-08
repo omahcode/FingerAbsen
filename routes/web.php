@@ -28,6 +28,7 @@ Route::resource('students', StudentController::class)->except(['show']);
 Route::post('students/sync', [StudentController::class, 'sync'])->name('students.sync');
 
 Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+Route::get('attendance/latest', [AttendanceController::class, 'latest'])->name('attendance.latest');
 Route::post('attendance/sync', [AttendanceController::class, 'sync'])->name('attendance.sync');
 Route::post('attendance/delete-multiple', [AttendanceController::class, 'destroyMultiple'])->name('attendance.destroyMultiple');
 Route::post('attendance/toggle-strict', [AttendanceController::class, 'toggleStrict'])->name('attendance.toggleStrict');

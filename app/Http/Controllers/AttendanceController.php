@@ -27,6 +27,27 @@ class AttendanceController extends Controller
         $isStrict = env('STRICT_ATTENDANCE', true);
         
         return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict'));
+    public function latest(Request $request)
+    {
+        $sinceId = (int) $request->query('since_id', 0);
+        $filter = $request->query('filter', 'all');
+
+        $query = AttendanceLog::with(['student.schoolClass', 'device'])
+            ->where('id', '>', $sinceId)
+            ->orderBy('id', 'asc');
+
+        if ($filter === 'registered') {
+            $query->whereNotNull('student_id');
+        } elseif ($filter === 'unregistered') {
+            $query->whereNull('student_id');
+        }
+
+        $logs = $query->limit(50)->get();
+
+        return response()->json([
+            'status' => 'success',
+            'logs' => $logs
+        ]);
     }
 
     public function toggleStrict()

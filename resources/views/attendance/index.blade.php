@@ -145,53 +145,92 @@
     });
 </script>
 
-<script type="module">
+<script>
     document.addEventListener("DOMContentLoaded", () => {
         const currentFilter = "{{ $filter }}";
+        // Ambil ID log tertinggi yang saat ini ada di halaman
+        let maxLogId = {{ $logs->first() ? $logs->first()->id : 0 }};
 
-        window.Echo.channel('attendance')
-            .listen('.AttendanceCreated', (e) => {
-                const log = e.log;
-                const isRegistered = log.student_id !== null;
+        function insertLogRow(log, isNew = true) {
+            // Hindari duplikasi baris
+            if (document.getElementById(`log-${log.id}`)) return;
 
-                if (currentFilter === 'registered' && !isRegistered) return;
-                if (currentFilter === 'unregistered' && isRegistered) return;
-                
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-gray-50 bg-green-50 transition-colors duration-1000";
-                
-                const studentName = log.student ? log.student.name : 'Belum terdaftar';
-                const className = (log.student && log.student.school_class) ? log.student.school_class.name : '-';
-                const deviceName = log.device ? log.device.name : '-';
-                
-                let statusHtml = log.status_code;
-                if(log.status_code == 0) statusHtml = '<span class="text-blue-600 font-semibold">Masuk</span>';
-                if(log.status_code == 1) statusHtml = '<span class="text-red-600 font-semibold">Pulang</span>';
+            if (log.id > maxLogId) {
+                maxLogId = log.id;
+            }
 
-                tr.innerHTML = `
-                    <td class="p-3 text-center">
-                        <input type="checkbox" name="ids[]" value="${log.id}" class="check-item w-4 h-4 text-blue-600 rounded border-gray-300">
-                    </td>
-                    <td class="p-3">${log.timestamp}</td>
-                    <td class="p-3 font-semibold">${studentName}</td>
-                    <td class="p-3">${className}</td>
-                    <td class="p-3">${statusHtml}</td>
-                    <td class="p-3 text-xs text-gray-500">${deviceName}</td>
-                    <td class="p-3 text-center">
-                        <button type="button" onclick="deleteSingle(${log.id})" class="text-red-600 hover:underline text-sm">Hapus</button>
-                    </td>
-                `;
+            const isRegistered = log.student_id !== null;
+            if (currentFilter === 'registered' && !isRegistered) return;
+            if (currentFilter === 'unregistered' && isRegistered) return;
+            
+            const tr = document.createElement('tr');
+            tr.id = `log-${log.id}`;
+            tr.className = `border-b hover:bg-gray-50 ${isNew ? 'bg-emerald-100 transition-colors duration-1000' : ''}`;
+            
+            const studentName = log.student ? log.student.name : 'Belum terdaftar';
+            const className = (log.student && (log.student.school_class || log.student.schoolClass)) 
+                ? (log.student.school_class?.name || log.student.schoolClass?.name) 
+                : '-';
+            const deviceName = log.device ? log.device.name : '-';
+            
+            let statusHtml = log.status_code;
+            if (log.status_code == 0) statusHtml = '<span class="text-blue-600 font-semibold">Masuk</span>';
+            if (log.status_code == 1) statusHtml = '<span class="text-red-600 font-semibold">Pulang</span>';
 
-                const emptyRow = document.getElementById('empty-row');
-                if(emptyRow) emptyRow.remove();
+            tr.innerHTML = `
+                <td class="p-3 text-center">
+                    <input type="checkbox" name="ids[]" value="${log.id}" class="check-item w-4 h-4 text-blue-600 rounded border-gray-300">
+                </td>
+                <td class="p-3">${log.timestamp}</td>
+                <td class="p-3 font-semibold">${studentName}</td>
+                <td class="p-3">${className}</td>
+                <td class="p-3">${statusHtml}</td>
+                <td class="p-3 text-xs text-gray-500">${deviceName}</td>
+                <td class="p-3 text-center">
+                    <button type="button" onclick="deleteSingle(${log.id})" class="text-red-600 hover:underline text-sm">Hapus</button>
+                </td>
+            `;
 
-                const tbody = document.getElementById('attendance-table-body');
-                tbody.insertBefore(tr, tbody.firstChild);
-                
+            const emptyRow = document.getElementById('empty-row');
+            if (emptyRow) emptyRow.remove();
+
+            const tbody = document.getElementById('attendance-table-body');
+            tbody.insertBefore(tr, tbody.firstChild);
+            
+            if (isNew) {
                 setTimeout(() => {
-                    tr.classList.remove('bg-green-50');
-                }, 2000);
-            });
+                    tr.classList.remove('bg-emerald-100');
+                }, 2500);
+            }
+        }
+
+        // 1. Live Smart Polling (Otomatis cek data baru setiap 2.5 detik tanpa reload halaman)
+        setInterval(async () => {
+            try {
+                const response = await fetch(`{{ route('attendance.latest') }}?since_id=${maxLogId}&filter=${currentFilter}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.logs && data.logs.length > 0) {
+                    // Masukkan data baru berurutan
+                    data.logs.forEach(log => {
+                        insertLogRow(log, true);
+                    });
+                }
+            } catch (err) {
+                // Ignore silent network errors
+            }
+        }, 2500);
+
+        // 2. WebSocket Fallback (Jika Laravel Echo aktif)
+        if (window.Echo) {
+            window.Echo.channel('attendance')
+                .listen('.AttendanceCreated', (e) => {
+                    if (e && e.log) {
+                        insertLogRow(e.log, true);
+                    }
+                });
+        }
     });
 </script>
 @endsection
