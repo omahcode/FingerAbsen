@@ -27,6 +27,26 @@
                 <a href="{{ route('sync.index') }}" class="text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-3 py-1 rounded-full shadow-sm transition">
                     <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi
                 </a>
+
+                @auth
+                <!-- User Profile & Logout -->
+                <div class="flex items-center space-x-3 pl-3 border-l border-blue-500/50">
+                    <div class="flex items-center space-x-1.5 text-xs text-blue-100 font-medium">
+                        <i class="fas fa-user-circle text-base text-yellow-300"></i>
+                        <span>{{ Auth::user()->name }}</span>
+                    </div>
+                    <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question">
+                        @csrf
+                        <button type="submit" class="bg-red-500/20 hover:bg-red-500/40 text-red-100 text-xs px-2.5 py-1 rounded border border-red-400/40 transition">
+                            <i class="fas fa-sign-out-alt mr-0.5"></i> Keluar
+                        </button>
+                    </form>
+                </div>
+                @else
+                <a href="{{ route('login') }}" class="text-sm font-bold bg-white text-blue-800 px-3 py-1 rounded-full hover:bg-blue-50 transition">
+                    Login
+                </a>
+                @endauth
             </div>
         </div>
     </nav>
