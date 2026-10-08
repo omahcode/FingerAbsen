@@ -75,13 +75,46 @@ class IclockController extends Controller
     }
 
     /**
-     * Helper untuk menambahkan perintah ke antrean ADMS
+     * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
      */
-    public static function queueCommand(string $command)
+    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null)
     {
-        $queue = \Illuminate\Support\Facades\Cache::get('adms_cmd_queue', []);
-        $queue[] = $command;
-        \Illuminate\Support\Facades\Cache::put('adms_cmd_queue', $queue, now()->addDays(1));
+        $devices = Device::all();
+
+        if ($targetSn) {
+            $queueKey = "adms_queue_" . $targetSn;
+            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+            $queue[] = $command;
+            \Illuminate\Support\Facades\Cache::put($queueKey, $queue, now()->addDays(2));
+            return;
+        }
+
+        // Broadcast ke setiap mesin secara independen
+        if ($devices->isNotEmpty()) {
+            foreach ($devices as $device) {
+                if ($excludeSn && $device->serial_number === $excludeSn) {
+                    continue;
+                }
+
+                $keys = [];
+                if (!empty($device->serial_number)) {
+                    $keys[] = "adms_queue_" . $device->serial_number;
+                }
+                $keys[] = "adms_queue_DEVICE_" . $device->id;
+
+                foreach ($keys as $k) {
+                    $q = \Illuminate\Support\Facades\Cache::get($k, []);
+                    $q[] = $command;
+                    \Illuminate\Support\Facades\Cache::put($k, $q, now()->addDays(2));
+                }
+            }
+        }
+
+        // Antrean global fallback
+        $globalKey = "adms_queue_GLOBAL";
+        $globalQueue = \Illuminate\Support\Facades\Cache::get($globalKey, []);
+        $globalQueue[] = $command;
+        \Illuminate\Support\Facades\Cache::put($globalKey, $globalQueue, now()->addDays(2));
     }
 
     /**
@@ -90,16 +123,39 @@ class IclockController extends Controller
     public function getRequest(Request $request)
     {
         $sn = $request->query('SN', 'UNKNOWN');
-        $this->updateDeviceStatus($sn, $request->ip());
+        $device = $this->updateDeviceStatus($sn, $request->ip());
 
-        // Cek apakah ada antrean perintah ADMS
-        $queue = \Illuminate\Support\Facades\Cache::get('adms_cmd_queue', []);
+        // Ambil antrean spesifik untuk mesin ini
+        $queueKey = "adms_queue_" . $sn;
+        $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+
+        if (empty($queue) && $device) {
+            $queueKey = "adms_queue_DEVICE_" . $device->id;
+            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+        }
+
+        if (empty($queue)) {
+            $queueKey = "adms_queue_GLOBAL";
+            $queue = \Illuminate\Support\Facades\Cache::get($queueKey, []);
+        }
+
         if (!empty($queue)) {
-            $cmd = array_shift($queue);
-            \Illuminate\Support\Facades\Cache::put('adms_cmd_queue', $queue, now()->addDays(1));
-            $cmdId = rand(100, 999);
-            Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$cmd}");
-            return response("C:{$cmdId}:{$cmd}\n", 200)
+            // Ambil hingga 15 perintah sekaligus (batch)
+            $batch = [];
+            $batchCount = min(count($queue), 15);
+            for ($i = 0; $i < $batchCount; $i++) {
+                $batch[] = array_shift($queue);
+            }
+            \Illuminate\Support\Facades\Cache::put($queueKey, $queue, now()->addDays(2));
+
+            $responseOutput = "";
+            foreach ($batch as $cmd) {
+                $cmdId = rand(1000, 9999);
+                Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$cmd}");
+                $responseOutput .= "C:{$cmdId}:{$cmd}\n";
+            }
+
+            return response($responseOutput, 200)
                 ->header('Content-Type', 'text/plain');
         }
 
