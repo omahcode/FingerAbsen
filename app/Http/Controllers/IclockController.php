@@ -77,16 +77,58 @@ class IclockController extends Controller
         $this->updateDeviceStatus($sn, $ip);
 
         $table = strtoupper($request->query('table', 'FINGERTMP'));
-        $body = $request->getContent();
+        $body = $this->extractRequestBody($request);
 
-        Log::info("ADMS fdata from SN {$sn}, Table: {$table}, Length: " . strlen($body));
+        Log::info("ADMS fdata from SN {$sn}, Table: {$table}, Query: " . json_encode($request->query()) . ", Length: " . strlen($body));
 
-        if (empty($body)) {
-            return response("OK\n", 200)->header('Content-Type', 'text/plain');
+        $count = 0;
+
+        // Format 1: PIN & FID ada di parameter query URL
+        if ($request->has('PIN') && !empty($body)) {
+            $pin = $request->query('PIN');
+            $fid = $request->query('FID', 0);
+            $size = $request->query('size', strlen($body));
+            $tmp = base64_encode($body);
+
+            $student = Student::where('device_user_id', (string) $pin)->first();
+            \App\Models\FingerprintTemplate::updateOrCreate(
+                [
+                    'device_user_id' => (string) $pin,
+                    'finger_index' => (int) $fid
+                ],
+                [
+                    'student_id' => $student ? $student->id : null,
+                    'size' => (int) $size,
+                    'valid' => 1,
+                    'template_data' => $tmp
+                ]
+            );
+
+            self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
+            self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
+            $count = 1;
+        } elseif (!empty($body)) {
+            // Format 2: Multi-line text template di body
+            $count = $this->processFingerprintLogs($body, $sn);
         }
 
-        $count = $this->processFingerprintLogs($body, $sn);
         return response("OK: {$count}\n", 200)->header('Content-Type', 'text/plain');
+    }
+
+    private function extractRequestBody(Request $request): string
+    {
+        $body = $request->getContent();
+        if (!empty($body)) return $body;
+
+        if ($request->has('data')) return (string) $request->input('data');
+        if ($request->has('content')) return (string) $request->input('content');
+        if (!empty($request->allFiles())) {
+            $file = current($request->allFiles());
+            if ($file && file_exists($file->getPathname())) {
+                return (string) file_get_contents($file->getPathname());
+            }
+        }
+        return '';
     }
 
     /**
