@@ -42,7 +42,7 @@
 </div>
 
 <div class="bg-white shadow rounded overflow-x-auto p-4">
-    <form id="bulk-delete-form" action="{{ route('attendance.destroyMultiple') }}" method="POST" onsubmit="return confirm('Hapus semua data absensi yang dicentang?')">
+    <form id="bulk-delete-form" action="{{ route('attendance.destroyMultiple') }}" method="POST" data-confirm="Hapus semua data absensi yang dicentang?" data-title="Hapus Massal Absensi" data-danger="true" data-icon="warning">
         @csrf
         <table class="w-full text-left border-collapse" id="attendance-table">
             <thead>
@@ -102,13 +102,25 @@
 </div>
 
 <script>
-    // Logic untuk Delete Satuan via JS
+    // Logic untuk Delete Satuan via SweetAlert
     function deleteSingle(id) {
-        if(confirm('Hapus absensi ini?')) {
-            const form = document.getElementById('single-delete-form');
-            form.action = `/attendance/${id}`;
-            form.submit();
-        }
+        Swal.fire({
+            title: 'Hapus Absensi?',
+            text: 'Apakah Anda yakin ingin menghapus data log absensi ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.getElementById('single-delete-form');
+                form.action = `/attendance/${id}`;
+                form.submit();
+            }
+        });
     }
 
     // Logic Checkbox & Hapus Massal

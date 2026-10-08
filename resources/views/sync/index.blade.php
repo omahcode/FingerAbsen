@@ -14,7 +14,7 @@
                 Menyinkronkan total <strong>{{ $studentsCount ?? 0 }} Siswa</strong> dan <strong>{{ $templatesCount ?? 0 }} Template Sidik Jari</strong> dari database web ke <strong>Mesin 1</strong> dan <strong>Mesin 2</strong>. Siswa yang sudah didaftarkan di satu mesin akan otomatis bisa absen di mesin lainnya.
             </p>
         </div>
-        <form action="{{ route('sync.pushAll') }}" method="POST" class="mt-4 md:mt-0" onsubmit="return confirm('Kirim semua data siswa & sidik jari ke seluruh mesin fingerprint?')">
+        <form action="{{ route('sync.pushAll') }}" method="POST" class="mt-4 md:mt-0" data-confirm="Kirim seluruh data siswa dan template sidik jari dari database ke semua mesin fingerprint?" data-title="⚡ Sebar Data ke Semua Mesin" data-icon="question">
             @csrf
             <button type="submit" class="bg-white hover:bg-gray-100 text-indigo-700 font-bold py-3 px-6 rounded-lg shadow transition-all duration-200 transform hover:scale-105">
                 ⚡ Mulai Sebar Data
@@ -30,7 +30,7 @@
     <div class="bg-white p-6 shadow rounded border-t-4 border-blue-500">
         <h3 class="font-bold mb-2 text-lg text-blue-700">1. Tarik Data Siswa dari Mesin</h3>
         <p class="text-sm text-gray-500 mb-4">Menarik daftar nama dan NIS dari memori mesin ke dalam database web.</p>
-        <form action="{{ route('students.sync') }}" method="POST">
+        <form action="{{ route('students.sync') }}" method="POST" data-confirm="Tarik data siswa dari mesin ke database web?" data-title="Tarik Data Siswa" data-icon="question">
             @csrf
             <div class="mb-3">
                 <label class="block text-xs font-bold mb-1">Pilih Mesin Asal</label>
@@ -60,7 +60,7 @@
     <div class="bg-white p-6 shadow rounded border-t-4 border-purple-500">
         <h3 class="font-bold mb-2 text-lg text-purple-700">2. Backup Sidik Jari dari Mesin</h3>
         <p class="text-sm text-gray-500 mb-4">Menarik template sidik jari fisik dari mesin ke database cloud (untuk disebar ke mesin lain).</p>
-        <form action="{{ route('sync.backupTemplates') }}" method="POST">
+        <form action="{{ route('sync.backupTemplates') }}" method="POST" data-confirm="Kirim perintah penarikan seluruh template sidik jari dari mesin ke server cloud?" data-title="Backup Sidik Jari" data-icon="question">
             @csrf
             <div class="mb-4">
                 <label class="block text-xs font-bold mb-1">Pilih Mesin Asal</label>
@@ -81,7 +81,7 @@
     <div class="bg-white p-6 shadow rounded border-t-4 border-green-500">
         <h3 class="font-bold mb-2 text-lg text-green-700">3. Tarik Data Absensi Tertinggal</h3>
         <p class="text-sm text-gray-500 mb-4">Menarik log sidik jari dari mesin yang belum sempat masuk ke web secara Realtime.</p>
-        <form action="{{ route('attendance.sync') }}" method="POST">
+        <form action="{{ route('attendance.sync') }}" method="POST" data-confirm="Tarik data absensi dari mesin ke server web?" data-title="Tarik Log Absensi" data-icon="question">
             @csrf
             <div class="mb-4">
                 <label class="block text-xs font-bold mb-1">Pilih Mesin</label>
