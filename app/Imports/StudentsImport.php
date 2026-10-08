@@ -39,6 +39,7 @@ class StudentsImport implements ToModel, WithHeadingRow
 
         $nis = $row['nis'];
         $name = $row['nama_siswa'];
+        $parentPhone = $row['no_hp_ortu'] ?? $row['no_wa'] ?? $row['whatsapp'] ?? $row['no_telepon_ortu'] ?? $row['parent_phone'] ?? $row['no_hp'] ?? null;
 
         // Sebar data ke semua mesin
         foreach ($this->devices as $device) {
@@ -62,6 +63,7 @@ class StudentsImport implements ToModel, WithHeadingRow
             [
                 'name' => $name,
                 'school_class_id' => $classId,
+                'parent_phone' => $parentPhone,
                 'privilege' => '0'
             ]
         );

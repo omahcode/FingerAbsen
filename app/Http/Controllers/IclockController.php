@@ -410,6 +410,11 @@ class IclockController extends Controller
 
             Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: " . ($student->name ?? 'Belum terdaftar') . ")");
 
+            // Kirim notifikasi WhatsApp otomatis ke Orang Tua / Wali Murid
+            if ($student && !empty($student->parent_phone)) {
+                \App\Services\WhatsAppService::sendAttendanceNotification($student, $timestamp, $status, $device ? $device->name : null);
+            }
+
             // Broadcast event websocket / realtime jika ada
             try {
                 broadcast(new AttendanceCreated($log));

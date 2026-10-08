@@ -31,6 +31,7 @@
                     <th class="p-3 text-sm font-semibold">Nama Siswa</th>
                     <th class="p-3 text-sm font-semibold">Kelas</th>
                     <th class="p-3 text-sm font-semibold">Jurusan</th>
+                    <th class="p-3 text-sm font-semibold">No. WA Ortu</th>
                     <th class="p-3 text-sm text-center font-semibold">Aksi</th>
                 </tr>
             </thead>
@@ -44,6 +45,15 @@
                     <td class="p-3 font-semibold text-gray-900">{{ $s->name }}</td>
                     <td class="p-3">{{ $s->schoolClass->name ?? '-' }}</td>
                     <td class="p-3">{{ $s->schoolClass->major->name ?? '-' }}</td>
+                    <td class="p-3 text-xs">
+                        @if($s->parent_phone)
+                            <a href="https://wa.me/{{ \App\Services\WhatsAppService::formatPhoneNumber($s->parent_phone) }}" target="_blank" class="inline-flex items-center text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200 hover:bg-green-100 font-mono">
+                                <i class="fab fa-whatsapp mr-1 text-green-600"></i> {{ $s->parent_phone }}
+                            </a>
+                        @else
+                            <span class="text-gray-400 italic">- Belum ada -</span>
+                        @endif
+                    </td>
                     <td class="p-3 text-center flex justify-center space-x-2">
                         <a href="{{ route('students.edit', $s->id) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1.5 px-3 rounded shadow-sm">
                             <i class="fas fa-edit mr-0.5"></i> Edit
@@ -55,7 +65,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="p-6 text-center text-gray-400">Belum ada data siswa terdaftar.</td>
+                    <td colspan="7" class="p-6 text-center text-gray-400">Belum ada data siswa terdaftar.</td>
                 </tr>
                 @endforelse
             </tbody>

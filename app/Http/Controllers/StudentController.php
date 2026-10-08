@@ -52,7 +52,8 @@ class StudentController extends Controller
         $request->validate([
             'device_user_id' => 'required|numeric',
             'name' => 'required',
-            'school_class_id' => 'required|exists:school_classes,id'
+            'school_class_id' => 'required|exists:school_classes,id',
+            'parent_phone' => 'nullable|string|max:25'
         ]);
 
         // Simpan ke database
@@ -61,6 +62,7 @@ class StudentController extends Controller
             [
                 'name' => $request->name,
                 'school_class_id' => $request->school_class_id,
+                'parent_phone' => $request->parent_phone,
                 'privilege' => '0'
             ]
         );
@@ -98,12 +100,14 @@ class StudentController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'school_class_id' => 'required|exists:school_classes,id'
+            'school_class_id' => 'required|exists:school_classes,id',
+            'parent_phone' => 'nullable|string|max:25'
         ]);
 
         $student->update([
             'name' => $request->name,
-            'school_class_id' => $request->school_class_id
+            'school_class_id' => $request->school_class_id,
+            'parent_phone' => $request->parent_phone
         ]);
 
         // Kirim ke antrean ADMS

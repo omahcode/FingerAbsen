@@ -8,7 +8,7 @@
         <h4 class="font-bold text-blue-800 mb-2">Cara Penggunaan:</h4>
         <ol class="list-decimal ml-5 text-sm text-blue-700 space-y-1">
             <li>Download template file di bawah ini.</li>
-            <li>Isi kolom <strong>NIS</strong> (angka), <strong>Nama Siswa</strong>, dan <strong>Kelas</strong>.</li>
+            <li>Isi kolom <strong>NIS</strong> (angka), <strong>Nama Siswa</strong>, <strong>Kelas</strong>, dan <strong>No HP Ortu</strong> (opsional, untuk WhatsApp otomatis).</li>
             <li>Pastikan <strong>Nama Kelas</strong> persis sama dengan yang ada di menu Kelas web ini (Contoh: <code class="bg-blue-100 px-1">X RPL 1</code>).</li>
             <li>Upload file yang sudah diisi ke form ini.</li>
         </ol>
