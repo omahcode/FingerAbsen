@@ -214,15 +214,23 @@
         // Live Auto-Poll setiap 2 detik
         async function checkLiveAttendance() {
             try {
-                const url = `{{ route('attendance.latest') }}?since_id=${maxLogId}&filter=${currentFilter}`;
-                const response = await fetch(url);
+                // Gunakan relative path untuk mencegah mixed content block pada HTTPS
+                const url = `/attendance/latest?since_id=${maxLogId}&filter=${encodeURIComponent(currentFilter)}`;
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 if (!response.ok) return;
                 const data = await response.json();
                 
-                if (data.status === 'success' && data.logs && data.logs.length > 0) {
-                    data.logs.forEach(log => {
-                        insertLogRow(log, true);
-                    });
+                if (data.status === 'success') {
+                    if (data.logs && data.logs.length > 0) {
+                        data.logs.forEach(log => {
+                            insertLogRow(log, true);
+                        });
+                    }
+                    if (data.max_id && data.max_id > maxLogId) {
+                        maxLogId = data.max_id;
+                    }
                 }
             } catch (err) {
                 console.error("Live poll error:", err);

@@ -49,6 +49,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'status' => 'success',
+            'max_id' => AttendanceLog::max('id') ?? $sinceId,
             'logs' => $logs
         ]);
     }
