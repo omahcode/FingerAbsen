@@ -81,69 +81,50 @@ class DeviceController extends Controller
     public function clearAdmin($id)
     {
         $device = Device::findOrFail($id);
+        
+        // Simpan ke antrean perintah ADMS
+        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', 'CLEAR ADMIN', now()->addMinutes(10));
+        
+        // Hapus juga hak admin di database lokal
+        \App\Models\Student::where('privilege', '!=', '0')->update(['privilege' => '0']);
+
+        // Coba via service python jika aktif
         try {
-            $response = Http::timeout(10)->post('http://127.0.0.1:5000/api/clear_admins', [
+            $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+            Http::timeout(3)->post($serviceUrl . '/api/clear_admins', [
                 'ip_address' => $device->ip_address,
                 'port' => $device->port
             ]);
+        } catch (\Exception $e) {}
 
-            if ($response->successful() && $response->json('status') === 'success') {
-                // Hapus juga hak admin di database lokal
-                \App\Models\Student::where('privilege', '!=', '0')->update(['privilege' => '0']);
-                return redirect()->back()->with('success', 'Hak Admin berhasil dihapus dari mesin dan sistem. Gembok mesin sudah terbuka.');
-            }
-            return redirect()->back()->with('error', 'Gagal buka kunci mesin: ' . $response->json('error', 'Unknown Error'));
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal koneksi ke Service Python: ' . $e->getMessage());
-        }
+        return redirect()->back()->with('success', 'Perintah buka kunci mesin telah dikirim ke antrean mesin.');
     }
 
     public function syncTime($id)
     {
         $device = Device::findOrFail($id);
+        $time = now()->format('Y-m-d H:i:s');
+
+        // Simpan ke antrean perintah ADMS
+        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', "SET OPTIONS DateTime={$time}", now()->addMinutes(10));
+
+        // Coba via service python jika aktif
         try {
-            $response = Http::timeout(10)->post('http://127.0.0.1:5000/api/sync_time', [
+            $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+            Http::timeout(3)->post($serviceUrl . '/api/sync_time', [
                 'ip_address' => $device->ip_address,
                 'port' => $device->port
             ]);
+        } catch (\Exception $e) {}
 
-            if ($response->successful() && $response->json('status') === 'success') {
-                $time = $response->json('time_synced');
-                return redirect()->back()->with('success', "Waktu pada mesin {$device->name} berhasil disinkronkan menjadi: $time.");
-            }
-            return redirect()->back()->with('error', 'Gagal sinkronisasi waktu mesin: ' . $response->json('error', 'Unknown Error'));
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal koneksi ke Service Python: ' . $e->getMessage());
-        }
+        return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke mesin.");
     }
 
     public function syncTimeAll()
     {
-        $devices = Device::all();
-        $successCount = 0;
-        $failedCount = 0;
+        $time = now()->format('Y-m-d H:i:s');
+        \Illuminate\Support\Facades\Cache::put('adms_cmd_ALL', "SET OPTIONS DateTime={$time}", now()->addMinutes(10));
 
-        foreach ($devices as $device) {
-            try {
-                $response = Http::timeout(5)->post('http://127.0.0.1:5000/api/sync_time', [
-                    'ip_address' => $device->ip_address,
-                    'port' => $device->port
-                ]);
-
-                if ($response->successful() && $response->json('status') === 'success') {
-                    $successCount++;
-                } else {
-                    $failedCount++;
-                }
-            } catch (\Exception $e) {
-                $failedCount++;
-            }
-        }
-
-        if ($failedCount > 0) {
-            return redirect()->back()->with('success', "Sync jam selesai. Berhasil: $successCount mesin. Gagal: $failedCount mesin (pastikan mesin menyala).");
-        }
-
-        return redirect()->back()->with('success', "Waktu pada semua mesin ($successCount mesin) berhasil disinkronkan dengan jam komputer ini.");
+        return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke semua mesin.");
     }
 }

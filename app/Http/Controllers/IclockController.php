@@ -78,6 +78,18 @@ class IclockController extends Controller
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
 
+        // Cek apakah ada antrean perintah ADMS untuk mesin ini
+        $cmdKey = "adms_cmd_" . ($sn !== 'UNKNOWN' ? $sn : 'ALL');
+        $pendingCmd = \Illuminate\Support\Facades\Cache::pull($cmdKey) 
+                   ?: \Illuminate\Support\Facades\Cache::pull("adms_cmd_ALL");
+
+        if ($pendingCmd) {
+            $cmdId = rand(100, 999);
+            Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$pendingCmd}");
+            return response("C:{$cmdId}:{$pendingCmd}\n", 200)
+                ->header('Content-Type', 'text/plain');
+        }
+
         return response("OK\n", 200)->header('Content-Type', 'text/plain');
     }
 
@@ -88,6 +100,7 @@ class IclockController extends Controller
     {
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
+        Log::info("Hasil ADMS Command dari mesin {$sn}: " . $request->getContent());
 
         return response("OK\n", 200)->header('Content-Type', 'text/plain');
     }
