@@ -13,8 +13,10 @@ class MajorController extends Controller {
         Major::create(['name' => $request->name]);
         return redirect()->back()->with('success', 'Jurusan ditambahkan');
     }
-    public function destroy(Major $major) {
+    public function destroy($id) {
+        $major = Major::findOrFail($id);
+        $name = $major->name;
         $major->delete();
-        return redirect()->back()->with('success', 'Jurusan dihapus');
+        return redirect()->back()->with('success', "Jurusan '{$name}' berhasil dihapus");
     }
 }

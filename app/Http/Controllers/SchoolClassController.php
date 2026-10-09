@@ -18,8 +18,10 @@ class SchoolClassController extends Controller {
         SchoolClass::create($request->all());
         return redirect()->back()->with('success', 'Kelas ditambahkan');
     }
-    public function destroy(SchoolClass $schoolClass) {
-        $schoolClass->delete();
-        return redirect()->back()->with('success', 'Kelas dihapus');
+    public function destroy($id) {
+        $class = SchoolClass::findOrFail($id);
+        $name = $class->name;
+        $class->delete();
+        return redirect()->back()->with('success', "Kelas '{$name}' berhasil dihapus");
     }
 }
