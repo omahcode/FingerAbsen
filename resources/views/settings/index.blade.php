@@ -185,7 +185,7 @@
                                 type="text" 
                                 name="tv_title" 
                                 value="{{ old('tv_title', $settings['tv_title']) }}" 
-                                placeholder="Contoh: SELAMAT DATANG DI SMK NEGERI 1"
+                                placeholder="Contoh: SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM"
                                 class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
                             >
                         </div>

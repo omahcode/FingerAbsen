@@ -21,7 +21,7 @@ class TvController extends Controller
 
         $tvSettings = [
             'school_name' => $schoolName,
-            'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI ' . strtoupper($schoolName)),
+            'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM'),
             'tv_subtitle' => Setting::get('tv_subtitle', 'Sistem Informasi Presensi Biometrik Fingerprint'),
             'tv_running_text' => Setting::get('tv_running_text', "Selamat Datang! Batas absensi masuk tepat waktu adalah pukul {$checkinEnd} WIB. Tingkatkan kedisiplinan dan raih prestasi terbaik!"),
             'tv_slide_interval' => (int) Setting::get('tv_slide_interval', '30'),

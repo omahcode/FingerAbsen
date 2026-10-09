@@ -24,7 +24,7 @@ class SettingController extends Controller
             'wa_notification' => Setting::get('wa_notification', '1'),
 
             // TV Mode Settings
-            'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI ' . strtoupper($schoolName)),
+            'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM'),
             'tv_subtitle' => Setting::get('tv_subtitle', 'Sistem Informasi Presensi Biometrik Fingerprint'),
             'tv_running_text' => Setting::get('tv_running_text', 'Selamat Datang! Batas absensi masuk tepat waktu adalah pukul 07:15 WIB. Jagalah selalu kedisiplinan dan semangat belajar.'),
             'tv_slide_interval' => Setting::get('tv_slide_interval', '30'),
@@ -72,7 +72,7 @@ class SettingController extends Controller
         Setting::set('wa_notification', $request->has('wa_notification') ? '1' : '0', 'Status Notifikasi WhatsApp');
 
         // Pengaturan TV Mode
-        Setting::set('tv_title', $request->tv_title ?: 'SELAMAT DATANG DI ' . strtoupper($request->school_name), 'Judul Utama TV');
+        Setting::set('tv_title', $request->tv_title ?: 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM', 'Judul Utama TV');
         Setting::set('tv_subtitle', $request->tv_subtitle ?: 'Sistem Informasi Presensi Biometrik Fingerprint', 'Subjudul TV');
         Setting::set('tv_running_text', $request->tv_running_text ?: '', 'Teks Berjalan Pengumuman TV');
         Setting::set('tv_slide_interval', (string) $request->tv_slide_interval, 'Durasi Slide TV (Detik)');
