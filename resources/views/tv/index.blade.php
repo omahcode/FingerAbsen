@@ -389,10 +389,14 @@
             ].filter(Boolean);
 
             podOrder.forEach(d => {
+                const avatarContent = d.photo 
+                    ? `<img src="${d.photo}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` 
+                    : d.ini;
+
                 h += `<div class="pod-card ${d.c}">
                     ${d.r===1?'<div class="pod-crown">&#x1F451;</div>':''}
                     <div class="pod-rank-num">#${d.r}</div>
-                    <div class="pod-avatar">${d.ini}</div>
+                    <div class="pod-avatar">${avatarContent}</div>
                     <div class="pod-name">${d.name.split(' ').slice(0,2).join(' ')}</div>
                     <div class="pod-class">${d.cls}</div>
                     <div class="pod-streak-display">${d.pts} <small style="font-size:0.55em;">pts (${d.streak} Hari)</small></div>
@@ -406,9 +410,13 @@
                     const rk = i+4;
                     const maxVal = d.max || 50;
                     const pct = Math.min(100, Math.round((d.pts / maxVal) * 100));
+                    const listAvatar = d.photo 
+                        ? `<img src="${d.photo}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` 
+                        : d.ini;
+
                     h += `<div class="board-item">
                         <div class="bi-rank">#${rk}</div>
-                        <div class="bi-avatar" style="background:${color}15;color:${color}">${d.ini}</div>
+                        <div class="bi-avatar" style="background:${color}15;color:${color}">${listAvatar}</div>
                         <div class="bi-info">
                             <div class="bi-name">${d.name} <span class="bi-class-badge">${d.cls}</span></div>
                             <div class="bi-meta"><span><i class="fas fa-check-circle text-emerald-500"></i> ${d.days || d.streak} Hari Hadir</span> &bull; <span>Tap: ${d.tap} WIB</span></div>

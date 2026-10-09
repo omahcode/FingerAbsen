@@ -152,16 +152,39 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'school_class_id' => 'required|exists:school_classes,id',
-            'parent_phone' => 'nullable|string|max:25'
+            'parent_phone' => 'nullable|string|max:25',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048'
+        ], [
+            'photo.image' => 'File foto profil harus berupa gambar.',
+            'photo.mimes' => 'Format foto harus berupa JPG, PNG, atau WEBP.',
+            'photo.max' => 'Ukuran file foto maksimal adalah 2MB.'
         ]);
 
-        $student->update([
+        $data = [
             'name' => $request->name,
             'school_class_id' => $request->school_class_id,
             'parent_phone' => $request->parent_phone
-        ]);
+        ];
+
+        // Hapus foto jika diminta
+        if ($request->has('remove_photo') && $request->remove_photo == '1') {
+            if ($student->photo && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->photo)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($student->photo);
+            }
+            $data['photo'] = null;
+        }
+
+        // Upload foto baru jika ada
+        if ($request->hasFile('photo')) {
+            if ($student->photo && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->photo)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($student->photo);
+            }
+            $data['photo'] = $request->file('photo')->store('students', 'public');
+        }
+
+        $student->update($data);
 
         // Kirim ke antrean ADMS
         \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$request->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
@@ -182,11 +205,16 @@ class StudentController extends Controller
             } catch (\Exception $e) {}
         }
         
-        return redirect()->route('students.index')->with('success', 'Data siswa berhasil diperbarui.');
+        return redirect()->route('students.index')->with('success', 'Data siswa dan foto profil berhasil diperbarui.');
     }
 
     public function destroy(Request $request, Student $student)
     {
+        // Hapus foto dari storage
+        if ($student->photo && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->photo)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($student->photo);
+        }
+
         // Kirim ke antrean ADMS untuk hapus user di mesin
         \App\Http\Controllers\IclockController::queueCommand("DATA DELETE USER PIN={$student->device_user_id}");
 
@@ -218,6 +246,11 @@ class StudentController extends Controller
         $count = 0;
 
         foreach ($students as $student) {
+            // Hapus foto dari storage
+            if ($student->photo && \Illuminate\Support\Facades\Storage::disk('public')->exists($student->photo)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($student->photo);
+            }
+
             // Hapus dari mesin
             foreach ($devices as $device) {
                 try {

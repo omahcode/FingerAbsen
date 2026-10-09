@@ -61,6 +61,7 @@ class TvController extends Controller
                 'time' => $timeStr,
                 'is_ontime' => $isOnTime,
                 'ini' => strtoupper(substr($student->name ?? 'S', 0, 1)),
+                'photo' => ($student && $student->photo) ? asset('storage/' . $student->photo) : null,
             ];
         })->values()->take(10)->toArray();
 
@@ -191,6 +192,7 @@ class TvController extends Controller
                 'streak' => $streak,
                 'tap' => $latestTap ?: '06:45',
                 'days' => $daysCount,
+                'photo' => $student->photo ? asset('storage/' . $student->photo) : null,
             ];
         }
 

@@ -8,11 +8,20 @@ class Student extends Model
 {
     protected $fillable = [
         'name',
+        'photo',
         'school_class_id',
         'parent_phone',
         'device_user_id',
         'privilege'
     ];
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if ($this->photo) {
+            return asset('storage/' . $this->photo);
+        }
+        return null;
+    }
 
     public function schoolClass()
     {

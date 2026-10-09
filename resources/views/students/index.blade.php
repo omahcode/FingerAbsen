@@ -108,11 +108,22 @@
                     </td>
                     <td class="p-3 font-mono text-gray-600">{{ $s->device_user_id }}</td>
                     <td class="p-3">
-                        <div class="flex items-center gap-1.5">
-                            <span class="font-semibold text-gray-900">{{ $s->name }}</span>
-                            @if($s->fingerprint_templates_count > 0)
-                                <i class="fas fa-fingerprint text-emerald-500 text-xs" title="Sidik Jari Terdaftar ({{ $s->fingerprint_templates_count }} jari)"></i>
+                        <div class="flex items-center gap-2.5">
+                            @if($s->photo)
+                                <img src="{{ asset('storage/' . $s->photo) }}" alt="{{ $s->name }}" class="w-8 h-8 rounded-full object-cover border border-gray-200 shadow-xs shrink-0">
+                            @else
+                                <div class="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                    {{ strtoupper(substr($s->name, 0, 1)) }}
+                                </div>
                             @endif
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-semibold text-gray-900 truncate">{{ $s->name }}</span>
+                                    @if($s->fingerprint_templates_count > 0)
+                                        <i class="fas fa-fingerprint text-emerald-500 text-xs shrink-0" title="Sidik Jari Terdaftar ({{ $s->fingerprint_templates_count }} jari)"></i>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td class="p-3">{{ $s->schoolClass->name ?? '-' }}</td>
