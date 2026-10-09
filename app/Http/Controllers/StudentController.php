@@ -9,12 +9,22 @@ use Illuminate\Support\Facades\Http;
 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\StudentsImport;
+use App\Exports\StudentTemplateExport;
 
 class StudentController extends Controller
 {
     public function importForm()
     {
-        return view('students.import');
+        $classes = SchoolClass::with('major')->orderBy('name')->get();
+        return view('students.import', compact('classes'));
+    }
+
+    public function downloadTemplate(Request $request)
+    {
+        $format = $request->query('format', 'xlsx');
+        $fileName = 'template-siswa.' . ($format === 'csv' ? 'csv' : 'xlsx');
+
+        return Excel::download(new StudentTemplateExport, $fileName);
     }
 
     public function importExcel(Request $request)
@@ -22,14 +32,26 @@ class StudentController extends Controller
         set_time_limit(300);
 
         $request->validate([
-            'file_excel' => 'required|mimes:xlsx,xls,csv|max:2048'
+            'file_excel' => 'required|file|mimes:xlsx,xls,csv,txt|max:4096'
+        ], [
+            'file_excel.required' => 'Pilih file Excel (.xlsx) atau CSV yang akan diunggah.',
+            'file_excel.mimes' => 'Format file harus berupa Excel (.xlsx, .xls) atau CSV (.csv).',
+            'file_excel.max' => 'Ukuran file maksimal adalah 4MB.'
         ]);
 
         try {
-            Excel::import(new StudentsImport(), $request->file('file_excel'));
-            return redirect()->route('students.index')->with('success', 'Data siswa berhasil diimport dan otomatis disebar ke seluruh mesin.');
+            $import = new StudentsImport();
+            Excel::import($import, $request->file('file_excel'));
+
+            $message = "Berhasil mengimpor {$import->importedCount} data siswa.";
+            if ($import->skippedCount > 0) {
+                $skippedInfo = !empty($import->errors) ? ' (Catatan: ' . implode(', ', array_slice($import->errors, 0, 3)) . ')' : '';
+                return redirect()->route('students.index')->with('success', "{$message} Namun terdapat {$import->skippedCount} baris yang dilewati{$skippedInfo}.");
+            }
+
+            return redirect()->route('students.index')->with('success', "{$message} Data telah otomatis disinkronkan ke mesin fingerprint.");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal mengimport data. Pastikan format Excel sesuai. Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengimpor data. Pastikan format kolom sesuai template. Error: ' . $e->getMessage());
         }
     }
 

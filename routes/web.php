@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('majors', MajorController::class)->except(['create', 'edit', 'update', 'show']);
     Route::resource('classes', SchoolClassController::class)->except(['create', 'edit', 'update', 'show']);
 
+    Route::get('students/download-template', [StudentController::class, 'downloadTemplate'])->name('students.downloadTemplate');
     Route::get('students/import', [StudentController::class, 'importForm'])->name('students.importForm');
     Route::post('students/import', [StudentController::class, 'importExcel'])->name('students.importExcel');
     Route::post('students/delete-multiple', [StudentController::class, 'destroyMultiple'])->name('students.destroyMultiple');
