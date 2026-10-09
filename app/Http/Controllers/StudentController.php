@@ -55,13 +55,41 @@ class StudentController extends Controller
         }
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::with('schoolClass.major')
-            ->withCount('fingerprintTemplates')
-            ->get();
+        $query = Student::with('schoolClass.major')
+            ->withCount('fingerprintTemplates');
+
+        // Filter berdasarkan kelas
+        if ($request->filled('class_id')) {
+            $query->where('school_class_id', $request->class_id);
+        }
+
+        // Filter pencarian nama atau NIS
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('device_user_id', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter status sidik jari
+        if ($request->query('fingerprint') === 'registered') {
+            $query->has('fingerprintTemplates');
+        } elseif ($request->query('fingerprint') === 'unregistered') {
+            $query->doesntHave('fingerprintTemplates');
+        }
+
+        $students = $query->orderBy('name')->get();
+        $classes = SchoolClass::with('major')->orderBy('name')->get();
         $devices = Device::all();
-        return view('students.index', compact('students', 'devices'));
+        $selectedClassId = $request->class_id;
+        $search = $request->search;
+        $selectedFingerprint = $request->fingerprint;
+        $totalStudents = Student::count();
+
+        return view('students.index', compact('students', 'classes', 'devices', 'selectedClassId', 'search', 'selectedFingerprint', 'totalStudents'));
     }
 
     public function create()
