@@ -13,52 +13,159 @@
     @vite(['resources/js/app.js'])
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
-    <nav class="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white shadow-md">
-        <div class="container mx-auto font-bold text-xl flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-fingerprint text-yellow-300 text-2xl"></i>
-                <span>Sekolah Fingerprint System</span>
-            </div>
-            <div class="flex space-x-4 items-center">
-                <a href="{{ route('devices.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Mesin</a>
-                <a href="{{ route('majors.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Jurusan</a>
-                <a href="{{ route('classes.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Kelas</a>
-                <a href="{{ route('students.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Siswa</a>
-                <a href="{{ route('attendance.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Absensi</a>
-                <a href="{{ route('reports.index') }}" class="text-sm font-medium hover:text-blue-200 transition">Rekap Siswa</a>
-                <a href="{{ route('sync.index') }}" class="text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-3 py-1 rounded-full shadow-sm transition">
-                    <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi
-                </a>
-                <a href="{{ route('settings.index') }}" class="text-sm font-medium hover:text-blue-200 transition">
-                    <i class="fas fa-cog mr-0.5"></i> Pengaturan
+    <nav class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Brand Logo & Name -->
+                <a href="{{ url('/') }}" class="flex items-center space-x-2.5 font-bold text-lg sm:text-xl tracking-tight hover:opacity-90 transition">
+                    <div class="w-9 h-9 rounded-lg bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
+                        <i class="fas fa-fingerprint text-yellow-300 text-xl"></i>
+                    </div>
+                    <span class="truncate max-w-[200px] sm:max-w-none">Fingerprint Sekolah</span>
                 </a>
 
+                <!-- Desktop Navigation Links (Visible on Large Screens) -->
+                <div class="hidden xl:flex items-center space-x-1 font-medium text-sm">
+                    <a href="{{ route('devices.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-hdd mr-1 text-xs"></i> Mesin
+                    </a>
+                    <a href="{{ route('majors.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-graduation-cap mr-1 text-xs"></i> Jurusan
+                    </a>
+                    <a href="{{ route('classes.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-chalkboard mr-1 text-xs"></i> Kelas
+                    </a>
+                    <a href="{{ route('students.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-user-graduate mr-1 text-xs"></i> Siswa
+                    </a>
+                    <a href="{{ route('attendance.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-clipboard-check mr-1 text-xs"></i> Absensi
+                    </a>
+                    <a href="{{ route('reports.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-chart-bar mr-1 text-xs"></i> Rekap
+                    </a>
+                    <a href="{{ route('sync.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold shadow-sm' : 'bg-yellow-400/20 text-yellow-200 hover:bg-yellow-400 hover:text-gray-900' }} transition">
+                        <i class="fas fa-sync-alt mr-1 text-xs"></i> Sinkronisasi
+                    </a>
+                    <a href="{{ route('settings.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                        <i class="fas fa-cog mr-1 text-xs"></i> Pengaturan
+                    </a>
+                    <a href="{{ route('tv.index') }}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-200 hover:text-white border border-emerald-400/30 transition">
+                        <i class="fas fa-tv mr-1 text-xs"></i> Mode TV
+                    </a>
+
+                    @auth
+                    <!-- User Profile & Logout -->
+                    <div class="flex items-center space-x-2 pl-3 ml-2 border-l border-blue-500/50">
+                        <div class="flex items-center space-x-1.5 text-xs text-blue-100 font-medium">
+                            <i class="fas fa-user-circle text-base text-yellow-300"></i>
+                            <span class="max-w-[90px] truncate">{{ Auth::user()->name }}</span>
+                        </div>
+                        <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question">
+                            @csrf
+                            <button type="submit" class="bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white text-xs px-2.5 py-1 rounded border border-red-400/40 transition">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                    @else
+                    <a href="{{ route('login') }}" class="text-sm font-bold bg-white text-blue-800 px-3.5 py-1.5 rounded-full hover:bg-blue-50 transition shadow-sm ml-2">
+                        Login
+                    </a>
+                    @endauth
+                </div>
+
+                <!-- Mobile Hamburger Toggle Button (Visible on Small Screens) -->
+                <div class="flex items-center space-x-2 xl:hidden">
+                    <a href="{{ route('tv.index') }}" target="_blank" class="text-xs font-semibold bg-emerald-500/30 text-emerald-200 px-2.5 py-1.5 rounded-lg border border-emerald-400/40 flex items-center gap-1">
+                        <i class="fas fa-tv"></i> TV
+                    </a>
+                    <button type="button" id="mobile-menu-btn" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white focus:outline-none transition" aria-label="Buka Menu">
+                        <i class="fas fa-bars text-xl" id="menu-icon-bars"></i>
+                        <i class="fas fa-times text-xl hidden" id="menu-icon-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Drawer / Dropdown -->
+            <div id="mobile-menu" class="hidden xl:hidden py-3 border-t border-blue-600/60 transition-all duration-200">
+                <div class="grid grid-cols-2 gap-2 text-sm font-medium pb-3">
+                    <a href="{{ route('devices.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-hdd w-5 text-center text-blue-300"></i> Mesin
+                    </a>
+                    <a href="{{ route('majors.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-graduation-cap w-5 text-center text-indigo-300"></i> Jurusan
+                    </a>
+                    <a href="{{ route('classes.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-chalkboard w-5 text-center text-purple-300"></i> Kelas
+                    </a>
+                    <a href="{{ route('students.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-user-graduate w-5 text-center text-emerald-300"></i> Siswa
+                    </a>
+                    <a href="{{ route('attendance.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-clipboard-check w-5 text-center text-green-300"></i> Absensi
+                    </a>
+                    <a href="{{ route('reports.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-chart-bar w-5 text-center text-amber-300"></i> Rekap
+                    </a>
+                    <a href="{{ route('sync.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold' : 'bg-yellow-400/20 text-yellow-200' }}">
+                        <i class="fas fa-sync-alt w-5 text-center"></i> Sinkronisasi
+                    </a>
+                    <a href="{{ route('settings.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                        <i class="fas fa-cog w-5 text-center text-sky-300"></i> Pengaturan
+                    </a>
+                </div>
+
                 @auth
-                <!-- User Profile & Logout -->
-                <div class="flex items-center space-x-3 pl-3 border-l border-blue-500/50">
-                    <div class="flex items-center space-x-1.5 text-xs text-blue-100 font-medium">
-                        <i class="fas fa-user-circle text-base text-yellow-300"></i>
-                        <span>{{ Auth::user()->name }}</span>
+                <div class="pt-3 border-t border-blue-600/60 flex items-center justify-between">
+                    <div class="flex items-center space-x-2 text-xs text-blue-100">
+                        <i class="fas fa-user-circle text-lg text-yellow-300"></i>
+                        <span>Login: <strong>{{ Auth::user()->name }}</strong></span>
                     </div>
                     <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question">
                         @csrf
-                        <button type="submit" class="bg-red-500/20 hover:bg-red-500/40 text-red-100 text-xs px-2.5 py-1 rounded border border-red-400/40 transition">
-                            <i class="fas fa-sign-out-alt mr-0.5"></i> Keluar
+                        <button type="submit" class="bg-red-500/30 hover:bg-red-500 text-red-100 text-xs px-3 py-1.5 rounded-lg border border-red-400/40 transition flex items-center gap-1.5">
+                            <i class="fas fa-sign-out-alt"></i> Keluar
                         </button>
                     </form>
                 </div>
                 @else
-                <a href="{{ route('login') }}" class="text-sm font-bold bg-white text-blue-800 px-3 py-1 rounded-full hover:bg-blue-50 transition">
-                    Login
-                </a>
+                <div class="pt-3 border-t border-blue-600/60">
+                    <a href="{{ route('login') }}" class="block text-center text-sm font-bold bg-white text-blue-800 py-2 rounded-lg hover:bg-blue-50 transition shadow-sm">
+                        <i class="fas fa-sign-in-alt mr-1"></i> Login Admin
+                    </a>
+                </div>
                 @endauth
             </div>
         </div>
     </nav>
     
-    <main class="container mx-auto mt-8 px-4 pb-16">
+    <main class="container mx-auto mt-4 sm:mt-6 md:mt-8 px-3 sm:px-4 md:px-6 pb-16">
         @yield('content')
     </main>
+
+    <script>
+        // Toggle Mobile Menu
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const iconBars = document.getElementById('menu-icon-bars');
+        const iconTimes = document.getElementById('menu-icon-times');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                const isHidden = mobileMenu.classList.contains('hidden');
+                if (isHidden) {
+                    mobileMenu.classList.remove('hidden');
+                    iconBars.classList.add('hidden');
+                    iconTimes.classList.remove('hidden');
+                } else {
+                    mobileMenu.classList.add('hidden');
+                    iconBars.classList.remove('hidden');
+                    iconTimes.classList.add('hidden');
+                }
+            });
+        }
+    </script>
 
     <!-- SweetAlert Global Handler -->
     <script>

@@ -14,9 +14,9 @@
                 Menyinkronkan total <strong>{{ $studentsCount ?? 0 }} Siswa</strong> dan <strong>{{ $templatesCount ?? 0 }} Template Sidik Jari</strong> dari database web ke <strong>Mesin 1</strong> dan <strong>Mesin 2</strong>. Siswa yang sudah didaftarkan di satu mesin akan otomatis bisa absen di mesin lainnya.
             </p>
         </div>
-        <form action="{{ route('sync.pushAll') }}" method="POST" class="mt-4 md:mt-0" data-confirm="Kirim seluruh data siswa dan template sidik jari dari database ke semua mesin fingerprint?" data-title="⚡ Sebar Data ke Semua Mesin" data-icon="question">
+        <form action="{{ route('sync.pushAll') }}" method="POST" class="mt-4 md:mt-0 w-full md:w-auto" data-confirm="Kirim seluruh data siswa dan template sidik jari dari database ke semua mesin fingerprint?" data-title="⚡ Sebar Data ke Semua Mesin" data-icon="question">
             @csrf
-            <button type="submit" class="bg-white hover:bg-gray-100 text-indigo-700 font-bold py-3 px-6 rounded-lg shadow transition-all duration-200 transform hover:scale-105">
+            <button type="submit" class="w-full md:w-auto text-center bg-white hover:bg-gray-100 text-indigo-700 font-bold py-3 px-6 rounded-lg shadow transition-all duration-200 transform hover:scale-105">
                 ⚡ Mulai Sebar Data
             </button>
         </form>

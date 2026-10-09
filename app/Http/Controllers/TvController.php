@@ -25,6 +25,7 @@ class TvController extends Controller
             'tv_subtitle' => Setting::get('tv_subtitle', 'Sistem Informasi Presensi Biometrik Fingerprint'),
             'tv_running_text' => Setting::get('tv_running_text', "Selamat Datang! Batas absensi masuk tepat waktu adalah pukul {$checkinEnd} WIB. Tingkatkan kedisiplinan dan raih prestasi terbaik!"),
             'tv_slide_interval' => (int) Setting::get('tv_slide_interval', '30'),
+            'tv_auto_fullscreen' => Setting::get('tv_auto_fullscreen', '1') === '1',
             'tv_show_welcome' => Setting::get('tv_show_welcome', '1') === '1',
             'tv_show_daily' => Setting::get('tv_show_daily', '1') === '1',
             'tv_show_weekly' => Setting::get('tv_show_weekly', '1') === '1',

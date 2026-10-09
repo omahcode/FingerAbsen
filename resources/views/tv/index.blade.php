@@ -177,8 +177,90 @@
         .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,0,0,0.15); cursor: pointer; transition: all 0.3s; }
         .dot.active { width: 28px; border-radius: 10px; background: var(--blue); }
 
-        .btn-settings-tv { position: fixed; bottom: 44px; right: 1.5rem; z-index: 60; width: 36px; height: 36px; border-radius: 50%; background: white; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; color: var(--text-muted); text-decoration: none; transition: all 0.3s; }
-        .btn-settings-tv:hover { transform: rotate(45deg) scale(1.1); color: var(--blue); }
+        .tv-floating-tools { position: fixed; bottom: 44px; right: 1rem; z-index: 60; display: flex; gap: 8px; align-items: center; }
+        .btn-tv-action { width: 36px; height: 36px; border-radius: 50%; background: white; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; color: var(--text-muted); text-decoration: none; cursor: pointer; transition: all 0.3s; font-size: 0.9rem; }
+        .btn-tv-action:hover { transform: scale(1.1); color: var(--blue); }
+
+        /* ==================== MOBILE & TABLET RESPONSIVENESS ==================== */
+        @media (max-width: 900px) {
+            .slides { padding: 0.75rem 1rem 3.5rem; }
+            .slide { inset: 0.75rem 1rem 3.5rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .s-header { margin-bottom: 0.5rem; }
+            .s-header h2 { font-size: 1.25rem; letter-spacing: 0.5px; }
+            .s-header h2 i { font-size: 1.1rem; }
+            .s-header p { font-size: 0.8rem; }
+            
+            /* Slide 1 Mobile */
+            .s1-wrap { padding: 1.2rem 1rem; border-radius: 20px; }
+            .s1-icon { font-size: 3.5rem; margin-bottom: 0.25rem; }
+            .s1-title { font-size: 1.85rem; line-height: 1.2; }
+            .s1-sub { font-size: 0.95rem; }
+            .s1-clock-wrap { margin-top: 1rem; padding: 0.75rem 1.2rem; gap: 1rem; border-radius: 16px; width: 90%; max-width: 320px; justify-content: center; }
+            .s1-time { font-size: 2.2rem; }
+            .s1-date-box { border-left: none; border-top: 1px solid #e2e8f0; padding-left: 0; padding-top: 0.5rem; text-align: center; width: 100%; }
+            .s1-day { font-size: 1rem; }
+            .s1-date { font-size: 0.82rem; }
+            .stats-strip { margin-top: 1rem; gap: 0.5rem; display: grid; grid-template-columns: 1fr 1fr; width: 100%; max-width: 400px; }
+            .stat-pill { padding: 0.5rem 0.75rem; border-radius: 12px; gap: 0.5rem; }
+            .stat-pill i { font-size: 1rem; }
+            .stat-pill .stat-val { font-size: 1rem; }
+            .stat-pill .stat-lbl { font-size: 0.68rem; }
+
+            /* Slide 2 Mobile Daily */
+            .s2-grid { grid-template-columns: 1fr; gap: 0.75rem; overflow-y: auto; }
+            .s2-card { padding: 0.6rem 0.8rem; gap: 0.6rem; border-radius: 12px; }
+            .s2-medal { font-size: 1.4rem; width: 30px; }
+            .s2-name { font-size: 0.9rem; }
+            .s2-class { font-size: 0.75rem; }
+            .s2-time { font-size: 0.78rem; padding: 0.25rem 0.5rem; }
+            .s2-table-wrap { padding: 0.6rem 0.75rem; border-radius: 12px; }
+            .s2-table-wrap th { font-size: 0.65rem; padding: 0.4rem; }
+            .s2-table-wrap td { font-size: 0.78rem; padding: 0.4rem; }
+
+            /* Slide 3,4,5 Mobile Podiums */
+            .podium { gap: 0.4rem; width: 100%; padding: 0.25rem 0; }
+            .pod-card { padding: 0.5rem 0.3rem; border-radius: 14px; }
+            .pod-1 { width: 35%; min-height: 180px; }
+            .pod-2 { width: 31%; min-height: 155px; }
+            .pod-3 { width: 31%; min-height: 145px; }
+            .pod-crown { font-size: 1.3rem; top: -16px; }
+            .pod-rank-num { font-size: 0.85rem; top: 4px; right: 6px; }
+            .pod-avatar { width: 42px; height: 42px; font-size: 1.2rem; }
+            .pod-1 .pod-avatar { width: 50px; height: 50px; font-size: 1.4rem; }
+            .pod-name { font-size: 0.75rem; margin-top: 6px; line-height: 1.2; text-align: center; }
+            .pod-class { font-size: 0.65rem; }
+            .pod-streak-display { font-size: 0.9rem; padding-top: 4px; }
+
+            /* Board List Mobile */
+            .board-list { gap: 0.3rem; }
+            .board-item { padding: 0.4rem 0.6rem; gap: 0.5rem; border-radius: 10px; }
+            .bi-rank { font-size: 0.82rem; width: 26px; }
+            .bi-avatar { width: 28px; height: 28px; font-size: 0.8rem; }
+            .bi-name { font-size: 0.8rem; }
+            .bi-meta { font-size: 0.68rem; }
+            .bi-progress { display: none; }
+            .bi-pts { font-size: 0.88rem; width: auto; }
+
+            .nav-arrow { display: none; }
+            .nav-dots { bottom: 40px; }
+            .ticker-bar { height: 32px; font-size: 0.78rem; padding: 0 0.5rem; }
+            .ticker-badge { font-size: 0.65rem; padding: 2px 7px; margin-right: 0.5rem; }
+            .tv-floating-tools { bottom: 38px; right: 0.5rem; gap: 5px; }
+            .btn-tv-action { width: 30px; height: 30px; font-size: 0.75rem; }
+        }
+
+        @media (max-width: 480px) {
+            .s1-title { font-size: 1.5rem; }
+            .s1-icon { font-size: 2.8rem; }
+            .s1-time { font-size: 1.8rem; }
+            .stats-strip { grid-template-columns: 1fr; max-width: 260px; }
+            .podium { gap: 0.25rem; }
+            .pod-name { font-size: 0.7rem; }
+            .pod-class { font-size: 0.6rem; }
+            .pod-streak-display { font-size: 0.8rem; }
+            .pod-1 .pod-avatar { width: 44px; height: 44px; }
+            .pod-2 .pod-avatar, .pod-3 .pod-avatar { width: 36px; height: 36px; }
+        }
     </style>
 </head>
 <body>
@@ -317,10 +399,18 @@
     </div>
     @endif
 
-    <!-- Quick Settings Link Button -->
-    <a href="{{ route('settings.index') }}" class="btn-settings-tv" title="Buka Pengaturan Mode TV" target="_blank">
-        <i class="fas fa-cog text-sm"></i>
-    </a>
+    <!-- Floating Quick Actions (Dashboard, Fullscreen, Settings) -->
+    <div class="tv-floating-tools">
+        <a href="{{ route('attendance.index') }}" class="btn-tv-action" title="Kembali ke Dashboard">
+            <i class="fas fa-th-large"></i>
+        </a>
+        <button type="button" id="btn-fullscreen-tv" class="btn-tv-action" title="Layar Penuh">
+            <i class="fas fa-expand"></i>
+        </button>
+        <a href="{{ route('settings.index') }}" class="btn-tv-action" title="Buka Pengaturan Mode TV" target="_blank">
+            <i class="fas fa-cog"></i>
+        </a>
+    </div>
 
     <script>
         // ======================== REAL DATA FROM BACKEND ========================
@@ -516,16 +606,95 @@
         document.getElementById('carousel')?.addEventListener('mouseenter', () => paused = true);
         document.getElementById('carousel')?.addEventListener('mouseleave', () => paused = false);
 
+        // Fullscreen Toggle Button & Auto-Fullscreen Logic
+        const autoFullscreen = {{ $tvSettings['tv_auto_fullscreen'] ? 'true' : 'false' }};
+
+        function enterFullscreen() {
+            if (!document.fullscreenElement) {
+                const el = document.documentElement;
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().catch(() => {});
+                } else if (el.webkitRequestFullscreen) {
+                    el.webkitRequestFullscreen();
+                } else if (el.msRequestFullscreen) {
+                    el.msRequestFullscreen();
+                }
+            }
+        }
+
+        function exitFullscreen() {
+            if (document.fullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                enterFullscreen();
+            } else {
+                exitFullscreen();
+            }
+        }
+
+        document.getElementById('btn-fullscreen-tv')?.addEventListener('click', toggleFullscreen);
+
+        // Auto Fullscreen saat halaman dibuka
+        if (autoFullscreen) {
+            // Coba langsung saat load
+            setTimeout(() => {
+                enterFullscreen();
+            }, 300);
+
+            // Karena browser mewajibkan interaksi pengguna (user gesture), pasang listener 1x klik/tap pertama
+            const onFirstUserGesture = () => {
+                enterFullscreen();
+                window.removeEventListener('click', onFirstUserGesture);
+                window.removeEventListener('touchstart', onFirstUserGesture);
+                window.removeEventListener('keydown', onFirstUserGesture);
+            };
+
+            window.addEventListener('click', onFirstUserGesture, { once: true });
+            window.addEventListener('touchstart', onFirstUserGesture, { once: true });
+            window.addEventListener('keydown', onFirstUserGesture, { once: true });
+        }
+
+        // Mobile Touch Gestures (Swipe Left / Right)
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const carouselEl = document.getElementById('carousel');
+
+        if (carouselEl) {
+            carouselEl.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            carouselEl.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            if (touchEndX < touchStartX - swipeThreshold) {
+                next(); // Geser ke kiri -> Slide selanjutnya
+            } else if (touchEndX > touchStartX + swipeThreshold) {
+                prev(); // Geser ke kanan -> Slide sebelumnya
+            }
+        }
+
         document.addEventListener('keydown', e => {
             if (e.key === 'ArrowRight') next();
             if (e.key === 'ArrowLeft') prev();
             if (e.key === ' ' || e.key === 'Spacebar') paused = !paused;
             if (e.key === 'f' || e.key === 'F') {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(() => {});
-                } else {
-                    document.exitFullscreen().catch(() => {});
-                }
+                toggleFullscreen();
             }
         });
 

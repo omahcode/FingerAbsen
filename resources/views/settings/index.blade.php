@@ -222,19 +222,29 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">
-                                <i class="fas fa-stopwatch text-indigo-500 mr-1"></i> Durasi Tiap Slide
+                                <i class="fas fa-stopwatch text-indigo-500 mr-1"></i> Durasi Tiap Slide (Carousel)
                             </label>
                             <div class="relative">
                                 <input 
                                     type="number" 
+                                    id="tv_slide_interval_input"
                                     name="tv_slide_interval" 
-                                    min="5" 
-                                    max="300"
+                                    min="3" 
+                                    max="600"
                                     value="{{ old('tv_slide_interval', $settings['tv_slide_interval']) }}" 
                                     required 
                                     class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
                                 >
                                 <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">detik</span>
+                            </div>
+                            <!-- Preset Chips -->
+                            <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span class="text-[10px] text-gray-400 font-semibold">Pilih Cepat:</span>
+                                <button type="button" onclick="setSlideInterval(10)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">10s</button>
+                                <button type="button" onclick="setSlideInterval(15)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">15s</button>
+                                <button type="button" onclick="setSlideInterval(20)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">20s</button>
+                                <button type="button" onclick="setSlideInterval(30)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">30s</button>
+                                <button type="button" onclick="setSlideInterval(60)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">1m</button>
                             </div>
                         </div>
 
@@ -259,7 +269,7 @@
                                     type="number" 
                                     name="tv_points_ontime" 
                                     min="1" 
-                                    max="100"
+                                    max="100" 
                                     value="{{ old('tv_points_ontime', $settings['tv_points_ontime']) }}" 
                                     required 
                                     class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
@@ -277,7 +287,7 @@
                                     type="number" 
                                     name="tv_points_late" 
                                     min="0" 
-                                    max="100"
+                                    max="100" 
                                     value="{{ old('tv_points_late', $settings['tv_points_late']) }}" 
                                     required 
                                     class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
@@ -285,6 +295,19 @@
                                 <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">pt</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Otomatis Fullscreen Toggle -->
+                    <div class="pt-3 border-t border-gray-100">
+                        <label class="flex items-center p-3 bg-indigo-50/60 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50 transition">
+                            <input type="checkbox" name="tv_auto_fullscreen" value="1" {{ ($settings['tv_auto_fullscreen'] ?? '1') == '1' ? 'checked' : '' }} class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                            <div class="ml-3">
+                                <span class="text-xs font-bold text-indigo-900 flex items-center">
+                                    <i class="fas fa-expand-arrows-alt text-indigo-600 mr-1.5"></i> Otomatis Layar Penuh (Auto Fullscreen) Saat Halaman TV Dibuka
+                                </span>
+                                <p class="text-[11px] text-indigo-700/80 mt-0.5">Otomatis beralih ke mode layar penuh saat layar TV pertama kali dibuka atau di-klik.</p>
+                            </div>
+                        </label>
                     </div>
 
                     <!-- Slide Toggles -->
@@ -319,10 +342,10 @@
             </div>
 
             <!-- Tombol Simpan -->
-            <div class="flex justify-end space-x-3 pt-2">
+            <div class="flex justify-end pt-2">
                 <button 
                     type="submit" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition flex items-center text-sm"
+                    class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition flex items-center text-sm"
                 >
                     <i class="fas fa-save mr-2"></i> Simpan Semua Pengaturan
                 </button>
@@ -330,4 +353,15 @@
         </div>
     </form>
 </div>
+
+<script>
+    function setSlideInterval(sec) {
+        const input = document.getElementById('tv_slide_interval_input');
+        if (input) {
+            input.value = sec;
+            input.classList.add('ring-2', 'ring-purple-500');
+            setTimeout(() => input.classList.remove('ring-2', 'ring-purple-500'), 600);
+        }
+    }
+</script>
 @endsection

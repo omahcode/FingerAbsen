@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="flex justify-between items-center mb-6">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <div>
         <h2 class="text-2xl font-bold text-gray-800">Daftar Mesin Fingerprint</h2>
         <p class="text-xs text-gray-500 mt-1">Kelola mesin fingerprint fisik (Solution / ZKTeco) yang terhubung via ADMS Cloud.</p>
     </div>
-    <div class="flex space-x-2">
+    <div class="flex flex-wrap items-center gap-2">
         <form action="{{ route('devices.sync_time_all') }}" method="POST" data-confirm="Samakan jam SEMUA mesin fingerprint dengan jam komputer server sekarang?" data-title="Sinkronisasi Jam Semua Mesin" data-icon="question">
             @csrf
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition">
-                <i class="fas fa-clock mr-1"></i> Sync Jam Semua Mesin
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow transition text-xs sm:text-sm">
+                <i class="fas fa-clock mr-1"></i> Sync Jam Mesin
             </button>
         </form>
-        <a href="{{ route('devices.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow transition">
+        <a href="{{ route('devices.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow transition text-xs sm:text-sm">
             <i class="fas fa-plus mr-1"></i> Tambah Mesin
         </a>
     </div>
