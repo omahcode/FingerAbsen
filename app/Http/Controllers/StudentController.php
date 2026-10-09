@@ -184,6 +184,15 @@ class StudentController extends Controller
             $data['photo'] = $request->file('photo')->store('students', 'public');
         }
 
+        // Pastikan kolom photo sudah ada di database (auto-migration fallback)
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('students', 'photo')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('students', function ($table) {
+                    $table->string('photo')->nullable()->after('name');
+                });
+            } catch (\Exception $e) {}
+        }
+
         $student->update($data);
 
         // Kirim ke antrean ADMS
