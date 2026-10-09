@@ -319,17 +319,212 @@
             .btn-tv-action { width: 30px; height: 30px; font-size: 0.75rem; }
         }
 
-        @media (max-width: 480px) {
-            .s1-title { font-size: 1.5rem; }
-            .s1-icon { font-size: 2.8rem; }
-            .s1-time { font-size: 1.8rem; }
-            .stats-strip { grid-template-columns: 1fr; max-width: 260px; }
-            .podium { gap: 0.25rem; }
-            .pod-name { font-size: 0.7rem; }
-            .pod-class { font-size: 0.6rem; }
-            .pod-streak-display { font-size: 0.8rem; }
-            .pod-1 .pod-avatar { width: 44px; height: 44px; }
-            .pod-2 .pod-avatar, .pod-3 .pod-avatar { width: 36px; height: 36px; }
+        /* ==================== ATTENDANCE REALTIME OVERLAY MODAL ==================== */
+        #attendance-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(3, 7, 18, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 1.5rem;
+        }
+
+        #attendance-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .att-card {
+            background: linear-gradient(150deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            border-radius: 32px;
+            padding: 2.2rem 2.8rem;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.8), 0 0 50px rgba(56, 189, 248, 0.25);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transform: scale(0.85) translateY(25px);
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #attendance-overlay.active .att-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .att-close-btn {
+            position: absolute;
+            top: 1.2rem;
+            right: 1.2rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            z-index: 10;
+        }
+        .att-close-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            transform: scale(1.1);
+        }
+
+        .att-header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(56, 189, 248, 0.2));
+            border: 1px solid rgba(52, 211, 153, 0.5);
+            color: #34d399;
+            padding: 6px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(52, 211, 153, 0.2); }
+            100% { box-shadow: 0 0 25px rgba(52, 211, 153, 0.5); }
+        }
+
+        .att-icon-wrap {
+            width: 85px;
+            height: 85px;
+            margin: 0 auto 1.2rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #06b6d4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45);
+            animation: iconPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes iconPop {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .att-greeting {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 800;
+            line-height: 1.35;
+            color: #f8fafc;
+            margin-bottom: 0.6rem;
+        }
+
+        .att-name-highlight {
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+            font-weight: 900;
+        }
+
+        .att-time-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(56, 189, 248, 0.18);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+
+        .att-sub-info {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .att-tag {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .att-quote-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06));
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 20px;
+            padding: 1.1rem 1.5rem;
+            position: relative;
+            text-align: center;
+            margin-top: 0.6rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .att-quote-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            font-style: italic;
+            color: #fef08a;
+            line-height: 1.55;
+        }
+
+        .att-quote-footer {
+            margin-top: 0.55rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #f59e0b;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .att-countdown-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .att-countdown-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #10b981, #38bdf8, #818cf8);
+            border-radius: 0 3px 3px 0;
         }
     </style>
 </head>
@@ -469,8 +664,49 @@
     </div>
     @endif
 
+    <!-- Realtime Attendance Success Overlay Popup -->
+    <div id="attendance-overlay">
+        <div class="att-card">
+            <button type="button" class="att-close-btn" id="att-close-btn" title="Tutup">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="att-header-badge">
+                <i class="fas fa-check-circle"></i> Absensi Berhasil
+            </div>
+
+            <div class="att-icon-wrap">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+
+            <div class="att-greeting">
+                Halo <span class="att-name-highlight" id="att-name">Siswa</span>,<br>
+                Kamu sudah Absen pukul <span class="att-time-pill" id="att-time">--:-- WIB</span>
+            </div>
+
+            <div class="att-sub-info">
+                <div class="att-tag"><i class="fas fa-graduation-cap text-sky-400"></i> <span id="att-class">Kelas</span></div>
+                <div class="att-tag"><i class="fas fa-shield-alt text-emerald-400"></i> Terverifikasi Mesin</div>
+            </div>
+
+            <div class="att-quote-card">
+                <div class="att-quote-text" id="att-quote">"Semangat belajar hari ini! Sukses dimulai dari langkah kecil dan disiplin setiap pagi."</div>
+                <div class="att-quote-footer">
+                    <i class="fas fa-sparkles"></i> Quote Motivasi Hari Ini
+                </div>
+            </div>
+
+            <div class="att-countdown-bar">
+                <div class="att-countdown-fill" id="att-countdown-fill"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating Quick Actions (Dashboard, Fullscreen, Settings) -->
     <div class="tv-floating-tools">
+        <button type="button" id="btn-test-popup" class="btn-tv-action" title="Uji Coba Tampilan Pop-up Absen">
+            <i class="fas fa-bell"></i>
+        </button>
         <a href="{{ route('attendance.index') }}" class="btn-tv-action" title="Kembali ke Dashboard">
             <i class="fas fa-th-large"></i>
         </a>
@@ -490,6 +726,131 @@
         let hofData = {!! json_encode($hofData) !!};
 
         const slideInterval = {{ $tvSettings['tv_slide_interval'] * 1000 }};
+
+        // ======================== MOTIVATIONAL QUOTES ========================
+        const motivationalQuotes = [
+            "Disiplin adalah jembatan antara cita-cita dan pencapaian nyata.",
+            "Masa depan adalah milik mereka yang mempersiapkan diri mulai hari ini.",
+            "Setiap langkah kecil dan konsisten membawamu lebih dekat ke impian besarmu.",
+            "Sukses dimulai dari kebiasaan baik dan kedisiplinan setiap pagi.",
+            "Jangan menunggu kesempatan datang, ciptakan kesempatan terbaikmu sendiri.",
+            "Orang sukses tidak pernah berhenti belajar dan terus memperbaiki diri.",
+            "Kerja keras dan ketekunan hari ini akan berbuah manis di masa depan.",
+            "Konsistensi adalah kunci utama yang mengubah hal biasa menjadi luar biasa.",
+            "Waktu adalah aset paling berharga. Manfaatkan setiap detiknya untuk berkembang.",
+            "Jadilah pribadi yang lebih berprestasi dan lebih baik dari dirimu yang kemarin.",
+            "Pendidikan adalah paspor terbaik untuk meraih masa depan yang gemilang.",
+            "Fokuslah pada proses dan tujuanmu, jangan biarkan rasa malas menghalangi langkahmu.",
+            "Keberanian untuk memulai pagi ini adalah awal dari setiap kesuksesan besar.",
+            "Ketekunan mengalahkan bakat ketika bakat tidak bekerja keras.",
+            "Hari baru adalah peluang baru. Berikan usaha terbaikmu hari ini!",
+            "Keringat hari ini adalah kejayaanmu di masa depan.",
+            "Bermimpilah setinggi langit, dan berjuanglah dengan segenap hatimu.",
+            "Karakter dan integritas terbentuk dari apa yang kamu lakukan setiap hari."
+        ];
+
+        function getRandomQuote() {
+            return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+        }
+
+        // ======================== MELODIC CHIME SOUND ========================
+        function playChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                
+                const playTone = (freq, start, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+                    
+                    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+                    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + start + 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + start);
+                    osc.stop(ctx.currentTime + start + duration);
+                };
+
+                // Melodic chime (E5 -> A5)
+                playTone(659.25, 0, 0.35);
+                playTone(880.00, 0.12, 0.55);
+            } catch(e) {}
+        }
+
+        // ======================== ATTENDANCE POPUP OVERLAY CONTROLLER ========================
+        let overlayTimer = null;
+        const overlayEl = document.getElementById('attendance-overlay');
+        const attNameEl = document.getElementById('att-name');
+        const attTimeEl = document.getElementById('att-time');
+        const attClassEl = document.getElementById('att-class');
+        const attQuoteEl = document.getElementById('att-quote');
+        const attCountdownFill = document.getElementById('att-countdown-fill');
+
+        function showAttendanceOverlay(studentName, timeStr, className) {
+            if (!overlayEl) return;
+
+            // Isi konten
+            if (attNameEl) attNameEl.textContent = studentName || 'Siswa';
+            if (attTimeEl) attTimeEl.textContent = (timeStr || '07:00') + ' WIB';
+            if (attClassEl) attClassEl.textContent = className || 'Umum';
+            if (attQuoteEl) attQuoteEl.textContent = `"${getRandomQuote()}"`;
+
+            // Reset countdown bar
+            if (attCountdownFill) {
+                attCountdownFill.style.transition = 'none';
+                attCountdownFill.style.width = '100%';
+            }
+
+            // Tampilkan modal
+            overlayEl.classList.add('active');
+            playChime();
+
+            // Jalankan countdown bar
+            setTimeout(() => {
+                if (attCountdownFill) {
+                    attCountdownFill.style.transition = 'width 6s linear';
+                    attCountdownFill.style.width = '0%';
+                }
+            }, 50);
+
+            // Bersihkan timer lama jika ada
+            clearTimeout(overlayTimer);
+
+            // Auto dismiss setelah 6 detik
+            overlayTimer = setTimeout(() => {
+                hideAttendanceOverlay();
+            }, 6000);
+        }
+
+        function hideAttendanceOverlay() {
+            if (overlayEl) {
+                overlayEl.classList.remove('active');
+            }
+            clearTimeout(overlayTimer);
+        }
+
+        document.getElementById('att-close-btn')?.addEventListener('click', hideAttendanceOverlay);
+        overlayEl?.addEventListener('click', (e) => {
+            if (e.target === overlayEl) hideAttendanceOverlay();
+        });
+
+        // Test Pop-up Button
+        document.getElementById('btn-test-popup')?.addEventListener('click', () => {
+            const sampleNames = ['Mohamad Jibril', 'Achmad Dzaky', 'Kayla Aqila', 'Rafa Abrar', 'Sheren Angelica'];
+            const sampleClasses = ['XI RPL 1', 'XI RPL 2', 'X PPLG 1', 'XII RPL 1'];
+            const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
+            const rClass = sampleClasses[Math.floor(Math.random() * sampleClasses.length)];
+            const n = new Date();
+            const timeStr = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+            showAttendanceOverlay(rName, timeStr, rClass);
+        });
+
+        window.testAttendancePopup = showAttendanceOverlay;
 
         // ======================== RENDER FUNCTIONS ========================
         function renderDaily() {
@@ -716,12 +1077,10 @@
 
         // Auto Fullscreen saat halaman dibuka
         if (autoFullscreen) {
-            // Coba langsung saat load
             setTimeout(() => {
                 enterFullscreen();
             }, 300);
 
-            // Karena browser mewajibkan interaksi pengguna (user gesture), pasang listener 1x klik/tap pertama
             const onFirstUserGesture = () => {
                 enterFullscreen();
                 window.removeEventListener('click', onFirstUserGesture);
@@ -766,6 +1125,9 @@
             if (e.key === 'f' || e.key === 'F') {
                 toggleFullscreen();
             }
+            if (e.key === 'Escape') {
+                hideAttendanceOverlay();
+            }
         });
 
         // ======================== INITIALIZE ========================
@@ -778,13 +1140,44 @@
         updateClock();
         startProg();
 
-        // Background polling fallback setiap 30 detik agar data selalu sinkron
+        // Background polling fallback setiap 10 detik agar data selalu sinkron
+        let maxTvLogId = 0;
+        fetch('/attendance/latest?since_id=0')
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.max_id) maxTvLogId = data.max_id;
+            })
+            .catch(() => {});
+
         setInterval(() => {
-            fetch('/attendance/latest?since_id=0')
-                .then(r => r.json())
-                .then(() => {})
-                .catch(() => {});
-        }, 30000);
+            if (maxTvLogId > 0) {
+                fetch(`/attendance/latest?since_id=${maxTvLogId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.logs && data.logs.length > 0) {
+                            data.logs.forEach(log => {
+                                const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
+                                const className = (log.student && log.student.school_class) ? log.student.school_class.name : '-';
+                                const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';
+
+                                dailyData.unshift({
+                                    name: studentName,
+                                    cls: className,
+                                    time: timeStr,
+                                    ini: studentName.charAt(0).toUpperCase(),
+                                    is_ontime: true
+                                });
+                                if (dailyData.length > 10) dailyData.pop();
+                                renderDaily();
+
+                                showAttendanceOverlay(studentName, timeStr, className);
+                            });
+                            maxTvLogId = data.max_id;
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }, 10000);
     </script>
 
     <!-- Realtime WebSockets Listener (Laravel Reverb / Echo) -->
@@ -795,10 +1188,20 @@
                     .listen('.AttendanceCreated', (e) => {
                         const log = e.log;
                         const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
-                        const className = (log.student && log.student.school_class) ? log.student.school_class.name : '-';
+                        const className = (log.student && log.student.school_class) ? log.student.school_class.name : ((log.student && log.student.schoolClass) ? log.student.schoolClass.name : '-');
                         const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';
 
-                        // Masukkan data baru ke paling atas
+                        // Tampilkan modal overlay absensi dengan pesan & motivasi quote
+                        if (typeof showAttendanceOverlay === 'function') {
+                            showAttendanceOverlay(studentName, timeStr, className);
+                        }
+
+                        // Update maxTvLogId agar polling tidak menduplikasi
+                        if (log.id && typeof maxTvLogId !== 'undefined' && log.id > maxTvLogId) {
+                            maxTvLogId = log.id;
+                        }
+
+                        // Masukkan data baru ke paling atas daftar Top 10 Hari Ini
                         dailyData.unshift({
                             name: studentName,
                             cls: className,
@@ -811,7 +1214,7 @@
 
                         renderDaily();
 
-                        // Efek highlight
+                        // Efek highlight panel
                         const pnl = document.getElementById('daily-top3');
                         if (pnl) {
                             pnl.style.transition = 'transform 0.3s, filter 0.3s';
