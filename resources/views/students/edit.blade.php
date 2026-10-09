@@ -27,7 +27,18 @@
         </div>
 
         <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-400 mb-1">NIS / ID Mesin (Terkunci)</label>
+            <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm font-bold text-gray-400">NIS / ID Mesin (Terkunci)</label>
+                @if(($student->fingerprint_templates_count ?? 0) > 0)
+                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <i class="fas fa-fingerprint text-emerald-600"></i> Sidik Jari Terdaftar ({{ $student->fingerprint_templates_count }} Jari)
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        <i class="fas fa-fingerprint text-amber-500"></i> Sidik Jari Belum Didaftarkan
+                    </span>
+                @endif
+            </div>
             <input type="number" class="border w-full p-2.5 rounded bg-gray-100 text-gray-500 text-sm font-mono" value="{{ $student->device_user_id }}" disabled>
             <p class="text-xs text-gray-400 mt-1">NIS menjadi kunci ID di mesin fingerprint.</p>
         </div>

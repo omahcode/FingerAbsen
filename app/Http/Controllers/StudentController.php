@@ -57,7 +57,9 @@ class StudentController extends Controller
 
     public function index()
     {
-        $students = Student::with('schoolClass.major')->get();
+        $students = Student::with('schoolClass.major')
+            ->withCount('fingerprintTemplates')
+            ->get();
         $devices = Device::all();
         return view('students.index', compact('students', 'devices'));
     }
@@ -113,6 +115,7 @@ class StudentController extends Controller
 
     public function edit(Student $student)
     {
+        $student->loadCount('fingerprintTemplates');
         $classes = SchoolClass::with('major')->get();
         $devices = Device::all();
         return view('students.edit', compact('student', 'classes', 'devices'));

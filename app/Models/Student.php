@@ -26,6 +26,11 @@ class Student extends Model
 
     public function fingerprintTemplates()
     {
-        return $this->hasMany(FingerprintTemplate::class);
+        return $this->hasMany(FingerprintTemplate::class, 'device_user_id', 'device_user_id');
+    }
+
+    public function getHasFingerprintAttribute(): bool
+    {
+        return ($this->fingerprint_templates_count ?? $this->fingerprintTemplates()->count()) > 0;
     }
 }

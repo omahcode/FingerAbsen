@@ -31,6 +31,7 @@
                     <th class="p-3 text-sm font-semibold">Nama Siswa</th>
                     <th class="p-3 text-sm font-semibold">Kelas</th>
                     <th class="p-3 text-sm font-semibold">Jurusan</th>
+                    <th class="p-3 text-sm font-semibold text-center">Sidik Jari</th>
                     <th class="p-3 text-sm font-semibold">No. WA Ortu</th>
                     <th class="p-3 text-sm text-center font-semibold">Aksi</th>
                 </tr>
@@ -42,9 +43,30 @@
                         <input type="checkbox" name="ids[]" value="{{ $s->id }}" class="check-item w-4 h-4 text-blue-600 rounded border-gray-300">
                     </td>
                     <td class="p-3 font-mono text-gray-600">{{ $s->device_user_id }}</td>
-                    <td class="p-3 font-semibold text-gray-900">{{ $s->name }}</td>
+                    <td class="p-3">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-semibold text-gray-900">{{ $s->name }}</span>
+                            @if($s->fingerprint_templates_count > 0)
+                                <i class="fas fa-fingerprint text-emerald-500 text-xs" title="Sidik Jari Terdaftar ({{ $s->fingerprint_templates_count }} jari)"></i>
+                            @endif
+                        </div>
+                    </td>
                     <td class="p-3">{{ $s->schoolClass->name ?? '-' }}</td>
                     <td class="p-3">{{ $s->schoolClass->major->name ?? '-' }}</td>
+                    <td class="p-3 text-center">
+                        @if($s->fingerprint_templates_count > 0)
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Sidik Jari Terdaftar ({{ $s->fingerprint_templates_count }} jari)">
+                                <i class="fas fa-fingerprint text-emerald-600 text-sm"></i>
+                                <span>Terdaftar</span>
+                                <span class="bg-emerald-200 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">{{ $s->fingerprint_templates_count }}</span>
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-400 border border-gray-200" title="Sidik jari belum didaftarkan di mesin">
+                                <i class="fas fa-fingerprint text-gray-300"></i>
+                                <span>Belum Ada</span>
+                            </span>
+                        @endif
+                    </td>
                     <td class="p-3 text-xs">
                         @if($s->parent_phone)
                             <a href="https://wa.me/{{ \App\Services\WhatsAppService::formatPhoneNumber($s->parent_phone) }}" target="_blank" class="inline-flex items-center text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200 hover:bg-green-100 font-mono">
@@ -65,7 +87,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="p-6 text-center text-gray-400">Belum ada data siswa terdaftar.</td>
+                    <td colspan="8" class="p-6 text-center text-gray-400">Belum ada data siswa terdaftar.</td>
                 </tr>
                 @endforelse
             </tbody>
