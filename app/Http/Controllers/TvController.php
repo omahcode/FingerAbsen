@@ -36,10 +36,7 @@ class TvController extends Controller
 
         // 2. Data Harian (Daily)
         $today = Carbon::today()->toDateString();
-        $hasTodayLogs = AttendanceLog::whereDate('timestamp', $today)->whereNotNull('student_id')->exists();
-        
-        // Gunakan hari ini jika ada log, atau hari aktif terakhir jika hari ini belum ada log
-        $activeDate = $hasTodayLogs ? $today : (AttendanceLog::whereNotNull('student_id')->max('timestamp') ? Carbon::parse(AttendanceLog::whereNotNull('student_id')->max('timestamp'))->toDateString() : $today);
+        $activeDate = $today;
 
         // Ambil tap pertama tiap siswa di hari aktif
         $rawDailyLogs = AttendanceLog::with(['student.schoolClass'])
