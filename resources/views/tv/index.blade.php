@@ -557,28 +557,28 @@
                         <div class="stat-pill">
                             <i class="fas fa-users text-blue-500"></i>
                             <div>
-                                <div class="stat-val text-blue-600">{{ $stats['total_students'] }}</div>
+                                <div class="stat-val text-blue-600" id="stat-total">{{ $stats['total_students'] }}</div>
                                 <div class="stat-lbl">Total Siswa</div>
                             </div>
                         </div>
                         <div class="stat-pill">
                             <i class="fas fa-user-check text-emerald-500"></i>
                             <div>
-                                <div class="stat-val text-emerald-600">{{ $stats['present_count'] }}</div>
+                                <div class="stat-val text-emerald-600" id="stat-present">{{ $stats['present_count'] }}</div>
                                 <div class="stat-lbl">Hadir Hari Ini</div>
                             </div>
                         </div>
                         <div class="stat-pill">
                             <i class="fas fa-clock text-indigo-500"></i>
                             <div>
-                                <div class="stat-val text-indigo-600">{{ $stats['ontime_count'] }}</div>
+                                <div class="stat-val text-indigo-600" id="stat-ontime">{{ $stats['ontime_count'] }}</div>
                                 <div class="stat-lbl">Tepat Waktu</div>
                             </div>
                         </div>
                         <div class="stat-pill">
                             <i class="fas fa-chart-pie text-purple-500"></i>
                             <div>
-                                <div class="stat-val text-purple-600">{{ $stats['percentage'] }}%</div>
+                                <div class="stat-val text-purple-600" id="stat-pct">{{ $stats['percentage'] }}%</div>
                                 <div class="stat-lbl">Kehadiran</div>
                             </div>
                         </div>
@@ -754,11 +754,27 @@
         }
 
         // ======================== MELODIC CHIME SOUND ========================
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtxClass) audioCtx = new AudioCtxClass();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+            return audioCtx;
+        }
+
+        // Unlock audio on first user gesture
+        ['click', 'touchstart', 'keydown'].forEach(evt => {
+            window.addEventListener(evt, () => getAudioContext(), { once: true });
+        });
+
         function playChime() {
             try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtx) return;
-                const ctx = new AudioCtx();
+                const ctx = getAudioContext();
+                if (!ctx) return;
                 
                 const playTone = (freq, start, duration) => {
                     const osc = ctx.createOscillator();
@@ -767,7 +783,7 @@
                     osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
                     
                     gain.gain.setValueAtTime(0, ctx.currentTime + start);
-                    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + start + 0.04);
+                    gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + start + 0.04);
                     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
                     
                     osc.connect(gain);
@@ -780,6 +796,29 @@
                 playTone(659.25, 0, 0.35);
                 playTone(880.00, 0.12, 0.55);
             } catch(e) {}
+        }
+
+        // ======================== LIVE STATS REALTIME CONTROLLER ========================
+        let statTotal = {{ $stats['total_students'] ?? 0 }};
+        let statPresent = {{ $stats['present_count'] ?? 0 }};
+        let statOntime = {{ $stats['ontime_count'] ?? 0 }};
+        const checkinEndTarget = '{{ $checkinEnd ?? "06:30" }}';
+
+        function updateLiveStats(timeStr) {
+            statPresent++;
+            const isOntime = (timeStr || '07:00') <= checkinEndTarget;
+            if (isOntime) statOntime++;
+            
+            const pEl = document.getElementById('stat-present');
+            const oEl = document.getElementById('stat-ontime');
+            const pctEl = document.getElementById('stat-pct');
+            
+            if (pEl) pEl.textContent = statPresent;
+            if (oEl) oEl.textContent = statOntime;
+            if (pctEl && statTotal > 0) {
+                const pct = Math.min(100, Math.round((statPresent / statTotal) * 1000) / 10);
+                pctEl.textContent = pct + '%';
+            }
         }
 
         // ======================== ATTENDANCE POPUP OVERLAY CONTROLLER ========================
@@ -848,6 +887,7 @@
             const n = new Date();
             const timeStr = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
             showAttendanceOverlay(rName, timeStr, rClass);
+            updateLiveStats(timeStr);
         });
 
         window.testAttendancePopup = showAttendanceOverlay;
@@ -859,8 +899,8 @@
             if (!top3El || !tableEl) return;
 
             if (dailyData.length === 0) {
-                top3El.innerHTML = `<div class="s2-card r1"><div class="accent"></div><div class="s2-info"><div class="s2-name text-gray-500">Belum ada tap hari ini</div><div class="s2-class">Tap jari di mesin untuk menjadi yang pertama</div></div></div>`;
-                tableEl.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-6">Belum ada data kehadiran pada sesi aktif ini.</td></tr>`;
+                top3El.innerHTML = `<div class="s2-card r1" style="justify-content:center;text-align:center;padding:1.6rem 1rem;"><div class="accent"></div><div class="s2-info"><div class="s2-name" style="font-size:1.15rem;color:var(--text);margin-bottom:4px;"><i class="fas fa-fingerprint text-sky-400"></i> Belum ada presensi hari ini</div><div class="s2-class" style="font-size:0.88rem;color:var(--text-muted);">Silakan tap sidik jari pada mesin untuk menjadi yang pertama</div></div></div>`;
+                tableEl.innerHTML = `<tr><td colspan="4" class="text-center py-8" style="color:var(--text-muted);font-weight:600;font-size:0.9rem;"><i class="far fa-clock"></i> Menunggu kehadiran siswa pada hari ini...</td></tr>`;
                 return;
             }
 
@@ -1174,6 +1214,7 @@
                                 renderDaily();
 
                                 showAttendanceOverlay(studentName, timeStr, className);
+                                updateLiveStats(timeStr);
                             });
                             maxTvLogId = data.max_id;
                         }
@@ -1197,6 +1238,11 @@
                         // Tampilkan modal overlay absensi dengan pesan & motivasi quote
                         if (typeof showAttendanceOverlay === 'function') {
                             showAttendanceOverlay(studentName, timeStr, className);
+                        }
+
+                        // Update live summary stats di Slide 1
+                        if (typeof updateLiveStats === 'function') {
+                            updateLiveStats(timeStr);
                         }
 
                         // Update maxTvLogId agar polling tidak menduplikasi
