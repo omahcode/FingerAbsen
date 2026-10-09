@@ -160,6 +160,164 @@
                 </div>
             </div>
 
+            <!-- Card 5: Pengaturan Mode TV Layar Absen (Leaderboard) -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-purple-500">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 pb-4 border-b border-gray-100 gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-tv text-purple-600 mr-2"></i> Pengaturan Mode TV Layar Absen
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Atur tampilan teks, durasi slide, tema warna, dan slide yang ingin ditampilkan di layar TV.</p>
+                    </div>
+                    <a href="{{ route('tv.index') }}" target="_blank" class="inline-flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-purple-200 transition">
+                        <i class="fas fa-external-link-alt"></i> Buka Layar TV
+                    </a>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Judul & Subjudul TV -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-heading text-gray-400 mr-1"></i> Judul Utama TV (Slide Sambutan)
+                            </label>
+                            <input 
+                                type="text" 
+                                name="tv_title" 
+                                value="{{ old('tv_title', $settings['tv_title']) }}" 
+                                placeholder="Contoh: SELAMAT DATANG DI SMK NEGERI 1"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-subscript text-gray-400 mr-1"></i> Subjudul Layar TV
+                            </label>
+                            <input 
+                                type="text" 
+                                name="tv_subtitle" 
+                                value="{{ old('tv_subtitle', $settings['tv_subtitle']) }}" 
+                                placeholder="Contoh: Sistem Informasi Presensi Biometrik"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Running Text Pengumuman -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">
+                            <i class="fas fa-bullhorn text-amber-500 mr-1"></i> Teks Berjalan Pengumuman (Running Text / Ticker Bawah)
+                        </label>
+                        <input 
+                            type="text" 
+                            name="tv_running_text" 
+                            value="{{ old('tv_running_text', $settings['tv_running_text']) }}" 
+                            placeholder="Contoh: Selamat Datang! Batas absensi masuk adalah pukul 07:15 WIB. Jagalah selalu kedisiplinan!"
+                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                        >
+                        <p class="text-[11px] text-gray-400 mt-1">Pesan teks ini akan berjalan terus di bagian bawah layar mode TV.</p>
+                    </div>
+
+                    <!-- Parameter Durasi, Poin, & Tema -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-stopwatch text-indigo-500 mr-1"></i> Durasi Tiap Slide
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    name="tv_slide_interval" 
+                                    min="5" 
+                                    max="300"
+                                    value="{{ old('tv_slide_interval', $settings['tv_slide_interval']) }}" 
+                                    required 
+                                    class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                >
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">detik</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-palette text-pink-500 mr-1"></i> Tema Tampilan
+                            </label>
+                            <select name="tv_theme" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                                <option value="aurora" {{ $settings['tv_theme'] == 'aurora' ? 'selected' : '' }}>🌈 Dynamic Aurora (Default)</option>
+                                <option value="dark" {{ $settings['tv_theme'] == 'dark' ? 'selected' : '' }}>🌙 Dark Mode Cyber</option>
+                                <option value="clean" {{ $settings['tv_theme'] == 'clean' ? 'selected' : '' }}>✨ Clean Modern Light</option>
+                                <option value="ocean" {{ $settings['tv_theme'] == 'ocean' ? 'selected' : '' }}>🌊 Deep Ocean Blue</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-star text-emerald-500 mr-1"></i> Poin Tepat Waktu
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    name="tv_points_ontime" 
+                                    min="1" 
+                                    max="100"
+                                    value="{{ old('tv_points_ontime', $settings['tv_points_ontime']) }}" 
+                                    required 
+                                    class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                >
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">pt</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-clock text-amber-500 mr-1"></i> Poin Terlambat
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    name="tv_points_late" 
+                                    min="0" 
+                                    max="100"
+                                    value="{{ old('tv_points_late', $settings['tv_points_late']) }}" 
+                                    required 
+                                    class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                >
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">pt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide Toggles -->
+                    <div class="pt-3 border-t border-gray-100">
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5">
+                            <i class="fas fa-layer-group text-purple-600 mr-1"></i> Slide yang Ditampilkan di Layar TV:
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                            <label class="flex items-center p-2.5 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                <input type="checkbox" name="tv_show_welcome" value="1" {{ $settings['tv_show_welcome'] == '1' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <span class="ml-2 text-xs font-semibold text-gray-700">1. Sambutan & Jam</span>
+                            </label>
+                            <label class="flex items-center p-2.5 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                <input type="checkbox" name="tv_show_daily" value="1" {{ $settings['tv_show_daily'] == '1' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <span class="ml-2 text-xs font-semibold text-gray-700">2. Kehadiran Hari Ini</span>
+                            </label>
+                            <label class="flex items-center p-2.5 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                <input type="checkbox" name="tv_show_weekly" value="1" {{ $settings['tv_show_weekly'] == '1' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <span class="ml-2 text-xs font-semibold text-gray-700">3. Peringkat Mingguan</span>
+                            </label>
+                            <label class="flex items-center p-2.5 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                <input type="checkbox" name="tv_show_monthly" value="1" {{ $settings['tv_show_monthly'] == '1' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <span class="ml-2 text-xs font-semibold text-gray-700">4. Peringkat Bulanan</span>
+                            </label>
+                            <label class="flex items-center p-2.5 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                <input type="checkbox" name="tv_show_hof" value="1" {{ $settings['tv_show_hof'] == '1' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                <span class="ml-2 text-xs font-semibold text-gray-700">5. Hall of Fame</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tombol Simpan -->
             <div class="flex justify-end space-x-3 pt-2">
                 <button 
