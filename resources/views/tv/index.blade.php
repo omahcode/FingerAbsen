@@ -592,7 +592,7 @@
             <div class="slide {{ !$tvSettings['tv_show_welcome'] ? 'active' : '' }}" data-slide-name="daily">
                 <div class="s-header s2-header">
                     <h2><i class="fas fa-bolt"></i> Top 10 Kehadiran Hari Ini</h2>
-                    <p>Siswa yang melakukan tap fingerprint paling awal ({{ $stats['active_date_label'] }})</p>
+                    <p>Siswa yang melakukan tap fingerprint paling awal (<span id="daily-active-date">{{ $stats['active_date_label'] }}</span>)</p>
                 </div>
                 <div class="s2-grid">
                     <div class="s2-top3" id="daily-top3"></div>
@@ -969,8 +969,11 @@
             
             const dayEl = document.getElementById('clock-day');
             const dateEl = document.getElementById('clock-date');
+            const dailyDateEl = document.getElementById('daily-active-date');
+            
             if (dayEl) dayEl.textContent = days[n.getDay()];
             if (dateEl) dateEl.textContent = `${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}`;
+            if (dailyDateEl) dailyDateEl.textContent = `${days[n.getDay()]}, ${String(n.getDate()).padStart(2,'0')} ${months[n.getMonth()]} ${n.getFullYear()}`;
         }
 
         // ======================== CAROUSEL CONTROLLER ========================
