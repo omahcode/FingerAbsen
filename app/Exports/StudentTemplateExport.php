@@ -70,7 +70,7 @@ class StudentTemplateExport implements FromArray, WithHeadings, WithStyles, Shou
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): ?array
     {
         // Header Styling
         $sheet->getStyle('A1:D1')->applyFromArray([
