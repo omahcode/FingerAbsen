@@ -1024,8 +1024,6 @@
         let monthlyData = {!! json_encode($monthlyData) !!};
         let hofData = {!! json_encode($hofData) !!};
 
-        const slideInterval = {{ $tvSettings['tv_slide_interval'] * 1000 }};
-
         // ======================== MOTIVATIONAL QUOTES ========================
         const motivationalQuotes = [
             "Disiplin adalah jembatan antara cita-cita dan pencapaian nyata.",
