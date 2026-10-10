@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 use App\Models\Student;
+use Illuminate\Support\Facades\Schema;
 
 class SettingController extends Controller
 {
@@ -41,8 +42,11 @@ class SettingController extends Controller
         ];
 
         // Daftar siswa untuk simulasi / uji coba streak
+        $hasManualStreakCol = Schema::hasColumn('students', 'manual_streak');
         $students = Student::with('schoolClass')->orderBy('name', 'asc')->get();
-        $manualStreakStudents = Student::with('schoolClass')->where('manual_streak', '>', 0)->orderBy('manual_streak', 'desc')->get();
+        $manualStreakStudents = $hasManualStreakCol
+            ? Student::with('schoolClass')->where('manual_streak', '>', 0)->orderBy('manual_streak', 'desc')->get()
+            : collect();
 
         return view('settings.index', compact('settings', 'students', 'manualStreakStudents'));
     }

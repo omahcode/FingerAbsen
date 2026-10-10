@@ -8,6 +8,7 @@ use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TvController extends Controller
 {
@@ -159,8 +160,11 @@ class TvController extends Controller
         // Kelompokkan log berdasarkan student_id
         $grouped = $logsCollection->groupBy('student_id');
 
-        // Ambil semua siswa yang memiliki manual_streak > 0 untuk simulasi / uji coba
-        $manualStreakStudents = Student::with('schoolClass')->where('manual_streak', '>', 0)->get()->keyBy('id');
+        // Ambil semua siswa yang memiliki manual_streak > 0 untuk simulasi / uji coba (jika kolom sudah ada di database)
+        $hasManualStreakCol = Schema::hasColumn('students', 'manual_streak');
+        $manualStreakStudents = $hasManualStreakCol
+            ? Student::with('schoolClass')->where('manual_streak', '>', 0)->get()->keyBy('id')
+            : collect();
 
         // Gabungkan semua ID siswa yang punya log presensi atau punya streak manual
         $allStudentIds = $grouped->keys()->merge($manualStreakStudents->keys())->unique();
