@@ -1344,13 +1344,31 @@
             if (dailyDateEl) dailyDateEl.textContent = `${days[n.getDay()]}, ${String(n.getDate()).padStart(2,'0')} ${months[n.getMonth()]} ${n.getFullYear()}`;
         }
 
-        // ======================== CAROUSEL CONTROLLER ========================
-        const allSlides = document.querySelectorAll('.slide');
+        // ======================== ROBUST CAROUSEL CONTROLLER ========================
+        const allSlides = Array.from(document.querySelectorAll('.slide'));
         const dotsContainer = document.getElementById('nav-dots');
         const progFill = document.getElementById('progress-fill');
         let cur = 0;
         const total = allSlides.length;
-        let progTimer, prog = 0, paused = false;
+        let progTimer = null;
+        let isManualPaused = false;
+        let slideStartTime = Date.now();
+        let lastProgressPct = 0;
+
+        const rawInterval = {{ (int) ($tvSettings['tv_slide_interval'] ?? 30) }};
+        const slideInterval = Math.max(3, rawInterval) * 1000;
+
+        // Inisialisasi slide awal yang benar
+        if (allSlides.length > 0) {
+            allSlides.forEach((s, idx) => {
+                if (idx === 0) {
+                    s.classList.add('active');
+                    s.classList.remove('exit');
+                } else {
+                    s.classList.remove('active', 'exit');
+                }
+            });
+        }
 
         // Buat dots navigasi dinamis
         if (dotsContainer && total > 1) {
@@ -1359,18 +1377,35 @@
 
         function goTo(idx) {
             if (total <= 1) return;
-            allSlides[cur].classList.remove('active');
-            allSlides[cur].classList.add('exit');
-            
-            const dots = document.querySelectorAll('.dot');
-            if (dots[cur]) dots[cur].classList.remove('active');
+            const nextIdx = ((idx % total) + total) % total;
+            if (nextIdx === cur) {
+                resetProg();
+                return;
+            }
 
-            setTimeout(() => document.querySelectorAll('.exit').forEach(e => e.classList.remove('exit')), 800);
-            
-            cur = ((idx % total) + total) % total;
-            allSlides[cur].classList.add('active');
-            if (dots[cur]) dots[cur].classList.add('active');
-            
+            allSlides.forEach((s, i) => {
+                if (i === cur) {
+                    s.classList.remove('active');
+                    s.classList.add('exit');
+                } else if (i === nextIdx) {
+                    s.classList.remove('exit');
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active', 'exit');
+                }
+            });
+
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((d, i) => {
+                if (i === nextIdx) d.classList.add('active');
+                else d.classList.remove('active');
+            });
+
+            cur = nextIdx;
+            setTimeout(() => {
+                document.querySelectorAll('.slide.exit').forEach(e => e.classList.remove('exit'));
+            }, 850);
+
             resetProg();
         }
 
@@ -1379,34 +1414,49 @@
 
         function startProg() {
             if (total <= 1) return;
-            prog = 0;
+            clearInterval(progTimer);
+            slideStartTime = Date.now();
+            lastProgressPct = 0;
+
             if (progFill) {
-                progFill.style.width = '0%';
                 progFill.style.transition = 'none';
-                requestAnimationFrame(() => {
-                    progFill.style.transition = 'width 1s linear';
-                    progTimer = setInterval(() => {
-                        if (!paused) {
-                            prog += 100 / (slideInterval / 1000);
-                            progFill.style.width = prog + '%';
-                            if (prog >= 100) next();
-                        }
-                    }, 1000);
-                });
+                progFill.style.width = '0%';
             }
+
+            progTimer = setInterval(() => {
+                if (isManualPaused) {
+                    slideStartTime = Date.now() - (lastProgressPct / 100 * slideInterval);
+                    return;
+                }
+
+                const elapsed = Date.now() - slideStartTime;
+                const pct = Math.min(100, (elapsed / slideInterval) * 100);
+                lastProgressPct = pct;
+
+                if (progFill) {
+                    progFill.style.transition = 'width 0.2s linear';
+                    progFill.style.width = pct + '%';
+                }
+
+                if (elapsed >= slideInterval) {
+                    next();
+                }
+            }, 200);
         }
 
         function resetProg() {
             clearInterval(progTimer);
+            lastProgressPct = 0;
+            if (progFill) {
+                progFill.style.transition = 'none';
+                progFill.style.width = '0%';
+            }
             startProg();
         }
 
         document.getElementById('arrow-next')?.addEventListener('click', next);
         document.getElementById('arrow-prev')?.addEventListener('click', prev);
         document.querySelectorAll('.dot').forEach((d,i) => d.addEventListener('click', () => goTo(i)));
-
-        document.getElementById('carousel')?.addEventListener('mouseenter', () => paused = true);
-        document.getElementById('carousel')?.addEventListener('mouseleave', () => paused = false);
 
         // Fullscreen Toggle Button & Auto-Fullscreen Logic
         const autoFullscreen = {{ $tvSettings['tv_auto_fullscreen'] ? 'true' : 'false' }};
@@ -1492,7 +1542,7 @@
         document.addEventListener('keydown', e => {
             if (e.key === 'ArrowRight') next();
             if (e.key === 'ArrowLeft') prev();
-            if (e.key === ' ' || e.key === 'Spacebar') paused = !paused;
+            if (e.key === ' ' || e.key === 'Spacebar') isManualPaused = !isManualPaused;
             if (e.key === 'f' || e.key === 'F') {
                 toggleFullscreen();
             }
