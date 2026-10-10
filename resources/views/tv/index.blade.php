@@ -1199,6 +1199,11 @@
                     .then(data => {
                         if (data.status === 'success' && data.logs && data.logs.length > 0) {
                             data.logs.forEach(log => {
+                                // Abaikan absen pulang (status_code == 1)
+                                if (log.status_code == 1 || log.status_code === '1') {
+                                    return;
+                                }
+
                                 const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
                                 const className = (log.student && log.student.school_class) ? log.student.school_class.name : '-';
                                 const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';
@@ -1231,6 +1236,12 @@
                 window.Echo.channel('attendance')
                     .listen('.AttendanceCreated', (e) => {
                         const log = e.log;
+
+                        // HANYA proses absen masuk, abaikan jika absen pulang (status_code == 1)
+                        if (log.status_code == 1 || log.status_code === '1') {
+                            return;
+                        }
+
                         const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
                         const className = (log.student && log.student.school_class) ? log.student.school_class.name : ((log.student && log.student.schoolClass) ? log.student.schoolClass.name : '-');
                         const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';

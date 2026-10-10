@@ -16,6 +16,7 @@ class TvController extends Controller
         // 1. Ambil Pengaturan Sistem & TV
         $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
         $checkinEnd = Setting::get('checkin_end', '07:15');
+        $checkoutStart = Setting::get('checkout_start', '14:00');
         $pointsOntime = (int) Setting::get('tv_points_ontime', '10');
         $pointsLate = (int) Setting::get('tv_points_late', '5');
 
@@ -34,14 +35,16 @@ class TvController extends Controller
             'tv_theme' => Setting::get('tv_theme', 'aurora'),
         ];
 
-        // 2. Data Harian (Daily)
+        // 2. Data Harian (Daily) - HANYA Absen Masuk (status_code 0 & waktu sebelum checkout_start)
         $today = Carbon::today()->toDateString();
         $activeDate = $today;
 
-        // Ambil tap pertama tiap siswa di hari aktif
+        // Ambil tap masuk pertama tiap siswa di hari aktif
         $rawDailyLogs = AttendanceLog::with(['student.schoolClass'])
             ->whereDate('timestamp', $activeDate)
             ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
@@ -63,7 +66,7 @@ class TvController extends Controller
             ];
         })->values()->take(10)->toArray();
 
-        // 3. Hitung Statistik Hari Ini
+        // 3. Hitung Statistik Hari Ini (Hanya Absen Masuk)
         $totalStudents = Student::count();
         $presentCount = $dailyUnique->count();
         $ontimeCount = $dailyUnique->filter(fn($l) => Carbon::parse($l->timestamp)->format('H:i') <= $checkinEnd)->count();
@@ -79,39 +82,45 @@ class TvController extends Controller
             'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y'),
         ];
 
-        // 4. Hitung Peringkat Mingguan (Weekly)
+        // 4. Hitung Peringkat Mingguan (Weekly) - HANYA Absen Masuk
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
         $endOfWeek = Carbon::now()->endOfWeek()->toDateString();
 
         $weeklyLogs = AttendanceLog::with('student.schoolClass')
             ->whereBetween('timestamp', [$startOfWeek . ' 00:00:00', $endOfWeek . ' 23:59:59'])
             ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $weeklyData = $this->calculateLeaderboard($weeklyLogs, $checkinEnd, $pointsOntime, $pointsLate, 50);
 
-        // 5. Hitung Peringkat Bulanan (Monthly)
+        // 5. Hitung Peringkat Bulanan (Monthly) - HANYA Absen Masuk
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
         $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
 
         $monthlyLogs = AttendanceLog::with('student.schoolClass')
             ->whereBetween('timestamp', [$startOfMonth . ' 00:00:00', $endOfMonth . ' 23:59:59'])
             ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $monthlyData = $this->calculateLeaderboard($monthlyLogs, $checkinEnd, $pointsOntime, $pointsLate, 200);
 
-        // 6. Hitung Hall of Fame (All-Time Leaderboard)
+        // 6. Hitung Hall of Fame (All-Time Leaderboard) - HANYA Absen Masuk
         $allLogs = AttendanceLog::with('student.schoolClass')
             ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $hofData = $this->calculateLeaderboard($allLogs, $checkinEnd, $pointsOntime, $pointsLate, null, true);
 
-        // Jika data mingguan / bulanan / HoF kosong karena sistem baru, isi dengan ranking dari data siswa aktif
+        // Jika data mingguan / bulanan / HoF kosong karena sistem baru dan belum ada streak manual, isi dengan fallback
         if (empty($weeklyData) && !empty($dailyData)) {
             $weeklyData = $this->generateFallbackBoard($dailyData, 1);
         }
@@ -122,9 +131,11 @@ class TvController extends Controller
             $hofData = $this->generateFallbackBoard($dailyData, 10);
         }
 
-        // Ambil juga raw logs terbaru untuk live socket feed
+        // Ambil juga raw logs masuk terbaru untuk live socket feed
         $logs = AttendanceLog::with(['student.schoolClass', 'device'])
             ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'desc')
             ->limit(30)
             ->get();
@@ -141,24 +152,31 @@ class TvController extends Controller
     }
 
     /**
-     * Hitung akumulasi poin, ketepatan waktu, dan streak kehadiran
+     * Hitung akumulasi poin, ketepatan waktu, dan streak kehadiran (termasuk manual streak untuk uji coba)
      */
     private function calculateLeaderboard($logsCollection, string $checkinEnd, int $pointsOntime, int $pointsLate, ?int $maxPoints = null, bool $isHof = false): array
     {
-        if ($logsCollection->isEmpty()) {
+        // Kelompokkan log berdasarkan student_id
+        $grouped = $logsCollection->groupBy('student_id');
+
+        // Ambil semua siswa yang memiliki manual_streak > 0 untuk simulasi / uji coba
+        $manualStreakStudents = Student::with('schoolClass')->where('manual_streak', '>', 0)->get()->keyBy('id');
+
+        // Gabungkan semua ID siswa yang punya log presensi atau punya streak manual
+        $allStudentIds = $grouped->keys()->merge($manualStreakStudents->keys())->unique();
+
+        if ($allStudentIds->isEmpty()) {
             return [];
         }
 
-        // Kelompokkan berdasarkan student_id
-        $grouped = $logsCollection->groupBy('student_id');
         $leaderboard = [];
 
-        foreach ($grouped as $studentId => $studentLogs) {
-            $firstLog = $studentLogs->first();
-            $student = $firstLog->student;
+        foreach ($allStudentIds as $studentId) {
+            $studentLogs = $grouped->get($studentId, collect());
+            $student = $studentLogs->first()?->student ?? $manualStreakStudents->get($studentId);
             if (!$student) continue;
 
-            // Kelompokkan log per tanggal unik (hanya 1 tap pertama per hari yang dihitung)
+            // Kelompokkan log per tanggal unik (hanya 1 tap masuk pertama per hari yang dihitung)
             $byDate = $studentLogs->groupBy(function ($item) {
                 return Carbon::parse($item->timestamp)->toDateString();
             });
@@ -179,17 +197,19 @@ class TvController extends Controller
                 }
             }
 
-            // Hitung streak (kehadiran beruntun)
-            $streak = $daysCount;
+            // Tambahkan manual streak (jika diatur di setting untuk simulasi/testing)
+            $manualStreak = (int) ($student->manual_streak ?? 0);
+            $effectiveStreak = $daysCount + $manualStreak;
+            $totalPoints += ($manualStreak * $pointsOntime);
 
             $leaderboard[] = [
                 'name' => $student->name,
                 'ini' => strtoupper(substr($student->name, 0, 1)),
                 'cls' => $student->schoolClass->name ?? '-',
                 'pts' => $totalPoints,
-                'streak' => $streak,
+                'streak' => $effectiveStreak,
                 'tap' => $latestTap ?: '06:45',
-                'days' => $daysCount,
+                'days' => $effectiveStreak,
                 'photo' => $student->photo ? asset('storage/' . $student->photo) : null,
             ];
         }

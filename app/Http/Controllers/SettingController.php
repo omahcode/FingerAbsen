@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Setting;
+use App\Models\Student;
 
 class SettingController extends Controller
 {
@@ -39,7 +40,11 @@ class SettingController extends Controller
             'tv_theme' => Setting::get('tv_theme', 'aurora'),
         ];
 
-        return view('settings.index', compact('settings'));
+        // Daftar siswa untuk simulasi / uji coba streak
+        $students = Student::with('schoolClass')->orderBy('name', 'asc')->get();
+        $manualStreakStudents = Student::with('schoolClass')->where('manual_streak', '>', 0)->orderBy('manual_streak', 'desc')->get();
+
+        return view('settings.index', compact('settings', 'students', 'manualStreakStudents'));
     }
 
     /**
@@ -90,5 +95,59 @@ class SettingController extends Controller
         Setting::set('tv_show_hof', $request->has('tv_show_hof') ? '1' : '0', 'Tampilkan Slide Hall of Fame TV');
 
         return redirect()->route('settings.index')->with('success', 'Semua pengaturan presensi dan mode TV berhasil diperbarui.');
+    }
+
+    /**
+     * Tambah / Update manual streak siswa untuk simulasi/uji coba Mode TV
+     */
+    public function updateManualStreak(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'manual_streak' => 'required|integer|min:0|max:365',
+        ]);
+
+        $student = Student::findOrFail($request->student_id);
+        $student->manual_streak = (int) $request->manual_streak;
+        $student->save();
+
+        return redirect()->route('settings.index')->with('success', "Streak simulasi untuk {$student->name} berhasil diatur menjadi {$student->manual_streak} hari.");
+    }
+
+    /**
+     * Reset manual streak untuk semua siswa atau siswa tertentu
+     */
+    public function resetManualStreak(Request $request)
+    {
+        if ($request->has('student_id') && $request->student_id) {
+            $student = Student::find($request->student_id);
+            if ($student) {
+                $student->manual_streak = 0;
+                $student->save();
+                return redirect()->route('settings.index')->with('success', "Streak simulasi untuk {$student->name} telah di-reset ke 0.");
+            }
+        }
+
+        Student::query()->update(['manual_streak' => 0]);
+        return redirect()->route('settings.index')->with('success', 'Semua streak simulasi siswa telah di-reset ke 0.');
+    }
+
+    /**
+     * Simulasi Cepat: Berikan streak otomatis ke 3 siswa pertama untuk uji coba podium TV
+     */
+    public function simulateTop3Streak()
+    {
+        $students = Student::take(3)->get();
+        if ($students->count() < 1) {
+            return redirect()->route('settings.index')->with('warning', 'Belum ada data siswa untuk disimulasikan.');
+        }
+
+        $streaks = [15, 12, 10];
+        foreach ($students as $index => $student) {
+            $student->manual_streak = $streaks[$index] ?? 5;
+            $student->save();
+        }
+
+        return redirect()->route('settings.index')->with('success', 'Simulasi Top 3 Podium TV berhasil dibuat (Juara 1: 15 hari, Juara 2: 12 hari, Juara 3: 10 hari). Buka Mode TV untuk melihat hasilnya!');
     }
 }

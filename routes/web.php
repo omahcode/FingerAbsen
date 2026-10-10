@@ -59,6 +59,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings', [\App\Http\Controllers\SettingController::class, 'index'])->name('settings.index');
     Route::post('settings', [\App\Http\Controllers\SettingController::class, 'update'])->name('settings.update');
+    Route::post('settings/manual-streak', [\App\Http\Controllers\SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
+    Route::post('settings/manual-streak/reset', [\App\Http\Controllers\SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
+    Route::post('settings/manual-streak/simulate-top3', [\App\Http\Controllers\SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
 });
 
 // Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco) - Public & Unrestricted

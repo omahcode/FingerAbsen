@@ -12,7 +12,8 @@ class Student extends Model
         'school_class_id',
         'parent_phone',
         'device_user_id',
-        'privilege'
+        'privilege',
+        'manual_streak'
     ];
 
     public function getPhotoUrlAttribute(): ?string

@@ -341,7 +341,7 @@
                 </div>
             </div>
 
-            <!-- Tombol Simpan -->
+            <!-- Tombol Simpan Pengaturan Utama -->
             <div class="flex justify-end pt-2">
                 <button 
                     type="submit" 
@@ -352,6 +352,134 @@
             </div>
         </div>
     </form>
+
+    <!-- Card Terpisah: Simulasi & Uji Coba Manual Streak Mode TV -->
+    <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-indigo-100 border-l-4 border-l-indigo-600">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+            <div>
+                <h3 class="text-base font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-flask text-indigo-600 mr-2"></i> Uji Coba & Simulasi Streak Siswa (Mode TV)
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">Tambahkan nilai streak kehadiran secara manual untuk menguji tampilan podium juara (Juara 1, 2, 3), poin mingguan/bulanan, dan Hall of Fame di layar TV.</p>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <form action="{{ route('settings.manual_streak.simulate_top3') }}" method="POST" data-confirm="Buat data simulasi otomatis untuk 3 siswa (Streak 15, 12, 10 hari) agar podium TV langsung terisi?" data-title="Simulasi Cepat Top 3" data-icon="question">
+                    @csrf
+                    <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fas fa-magic text-indigo-600"></i> ⚡ Simulasi Cepat Top 3
+                    </button>
+                </form>
+
+                @if($manualStreakStudents->count() > 0)
+                <form action="{{ route('settings.manual_streak.reset') }}" method="POST" data-confirm="Reset semua streak simulasi siswa kembali ke 0?" data-title="Reset Semua Streak" data-danger="true" data-icon="warning">
+                    @csrf
+                    <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fas fa-trash-alt text-red-600"></i> Reset Semua ({{ $manualStreakStudents->count() }})
+                    </button>
+                </form>
+                @endif
+            </div>
+        </div>
+
+        <!-- Form Tambah / Update Streak Siswa -->
+        <form action="{{ route('settings.manual_streak.update') }}" method="POST" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            @csrf
+            <!-- Pilih Siswa -->
+            <div class="md:col-span-6">
+                <label class="block text-xs font-bold text-gray-700 mb-1">
+                    <i class="fas fa-user-graduate text-blue-500 mr-1"></i> Pilih Siswa:
+                </label>
+                <select name="student_id" required class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">-- Pilih Siswa yang Ingin Diuji --</option>
+                    @foreach($students as $st)
+                        <option value="{{ $st->id }}">
+                            {{ $st->name }} ({{ $st->schoolClass->name ?? '-' }}) {{ $st->manual_streak > 0 ? "— [Streak Saat Ini: {$st->manual_streak} Hari]" : '' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Jumlah Streak -->
+            <div class="md:col-span-3">
+                <label class="block text-xs font-bold text-gray-700 mb-1">
+                    <i class="fas fa-fire text-amber-500 mr-1"></i> Jumlah Streak (Hari):
+                </label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        name="manual_streak" 
+                        min="0" 
+                        max="365" 
+                        value="10" 
+                        required 
+                        placeholder="Contoh: 10"
+                        class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    >
+                    <span class="absolute right-3 top-2 text-xs text-gray-400 font-medium">hari</span>
+                </div>
+            </div>
+
+            <!-- Tombol Submit -->
+            <div class="md:col-span-3">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-1.5">
+                    <i class="fas fa-plus-circle"></i> Terapkan Streak
+                </button>
+            </div>
+        </form>
+
+        <!-- Daftar Siswa yang Memiliki Manual Streak -->
+        @if($manualStreakStudents->count() > 0)
+        <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2 flex items-center">
+                <i class="fas fa-list-ol text-indigo-500 mr-1.5"></i> Siswa dengan Streak Simulasi Aktif ({{ $manualStreakStudents->count() }} Siswa):
+            </h4>
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-700 font-bold border-b">
+                            <th class="p-2.5 w-12 text-center">#</th>
+                            <th class="p-2.5">Nama Siswa</th>
+                            <th class="p-2.5">Kelas</th>
+                            <th class="p-2.5 text-center">Streak Simulasi</th>
+                            <th class="p-2.5 text-center">Poin Tambahan</th>
+                            <th class="p-2.5 text-center w-24">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @foreach($manualStreakStudents as $index => $ms)
+                        <tr class="hover:bg-indigo-50/40 transition">
+                            <td class="p-2.5 text-center font-mono font-bold text-indigo-600">#{{ $index + 1 }}</td>
+                            <td class="p-2.5 font-bold text-gray-800">{{ $ms->name }}</td>
+                            <td class="p-2.5 text-gray-500">{{ $ms->schoolClass->name ?? '-' }}</td>
+                            <td class="p-2.5 text-center">
+                                <span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full font-mono text-[11px] inline-flex items-center gap-1">
+                                    <i class="fas fa-fire text-amber-500 text-[10px]"></i> {{ $ms->manual_streak }} Hari
+                                </span>
+                            </td>
+                            <td class="p-2.5 text-center font-mono font-bold text-emerald-600">+{{ $ms->manual_streak * ((int)($settings['tv_points_ontime'] ?? 10)) }} pt</td>
+                            <td class="p-2.5 text-center">
+                                <form action="{{ route('settings.manual_streak.reset') }}" method="POST" class="inline">
+                                    @csrf
+                                    <input type="hidden" name="student_id" value="{{ $ms->id }}">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded text-[11px] font-semibold transition" title="Hapus Streak Simulasi">
+                                        <i class="fas fa-times mr-0.5"></i> Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @else
+        <div class="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-xs text-gray-400">
+            <i class="fas fa-info-circle mr-1 text-gray-400"></i> Belum ada streak simulasi manual yang diatur. Gunakan form di atas atau klik tombol <strong>"⚡ Simulasi Cepat Top 3"</strong>.
+        </div>
+        @endif
+    </div>
 </div>
 
 <script>
