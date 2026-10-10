@@ -255,16 +255,17 @@
 
                             <!-- Tema Tampilan & Auto Fullscreen -->
                             <div class="space-y-3">
-                                <div>
+                                <div class="bg-gray-50/80 p-3 rounded-xl border border-gray-200">
                                     <label class="block text-xs font-bold text-gray-700 mb-1">
-                                        <i class="fas fa-palette text-pink-500 mr-1"></i> Tema Warna TV
+                                        <i class="fas fa-tv text-purple-500 mr-1"></i> Tampilan Layar TV
                                     </label>
-                                    <select name="tv_theme" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none">
-                                        <option value="aurora" {{ $settings['tv_theme'] == 'aurora' ? 'selected' : '' }}>🌈 Dynamic Aurora (Default)</option>
-                                        <option value="dark" {{ $settings['tv_theme'] == 'dark' ? 'selected' : '' }}>🌙 Dark Mode Cyber</option>
-                                        <option value="clean" {{ $settings['tv_theme'] == 'clean' ? 'selected' : '' }}>✨ Clean Modern Light</option>
-                                        <option value="ocean" {{ $settings['tv_theme'] == 'ocean' ? 'selected' : '' }}>🌊 Deep Ocean Blue</option>
-                                    </select>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        <span class="inline-flex items-center gap-1.5 bg-slate-900 text-sky-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 shadow-sm">
+                                            <i class="fas fa-moon text-sky-400"></i> Dark Cyber High-Contrast (Khas Layar TV)
+                                        </span>
+                                    </div>
+                                    <input type="hidden" name="tv_theme" value="dark">
+                                    <p class="text-[10px] text-gray-400 mt-1.5">Desain permanen mode gelap dengan kontras teks tajam & glowing agar mudah dibaca dari jarak jauh.</p>
                                 </div>
 
                                 <label class="flex items-center p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50 transition">
