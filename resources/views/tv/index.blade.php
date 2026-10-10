@@ -1238,7 +1238,7 @@
                                     return;
                                 }
 
-                                const studentName = log.student ? log.student.name : ('Siswa ' . (log.device_user_id || ''));
+                                const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
                                 
                                 // Abaikan jika user adalah admin
                                 const lowerName = (studentName || '').toLowerCase();
