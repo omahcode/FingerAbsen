@@ -248,6 +248,36 @@
                             </div>
                         </div>
 
+                    <!-- Parameter Durasi, Poin, & Tema -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-stopwatch text-indigo-500 mr-1"></i> Durasi Tiap Slide (Carousel)
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    id="tv_slide_interval_input"
+                                    name="tv_slide_interval" 
+                                    min="3" 
+                                    max="600"
+                                    value="{{ old('tv_slide_interval', $settings['tv_slide_interval']) }}" 
+                                    required 
+                                    class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                >
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">detik</span>
+                            </div>
+                            <!-- Preset Chips -->
+                            <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span class="text-[10px] text-gray-400 font-semibold">Pilih Cepat:</span>
+                                <button type="button" onclick="setSlideInterval(10)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">10s</button>
+                                <button type="button" onclick="setSlideInterval(15)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">15s</button>
+                                <button type="button" onclick="setSlideInterval(20)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">20s</button>
+                                <button type="button" onclick="setSlideInterval(30)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">30s</button>
+                                <button type="button" onclick="setSlideInterval(60)" class="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200 transition">1m</button>
+                            </div>
+                        </div>
+
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">
                                 <i class="fas fa-palette text-pink-500 mr-1"></i> Tema Tampilan
@@ -262,7 +292,7 @@
 
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">
-                                <i class="fas fa-star text-emerald-500 mr-1"></i> Poin Tepat Waktu
+                                <i class="fas fa-star text-emerald-500 mr-1"></i> Poin Maksimal (Datang Pagi)
                             </label>
                             <div class="relative">
                                 <input 
@@ -270,12 +300,13 @@
                                     name="tv_points_ontime" 
                                     min="1" 
                                     max="100" 
-                                    value="{{ old('tv_points_ontime', $settings['tv_points_ontime']) }}" 
+                                    value="{{ old('tv_points_ontime', $settings['tv_points_ontime'] ?? '11') }}" 
                                     required 
                                     class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
                                 >
                                 <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">pt</span>
                             </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Diberikan penuh bagi yang datang paling awal (Contoh: 11 pt).</p>
                         </div>
 
                         <div>
@@ -288,12 +319,37 @@
                                     name="tv_points_late" 
                                     min="0" 
                                     max="100" 
-                                    value="{{ old('tv_points_late', $settings['tv_points_late']) }}" 
+                                    value="{{ old('tv_points_late', $settings['tv_points_late'] ?? '0') }}" 
                                     required 
                                     class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none"
                                 >
                                 <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-medium">pt</span>
                             </div>
+                            <p class="text-[10px] text-gray-400 mt-1">Jika lewat batas masuk (Contoh: 0 pt = tidak dapat poin).</p>
+                        </div>
+                    </div>
+
+                    <!-- Skema Poin & Penjelasan -->
+                    <div class="pt-3 border-t border-gray-100">
+                        <div class="bg-amber-50/70 border border-amber-200/80 rounded-lg p-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                <div class="text-xs font-bold text-amber-900 flex items-center">
+                                    <i class="fas fa-calculator text-amber-600 mr-1.5"></i> Skema Perhitungan Poin Kehadiran
+                                </div>
+                                <div class="flex items-center space-x-3 text-xs">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="tv_point_mode" value="tiered" {{ ($settings['tv_point_mode'] ?? 'tiered') === 'tiered' ? 'checked' : '' }} class="w-3.5 h-3.5 text-amber-600 focus:ring-amber-500">
+                                        <span class="ml-1.5 font-semibold text-gray-700">Poin Bertingkat Dinamis (Makin Pagi Makin Besar)</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="tv_point_mode" value="flat" {{ ($settings['tv_point_mode'] ?? 'tiered') === 'flat' ? 'checked' : '' }} class="w-3.5 h-3.5 text-amber-600 focus:ring-amber-500">
+                                        <span class="ml-1.5 font-semibold text-gray-700">Poin Rata (Flat)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-amber-800 leading-relaxed">
+                                <strong>Cara Kerja:</strong> Pada rentang jam buka masuk (<strong>{{ $settings['checkin_start'] }}</strong>) s/d batas tepat waktu (<strong>{{ $settings['checkin_end'] }}</strong>), siswa yang tap paling pagi (10 menit pertama) mendapat <strong>{{ $settings['tv_points_ontime'] ?? 11 }} poin penuh</strong>. Poin akan berkurang secara bertahap menit demi menit mendekati jam <strong>{{ $settings['checkin_end'] }}</strong>, dan jika datang di atas jam <strong>{{ $settings['checkin_end'] }} (terlambat)</strong> otomatis mendapat <strong>{{ $settings['tv_points_late'] ?? 0 }} poin</strong>.
+                            </p>
                         </div>
                     </div>
 

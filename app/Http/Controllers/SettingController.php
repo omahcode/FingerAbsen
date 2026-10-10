@@ -36,8 +36,9 @@ class SettingController extends Controller
             'tv_show_weekly' => Setting::get('tv_show_weekly', '1'),
             'tv_show_monthly' => Setting::get('tv_show_monthly', '1'),
             'tv_show_hof' => Setting::get('tv_show_hof', '1'),
-            'tv_points_ontime' => Setting::get('tv_points_ontime', '10'),
-            'tv_points_late' => Setting::get('tv_points_late', '5'),
+            'tv_point_mode' => Setting::get('tv_point_mode', 'tiered'),
+            'tv_points_ontime' => Setting::get('tv_points_ontime', '11'),
+            'tv_points_late' => Setting::get('tv_points_late', '0'),
             'tv_theme' => Setting::get('tv_theme', 'aurora'),
         ];
 
@@ -67,6 +68,7 @@ class SettingController extends Controller
             'tv_subtitle' => 'nullable|string|max:200',
             'tv_running_text' => 'nullable|string|max:500',
             'tv_slide_interval' => 'required|integer|min:3|max:600',
+            'tv_point_mode' => 'nullable|string|in:tiered,flat',
             'tv_points_ontime' => 'required|integer|min:1|max:100',
             'tv_points_late' => 'required|integer|min:0|max:100',
             'tv_theme' => 'nullable|string|in:aurora,dark,clean,ocean',
@@ -87,7 +89,8 @@ class SettingController extends Controller
         Setting::set('tv_running_text', $request->tv_running_text ?: '', 'Teks Berjalan Pengumuman TV');
         Setting::set('tv_slide_interval', (string) $request->tv_slide_interval, 'Durasi Slide TV (Detik)');
         Setting::set('tv_auto_fullscreen', $request->has('tv_auto_fullscreen') ? '1' : '0', 'Otomatis Layar Penuh Saat Buka TV');
-        Setting::set('tv_points_ontime', (string) $request->tv_points_ontime, 'Poin Hadir Tepat Waktu');
+        Setting::set('tv_point_mode', $request->tv_point_mode ?: 'tiered', 'Skema Perhitungan Poin TV');
+        Setting::set('tv_points_ontime', (string) $request->tv_points_ontime, 'Poin Maksimal Hadir Awal');
         Setting::set('tv_points_late', (string) $request->tv_points_late, 'Poin Hadir Terlambat');
         Setting::set('tv_theme', $request->tv_theme ?: 'aurora', 'Tema Tampilan TV');
 

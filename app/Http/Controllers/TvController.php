@@ -16,10 +16,12 @@ class TvController extends Controller
     {
         // 1. Ambil Pengaturan Sistem & TV
         $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
-        $checkinEnd = Setting::get('checkin_end', '07:15');
+        $checkinStart = Setting::get('checkin_start', '05:00');
+        $checkinEnd = Setting::get('checkin_end', '06:30');
         $checkoutStart = Setting::get('checkout_start', '14:00');
-        $pointsOntime = (int) Setting::get('tv_points_ontime', '10');
-        $pointsLate = (int) Setting::get('tv_points_late', '5');
+        $pointsOntime = (int) Setting::get('tv_points_ontime', '11');
+        $pointsLate = (int) Setting::get('tv_points_late', '0');
+        $pointMode = Setting::get('tv_point_mode', 'tiered');
 
         $tvSettings = [
             'school_name' => $schoolName,
@@ -95,7 +97,7 @@ class TvController extends Controller
             ->orderBy('timestamp', 'asc')
             ->get();
 
-        $weeklyData = $this->calculateLeaderboard($weeklyLogs, $checkinEnd, $pointsOntime, $pointsLate, 50);
+        $weeklyData = $this->calculateLeaderboard($weeklyLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, 50);
 
         // 5. Hitung Peringkat Bulanan (Monthly) - HANYA Absen Masuk
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
@@ -109,7 +111,7 @@ class TvController extends Controller
             ->orderBy('timestamp', 'asc')
             ->get();
 
-        $monthlyData = $this->calculateLeaderboard($monthlyLogs, $checkinEnd, $pointsOntime, $pointsLate, 200);
+        $monthlyData = $this->calculateLeaderboard($monthlyLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, 200);
 
         // 6. Hitung Hall of Fame (All-Time Leaderboard) - HANYA Absen Masuk
         $allLogs = AttendanceLog::with('student.schoolClass')
@@ -119,7 +121,7 @@ class TvController extends Controller
             ->orderBy('timestamp', 'asc')
             ->get();
 
-        $hofData = $this->calculateLeaderboard($allLogs, $checkinEnd, $pointsOntime, $pointsLate, null, true);
+        $hofData = $this->calculateLeaderboard($allLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, null, true);
 
         // Jika data mingguan / bulanan / HoF kosong karena sistem baru dan belum ada streak manual, isi dengan fallback
         if (empty($weeklyData) && !empty($dailyData)) {
@@ -153,9 +155,9 @@ class TvController extends Controller
     }
 
     /**
-     * Hitung akumulasi poin, ketepatan waktu, dan streak kehadiran (termasuk manual streak untuk uji coba)
+     * Hitung akumulasi poin bertingkat, ketepatan waktu, dan streak kehadiran (termasuk manual streak untuk uji coba)
      */
-    private function calculateLeaderboard($logsCollection, string $checkinEnd, int $pointsOntime, int $pointsLate, ?int $maxPoints = null, bool $isHof = false): array
+    private function calculateLeaderboard($logsCollection, string $checkinStart, string $checkinEnd, int $pointsOntime, int $pointsLate, string $pointMode = 'tiered', ?int $maxPoints = null, bool $isHof = false): array
     {
         // Kelompokkan log berdasarkan student_id
         $grouped = $logsCollection->groupBy('student_id');
@@ -194,11 +196,9 @@ class TvController extends Controller
                 $tapTime = Carbon::parse($earliestTap->timestamp)->format('H:i');
                 $latestTap = $tapTime;
 
-                if ($tapTime <= $checkinEnd) {
-                    $totalPoints += $pointsOntime;
-                } else {
-                    $totalPoints += $pointsLate;
-                }
+                // Hitung poin bertingkat (makin pagi makin tinggi)
+                $tapPoint = $this->calculateTapPoints($tapTime, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode);
+                $totalPoints += $tapPoint;
             }
 
             // Tambahkan manual streak (jika diatur di setting untuk simulasi/testing)
@@ -234,6 +234,49 @@ class TvController extends Controller
             $item['max'] = $effectiveMax;
             return $item;
         }, array_slice($leaderboard, 0, 10));
+    }
+
+    /**
+     * Hitung poin kedatangan berdasarkan jam tap (Poin bertingkat: semakin awal semakin besar)
+     */
+    private function calculateTapPoints(string $tapTime, string $checkinStart, string $checkinEnd, int $maxPoints = 11, int $latePoints = 0, string $mode = 'tiered'): int
+    {
+        // Jika sudah melewati batas tepat waktu (terlambat), beri late points (default: 0 poin)
+        if ($tapTime > $checkinEnd) {
+            return $latePoints;
+        }
+
+        if ($mode === 'flat') {
+            return $maxPoints;
+        }
+
+        // Mode Tiered (Poin Dinamis Bertingkat)
+        $startParts = explode(':', $checkinStart);
+        $endParts = explode(':', $checkinEnd);
+        $tapParts = explode(':', $tapTime);
+
+        $startMinutes = ((int)$startParts[0] * 60) + (int)($startParts[1] ?? 0);
+        $endMinutes = ((int)$endParts[0] * 60) + (int)($endParts[1] ?? 0);
+        $tapMinutes = ((int)$tapParts[0] * 60) + (int)($tapParts[1] ?? 0);
+
+        if ($endMinutes <= $startMinutes) {
+            return $maxPoints;
+        }
+
+        // Jika tap sebelum jam buka, berikan poin maksimal penuh
+        if ($tapMinutes <= $startMinutes) {
+            return $maxPoints;
+        }
+
+        // Proporsi waktu kedatangan (0.0 = jam buka paling awal, 1.0 = tepat di batas akhir jam masuk)
+        $totalRange = $endMinutes - $startMinutes;
+        $elapsed = $tapMinutes - $startMinutes;
+        $progress = min(1.0, max(0.0, $elapsed / $totalRange));
+
+        // Gradasi poin dari $maxPoints (misal 11) turun secara bertahap ke 1 poin
+        $calculated = (int) round($maxPoints - ($progress * ($maxPoints - 1)));
+
+        return max(1, min($maxPoints, $calculated));
     }
 
     /**
