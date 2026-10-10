@@ -253,19 +253,29 @@
                                 </div>
                             </div>
 
-                            <!-- Tema Tampilan & Auto Fullscreen -->
+                            <!-- Tema Tampilan (Dark / Light) & Auto Fullscreen -->
                             <div class="space-y-3">
-                                <div class="bg-gray-50/80 p-3 rounded-xl border border-gray-200">
+                                <div>
                                     <label class="block text-xs font-bold text-gray-700 mb-1">
-                                        <i class="fas fa-tv text-purple-500 mr-1"></i> Tampilan Layar TV
+                                        <i class="fas fa-palette text-purple-600 mr-1"></i> Pilihan Mode Tema Layar TV
                                     </label>
-                                    <div class="flex items-center gap-2 mt-1.5">
-                                        <span class="inline-flex items-center gap-1.5 bg-slate-900 text-sky-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 shadow-sm">
-                                            <i class="fas fa-moon text-sky-400"></i> Dark Cyber High-Contrast (Khas Layar TV)
-                                        </span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <label class="flex items-center p-2.5 bg-white border-2 rounded-xl cursor-pointer transition {{ ($settings['tv_theme'] ?? 'dark') !== 'light' ? 'border-purple-600 bg-purple-50/20' : 'border-gray-200 hover:border-purple-300' }}">
+                                            <input type="radio" name="tv_theme" value="dark" {{ ($settings['tv_theme'] ?? 'dark') !== 'light' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 focus:ring-purple-500">
+                                            <div class="ml-2">
+                                                <span class="text-xs font-bold text-gray-800 flex items-center gap-1"><i class="fas fa-moon text-indigo-500"></i> Dark Mode</span>
+                                                <span class="text-[10px] text-gray-400 block">Cyber Glow TV</span>
+                                            </div>
+                                        </label>
+
+                                        <label class="flex items-center p-2.5 bg-white border-2 rounded-xl cursor-pointer transition {{ ($settings['tv_theme'] ?? 'dark') === 'light' ? 'border-purple-600 bg-purple-50/20' : 'border-gray-200 hover:border-purple-300' }}">
+                                            <input type="radio" name="tv_theme" value="light" {{ ($settings['tv_theme'] ?? 'dark') === 'light' ? 'checked' : '' }} class="w-4 h-4 text-purple-600 focus:ring-purple-500">
+                                            <div class="ml-2">
+                                                <span class="text-xs font-bold text-gray-800 flex items-center gap-1"><i class="fas fa-sun text-amber-500"></i> Light Mode</span>
+                                                <span class="text-[10px] text-gray-400 block">Clean & Cerah</span>
+                                            </div>
+                                        </label>
                                     </div>
-                                    <input type="hidden" name="tv_theme" value="dark">
-                                    <p class="text-[10px] text-gray-400 mt-1.5">Desain permanen mode gelap dengan kontras teks tajam & glowing agar mudah dibaca dari jarak jauh.</p>
                                 </div>
 
                                 <label class="flex items-center p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-lg cursor-pointer hover:bg-indigo-50 transition">

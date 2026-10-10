@@ -71,7 +71,7 @@ class SettingController extends Controller
             'tv_point_mode' => 'nullable|string|in:tiered,flat',
             'tv_points_ontime' => 'required|integer|min:1|max:100',
             'tv_points_late' => 'required|integer|min:0|max:100',
-            'tv_theme' => 'nullable|string|in:aurora,dark,clean,ocean',
+            'tv_theme' => 'nullable|string|in:aurora,dark,light,clean,ocean',
         ]);
 
         // Pengaturan Utama & Jam
