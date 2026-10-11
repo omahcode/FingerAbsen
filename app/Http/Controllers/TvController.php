@@ -153,6 +153,9 @@ class TvController extends Controller
             ->limit(30)
             ->get();
 
+        $maxLogId = AttendanceLog::max('id') ?? 0;
+        $allStudents = Student::where($isStudentScope)->with('schoolClass')->orderBy('name')->get();
+
         return view('tv.index', compact(
             'logs',
             'dailyData',
@@ -160,7 +163,9 @@ class TvController extends Controller
             'monthlyData',
             'hofData',
             'stats',
-            'tvSettings'
+            'tvSettings',
+            'maxLogId',
+            'allStudents'
         ));
     }
 

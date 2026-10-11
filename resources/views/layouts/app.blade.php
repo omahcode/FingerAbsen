@@ -50,6 +50,9 @@
                     <a href="{{ route('settings.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
                         <i class="fas fa-cog mr-1 text-xs"></i> Pengaturan
                     </a>
+                    <a href="{{ route('attendance.simulate') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold shadow-sm' : 'bg-purple-500/20 text-purple-200 hover:bg-purple-500 hover:text-white border border-purple-400/30' }} transition">
+                        <i class="fas fa-flask mr-1 text-xs"></i> Simulasi
+                    </a>
                     <a href="{{ route('tv.index') }}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-200 hover:text-white border border-emerald-400/30 transition">
                         <i class="fas fa-tv mr-1 text-xs"></i> Mode TV
                     </a>
@@ -113,6 +116,9 @@
                     </a>
                     <a href="{{ route('settings.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
                         <i class="fas fa-cog w-5 text-center text-sky-300"></i> Pengaturan
+                    </a>
+                    <a href="{{ route('attendance.simulate') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold' : 'text-purple-200 hover:bg-white/10' }}">
+                        <i class="fas fa-flask w-5 text-center text-purple-300"></i> Simulasi
                     </a>
                 </div>
 

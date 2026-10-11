@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'iclock/*',
             'iclock',
             'api/*',
+            'attendance/simulate*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

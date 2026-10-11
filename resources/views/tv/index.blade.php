@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
     @vite(['resources/js/app.js'])
 
     <style>
@@ -525,6 +527,212 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        /* NEW ATTENDANCE HIGHLIGHT & AVATAR */
+        @keyframes cardPulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border-color: rgba(56, 189, 248, 0.8); }
+            50% { box-shadow: 0 0 45px rgba(52, 211, 153, 0.7); border-color: rgba(52, 211, 153, 0.9); }
+        }
+        .s2-card.just-attended {
+            animation: cardPulseGlow 1.8s ease-in-out infinite !important;
+            border-width: 2px !important;
+        }
+        .new-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #10b981, #06b6d4);
+            color: #ffffff;
+            vertical-align: middle;
+            margin-left: 6px;
+            animation: pulse 1s infinite;
+        }
+        .s2-avatar-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(56, 189, 248, 0.5);
+            flex-shrink: 0;
+        }
+        .s2-avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* REALTIME SIMULATION MODAL ON TV */
+        .tv-sim-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            background: rgba(3, 7, 18, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 1.5rem;
+        }
+        .tv-sim-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .tv-sim-box {
+            background: linear-gradient(150deg, #0f172a, #1e293b);
+            border: 2px solid rgba(99, 102, 241, 0.5);
+            border-radius: 28px;
+            padding: 2rem 2.4rem;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.8), 0 0 50px rgba(99, 102, 241, 0.3);
+            position: relative;
+            transform: scale(0.92);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .tv-sim-modal.active .tv-sim-box {
+            transform: scale(1);
+        }
+        .tv-sim-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .tv-sim-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tv-sim-close {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #94a3b8;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .tv-sim-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+        .tv-sim-desc {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-bottom: 1.2rem;
+            line-height: 1.45;
+        }
+        .tv-sim-group {
+            margin-bottom: 1.1rem;
+            text-align: left;
+        }
+        .tv-sim-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+        }
+        .tv-sim-select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+        }
+        .tv-sim-select:focus {
+            border-color: #6366f1;
+        }
+        .tv-sim-time-presets {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .tv-time-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #cbd5e1;
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .tv-time-btn:hover, .tv-time-btn.active {
+            background: rgba(99, 102, 241, 0.35);
+            border-color: #818cf8;
+            color: #ffffff;
+        }
+        .btn-run-sim {
+            width: 100%;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            border: none;
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 800;
+            padding: 0.95rem 1.4rem;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.4);
+            transition: all 0.25s;
+            margin-top: 1.2rem;
+        }
+        .btn-run-sim:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 40px rgba(79, 70, 229, 0.6);
+        }
+        .tv-sim-footer {
+            margin-top: 1.2rem;
+            text-align: center;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .tv-sim-link {
+            color: #38bdf8;
+            font-size: 0.88rem;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+        .tv-sim-link:hover {
+            color: #7dd3fc;
+            text-decoration: underline;
+        }
+
         /* ==================== LIGHT MODE STYLING ==================== */
         body.theme-light {
             --text: #0f172a;
@@ -938,8 +1146,9 @@
                 <i class="fas fa-check-circle"></i> Absensi Berhasil
             </div>
 
-            <div class="att-icon-wrap">
-                <i class="fas fa-fingerprint"></i>
+            <div class="att-icon-wrap" id="att-icon-wrap">
+                <i class="fas fa-fingerprint" id="att-finger-icon"></i>
+                <img id="att-photo" src="" alt="Foto Siswa" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
             </div>
 
             <div class="att-greeting">
@@ -965,12 +1174,61 @@
         </div>
     </div>
 
-    <!-- Floating Quick Actions (Dashboard, Fullscreen, Settings) -->
+    <!-- Realtime Attendance Simulation Drawer / Modal on TV -->
+    <div id="tv-sim-modal" class="tv-sim-modal">
+        <div class="tv-sim-box">
+            <div class="tv-sim-header">
+                <div class="tv-sim-title">
+                    <i class="fas fa-flask text-amber-400"></i> Simulator Absensi Realtime TV
+                </div>
+                <button type="button" class="tv-sim-close" id="btn-close-sim-modal" title="Tutup">&times;</button>
+            </div>
+            <div class="tv-sim-body">
+                <p class="tv-sim-desc">
+                    Uji coba notifikasi pop-up absen berhasil dan perpindahan otomatis ke Slide 2 (Top 10 Kehadiran Hari Ini).
+                </p>
+
+                <div class="tv-sim-group">
+                    <label>Pilih Siswa untuk Simulasi:</label>
+                    <select id="tv-sim-student-select" class="tv-sim-select">
+                        <option value="random">🎲 Siswa Acak (Random)</option>
+                        @foreach($allStudents ?? [] as $st)
+                            <option value="{{ $st->id }}">{{ $st->name }} ({{ $st->schoolClass->name ?? '-' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="tv-sim-group">
+                    <label>Preset Waktu Kehadiran:</label>
+                    <div class="tv-sim-time-presets">
+                        <button type="button" class="tv-time-btn active" data-time="now"><i class="fas fa-bolt"></i> Sekarang</button>
+                        <button type="button" class="tv-time-btn" data-time="06:15"><i class="far fa-clock"></i> 06:15 (Tepat)</button>
+                        <button type="button" class="tv-time-btn" data-time="06:45"><i class="fas fa-running"></i> 06:45 (Telat)</button>
+                    </div>
+                </div>
+
+                <button type="button" id="btn-run-tv-sim" class="btn-run-sim">
+                    <i class="fas fa-paper-plane"></i> Simulasikan Tap Absen Sekarang
+                </button>
+
+                <div class="tv-sim-footer">
+                    <a href="{{ route('attendance.simulate') }}" target="_blank" class="tv-sim-link">
+                        <i class="fas fa-external-link-alt"></i> Buka Halaman Simulator Lengkap
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Quick Actions (Dashboard, Fullscreen, Settings, Simulation) -->
     <div class="tv-floating-tools">
+        <button type="button" id="btn-open-sim-modal" class="btn-tv-action" title="Buka Panel Uji Coba / Simulasi Absen" style="background: rgba(99, 102, 241, 0.4); border-color: rgba(99, 102, 241, 0.6); color: #a5b4fc;">
+            <i class="fas fa-flask"></i>
+        </button>
         <button type="button" id="btn-theme-tv" class="btn-tv-action" title="Ganti Mode Gelap / Terang (Dark / Light)">
             <i class="fas {{ ($tvSettings['tv_theme'] ?? 'dark') === 'light' ? 'fa-moon' : 'fa-sun' }}" id="tv-theme-icon"></i>
         </button>
-        <button type="button" id="btn-test-popup" class="btn-tv-action" title="Uji Coba Tampilan Pop-up Absen">
+        <button type="button" id="btn-test-popup" class="btn-tv-action" title="Uji Coba Cepat Pop-up Absen (1-Klik)">
             <i class="fas fa-bell"></i>
         </button>
         <a href="{{ route('attendance.index') }}" class="btn-tv-action" title="Kembali ke Dashboard">
@@ -1127,6 +1385,9 @@
         const attQuoteEl = document.getElementById('att-quote');
         const attCountdownFill = document.getElementById('att-countdown-fill');
 
+        let isAttendancePaused = false;
+        let attendancePauseTimer = null;
+
         function goToDailySlide() {
             const slides = Array.from(document.querySelectorAll('.slide'));
             const dailyIdx = slides.findIndex(s => s.dataset.slideName === 'daily');
@@ -1135,7 +1396,7 @@
             }
         }
 
-        function showAttendanceOverlay(studentName, timeStr, className) {
+        function showAttendanceOverlay(studentName, timeStr, className, photoUrl) {
             if (!overlayEl) return;
 
             // Abaikan jika user adalah admin
@@ -1150,8 +1411,30 @@
             if (attClassEl) attClassEl.textContent = className || 'Umum';
             if (attQuoteEl) attQuoteEl.textContent = `"${getRandomQuote()}"`;
 
-            // Langsung pindah ke Slide 2 (Kehadiran Hari Ini) saat ada yang absen
+            // Tampilkan foto siswa atau ikon sidik jari mesin
+            const attPhoto = document.getElementById('att-photo');
+            const attFingerIcon = document.getElementById('att-finger-icon');
+            if (attPhoto && attFingerIcon) {
+                if (photoUrl) {
+                    attPhoto.src = photoUrl;
+                    attPhoto.style.display = 'block';
+                    attFingerIcon.style.display = 'none';
+                } else {
+                    attPhoto.style.display = 'none';
+                    attFingerIcon.style.display = 'block';
+                }
+            }
+
+            // Otomatis langsung pindah ke Tampilan ke-2 (Slide 2: Kehadiran Hari Ini)
             goToDailySlide();
+
+            // Tahan carousel pada Slide 2 selama 8.5 detik agar semua orang melihat siswa yang baru absen
+            isAttendancePaused = true;
+            clearTimeout(attendancePauseTimer);
+            attendancePauseTimer = setTimeout(() => {
+                isAttendancePaused = false;
+                resetProg();
+            }, 8500);
 
             // Reset countdown bar
             if (attCountdownFill) {
@@ -1159,14 +1442,14 @@
                 attCountdownFill.style.width = '100%';
             }
 
-            // Tampilkan modal
+            // Tampilkan modal popup
             overlayEl.classList.add('active');
             playChime();
 
-            // Jalankan countdown bar
+            // Jalankan countdown bar animasi 6.5 detik
             setTimeout(() => {
                 if (attCountdownFill) {
-                    attCountdownFill.style.transition = 'width 6s linear';
+                    attCountdownFill.style.transition = 'width 6.5s linear';
                     attCountdownFill.style.width = '0%';
                 }
             }, 50);
@@ -1174,10 +1457,10 @@
             // Bersihkan timer lama jika ada
             clearTimeout(overlayTimer);
 
-            // Auto dismiss setelah 6 detik
+            // Auto dismiss modal setelah 6.5 detik
             overlayTimer = setTimeout(() => {
                 hideAttendanceOverlay();
-            }, 6000);
+            }, 6500);
         }
 
         function hideAttendanceOverlay() {
@@ -1192,29 +1475,129 @@
             if (e.target === overlayEl) hideAttendanceOverlay();
         });
 
-        // Test Pop-up Button (Simulasi tap absen & langsung beralih ke slide 2)
-        document.getElementById('btn-test-popup')?.addEventListener('click', () => {
-            const sampleNames = ['Mohamad Jibril', 'Achmad Dzaky', 'Kayla Aqila', 'Rafa Abrar', 'Sheren Angelica'];
+        // ======================== INTERACTIVE SIMULATION CONTROLLERS ========================
+        const tvSimModal = document.getElementById('tv-sim-modal');
+        const btnOpenSimModal = document.getElementById('btn-open-sim-modal');
+        const btnCloseSimModal = document.getElementById('btn-close-sim-modal');
+        const btnRunTvSim = document.getElementById('btn-run-tv-sim');
+        let selectedSimPresetTime = 'now';
+
+        btnOpenSimModal?.addEventListener('click', () => {
+            tvSimModal?.classList.add('active');
+        });
+
+        btnCloseSimModal?.addEventListener('click', () => {
+            tvSimModal?.classList.remove('active');
+        });
+
+        tvSimModal?.addEventListener('click', (e) => {
+            if (e.target === tvSimModal) tvSimModal.classList.remove('active');
+        });
+
+        // Preset Time Selector in TV Modal
+        document.querySelectorAll('.tv-time-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tv-time-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedSimPresetTime = btn.dataset.time || 'now';
+            });
+        });
+
+        // Run simulation from TV Modal
+        btnRunTvSim?.addEventListener('click', async () => {
+            const studentId = document.getElementById('tv-sim-student-select')?.value || 'random';
+            let timeVal = null;
+            if (selectedSimPresetTime !== 'now') {
+                timeVal = selectedSimPresetTime;
+            }
+
+            btnRunTvSim.disabled = true;
+            btnRunTvSim.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses Absensi...';
+
+            try {
+                const res = await fetch("{{ route('attendance.simulate') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        time: timeVal,
+                        status_code: 0
+                    })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success' && data.log) {
+                    tvSimModal?.classList.remove('active');
+                    processNewAttendanceLog(data.log);
+                }
+            } catch(e) {
+                // Fallback simulation
+                runLocalFallbackSimulation();
+            } finally {
+                btnRunTvSim.disabled = false;
+                btnRunTvSim.innerHTML = '<i class="fas fa-paper-plane"></i> Simulasikan Tap Absen Sekarang';
+            }
+        });
+
+        // Quick 1-Click Simulation Button (#btn-test-popup)
+        document.getElementById('btn-test-popup')?.addEventListener('click', async () => {
+            const btn = document.getElementById('btn-test-popup');
+            if (btn) btn.style.transform = 'scale(0.9)';
+            setTimeout(() => { if (btn) btn.style.transform = ''; }, 200);
+
+            try {
+                const res = await fetch("{{ route('attendance.simulate') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: 'random',
+                        status_code: 0
+                    })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success' && data.log) {
+                    processNewAttendanceLog(data.log);
+                } else {
+                    runLocalFallbackSimulation();
+                }
+            } catch(err) {
+                runLocalFallbackSimulation();
+            }
+        });
+
+        function runLocalFallbackSimulation() {
+            const sampleNames = ['Mohamad Jibril', 'Achmad Dzaky', 'Kayla Aqila', 'Rafa Abrar', 'Sheren Angelica', 'Aulia Zahra'];
             const sampleClasses = ['XI RPL 1', 'XI RPL 2', 'X PPLG 1', 'XII RPL 1'];
             const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
             const rClass = sampleClasses[Math.floor(Math.random() * sampleClasses.length)];
             const n = new Date();
             const timeStr = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
             
-            // Masukkan data test ke daily top 10
+            dailyData = dailyData.filter(d => (d.name || '').toLowerCase() !== rName.toLowerCase());
             dailyData.unshift({
                 name: rName,
                 cls: rClass,
                 time: timeStr,
                 ini: rName.charAt(0).toUpperCase(),
-                is_ontime: true
+                photo: null,
+                is_ontime: true,
+                is_just_attended: true
             });
             if (dailyData.length > 10) dailyData.pop();
             renderDaily();
 
-            showAttendanceOverlay(rName, timeStr, rClass);
+            showAttendanceOverlay(rName, timeStr, rClass, null);
             updateLiveStats(timeStr);
-        });
+        }
 
         window.testAttendancePopup = showAttendanceOverlay;
 
@@ -1232,14 +1615,22 @@
 
             top3El.innerHTML = dailyData.slice(0,3).map((d,i) => {
                 const c = ['r1','r2','r3'][i];
-                return `<div class="s2-card ${c}">
+                const isJustAttended = d.is_just_attended ? 'just-attended' : '';
+                const avatarContent = d.photo 
+                    ? `<div class="s2-avatar-wrap"><img src="${d.photo}" alt="${d.name}" class="s2-avatar-img"></div>`
+                    : `<div class="s2-medal"><i class="fas fa-medal"></i></div>`;
+
+                return `<div class="s2-card ${c} ${isJustAttended}">
                     <div class="accent"></div>
-                    <div class="s2-medal"><i class="fas fa-medal"></i></div>
+                    ${avatarContent}
                     <div class="s2-info">
-                        <div class="s2-name">${d.name}</div>
+                        <div class="s2-name">
+                            ${d.name}
+                            ${d.is_just_attended ? '<span class="new-pill">BARU</span>' : ''}
+                        </div>
                         <div class="s2-class">${d.cls}</div>
                     </div>
-                    <div class="s2-time"><i class="far fa-clock"></i> ${d.time}</div>
+                    <div class="s2-time"><i class="far fa-clock"></i> ${d.time} WIB</div>
                 </div>`;
             }).join('');
 
@@ -1247,9 +1638,9 @@
             if (rest.length > 0) {
                 tableEl.innerHTML = rest.map((d,i) => `<tr>
                     <td class="tbl-rank">#${i+4}</td>
-                    <td class="tbl-name">${d.name}</td>
+                    <td class="tbl-name">${d.name} ${d.is_just_attended ? '<span class="new-pill" style="font-size:0.6rem;padding:1px 6px;">BARU</span>' : ''}</td>
                     <td>${d.cls}</td>
-                    <td><span class="tbl-time-pill">${d.time}</span></td>
+                    <td><span class="tbl-time-pill">${d.time} WIB</span></td>
                 </tr>`).join('');
             } else {
                 tableEl.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400 py-6 text-base">Menunggu siswa berikutnya...</td></tr>`;
@@ -1422,7 +1813,7 @@
             }
 
             progTimer = setInterval(() => {
-                if (isManualPaused) {
+                if (isManualPaused || isAttendancePaused) {
                     slideStartTime = Date.now() - (lastProgressPct / 100 * slideInterval);
                     return;
                 }
@@ -1559,119 +1950,126 @@
         updateClock();
         startProg();
 
-        // Background polling fallback setiap 10 detik agar data selalu sinkron
-        let maxTvLogId = 0;
-        fetch('/attendance/latest?since_id=0')
-            .then(r => r.json())
-            .then(data => {
-                if (data && data.max_id) maxTvLogId = data.max_id;
-            })
-            .catch(() => {});
+        // ======================== ULTRA-FAST REALTIME POLLING (1.5 SECONDS) & PROCESSOR ========================
+        let maxTvLogId = {{ $maxLogId ?? 0 }};
+        const seenLogIds = new Set();
+        let isFetchingLogs = false;
 
-        setInterval(() => {
-            if (maxTvLogId > 0) {
-                fetch(`/attendance/latest?since_id=${maxTvLogId}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === 'success' && data.logs && data.logs.length > 0) {
-                            data.logs.forEach(log => {
-                                // Abaikan absen pulang (status_code == 1)
-                                if (log.status_code == 1 || log.status_code === '1') {
-                                    return;
-                                }
-
-                                const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
-                                
-                                // Abaikan jika user adalah admin
-                                const lowerName = (studentName || '').toLowerCase();
-                                if (lowerName.includes('admin') || (log.student && log.student.privilege > 0)) {
-                                    return;
-                                }
-
-                                const className = (log.student && log.student.school_class) ? log.student.school_class.name : '-';
-                                const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';
-
-                                dailyData.unshift({
-                                    name: studentName,
-                                    cls: className,
-                                    time: timeStr,
-                                    ini: studentName.charAt(0).toUpperCase(),
-                                    is_ontime: true
-                                });
-                                if (dailyData.length > 10) dailyData.pop();
-                                renderDaily();
-
-                                showAttendanceOverlay(studentName, timeStr, className);
-                                updateLiveStats(timeStr);
-                            });
-                            maxTvLogId = data.max_id;
-                        }
-                    })
-                    .catch(() => {});
+        function processNewAttendanceLog(log) {
+            if (!log) return;
+            if (log.id && seenLogIds.has(log.id)) return;
+            if (log.id) {
+                seenLogIds.add(log.id);
+                if (log.id > maxTvLogId) maxTvLogId = log.id;
             }
-        }, 10000);
+
+            // HANYA proses absen masuk, abaikan jika absen pulang (status_code == 1)
+            if (log.status_code == 1 || log.status_code === '1') {
+                return;
+            }
+
+            const student = log.student;
+            const studentName = student ? student.name : ('Siswa ' + (log.device_user_id || ''));
+
+            // Abaikan jika user adalah admin
+            const lowerName = (studentName || '').toLowerCase();
+            if (lowerName.includes('admin') || (student && student.privilege > 0)) {
+                return;
+            }
+
+            const className = (student && student.school_class) 
+                ? student.school_class.name 
+                : ((student && student.schoolClass) ? student.schoolClass.name : '-');
+
+            const timeStr = (log.timestamp && log.timestamp.includes(' ')) 
+                ? log.timestamp.split(' ')[1].substring(0, 5) 
+                : '07:00';
+
+            const photoUrl = student?.photo_url || (student?.photo ? ('/storage/' + student.photo) : null);
+
+            // Perbarui dailyData: Hapus data siswa yang sama jika sudah ada agar tidak duplikat
+            dailyData = dailyData.filter(d => (d.name || '').toLowerCase() !== studentName.toLowerCase());
+
+            // Tambahkan ke paling atas
+            dailyData.unshift({
+                name: studentName,
+                cls: className,
+                time: timeStr,
+                ini: studentName.charAt(0).toUpperCase(),
+                photo: photoUrl,
+                is_ontime: true,
+                is_just_attended: true
+            });
+
+            if (dailyData.length > 10) dailyData.pop();
+
+            // Render ulang tampilan Slide 2
+            renderDaily();
+
+            // Tampilkan popup modal & geser otomatis ke Slide 2
+            showAttendanceOverlay(studentName, timeStr, className, photoUrl);
+            updateLiveStats(timeStr);
+
+            // Efek highlight panel Top 3
+            const pnl = document.getElementById('daily-top3');
+            if (pnl) {
+                pnl.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                pnl.style.transform = 'scale(1.03)';
+                setTimeout(() => {
+                    pnl.style.transform = 'scale(1)';
+                }, 600);
+            }
+        }
+        window.processNewAttendanceLog = processNewAttendanceLog;
+
+        async function pollRealtimeAttendance() {
+            if (isFetchingLogs) return;
+            isFetchingLogs = true;
+            try {
+                const res = await fetch(`/attendance/latest?since_id=${maxTvLogId}`);
+                const data = await res.json();
+                if (data.status === 'success' && data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        processNewAttendanceLog(log);
+                    });
+                    if (data.max_id && data.max_id > maxTvLogId) {
+                        maxTvLogId = data.max_id;
+                    }
+                }
+            } catch(e) {
+                // Silent retry on network hiccups
+            } finally {
+                isFetchingLogs = false;
+            }
+        }
+
+        // Jalankan polling setiap 1.5 detik
+        setInterval(pollRealtimeAttendance, 1500);
     </script>
 
     <!-- Realtime WebSockets Listener (Laravel Reverb / Echo) -->
-    <script type="module">
+    <script>
         document.addEventListener("DOMContentLoaded", () => {
+            if (typeof Echo !== 'undefined' && !window.Echo) {
+                try {
+                    window.Pusher = Pusher;
+                    window.Echo = new Echo({
+                        broadcaster: 'reverb',
+                        key: '{{ env('VITE_REVERB_APP_KEY', 'app_key') }}',
+                        wsHost: '{{ env('VITE_REVERB_HOST', '127.0.0.1') }}',
+                        wsPort: {{ env('VITE_REVERB_PORT', 8080) }},
+                        wssPort: {{ env('VITE_REVERB_PORT', 8080) }},
+                        forceTLS: false,
+                        enabledTransports: ['ws', 'wss'],
+                    });
+                } catch(e) {}
+            }
+
             if (window.Echo) {
                 window.Echo.channel('attendance')
                     .listen('.AttendanceCreated', (e) => {
-                        const log = e.log;
-
-                        // HANYA proses absen masuk, abaikan jika absen pulang (status_code == 1)
-                        if (log.status_code == 1 || log.status_code === '1') {
-                            return;
-                        }
-
-                        const studentName = log.student ? log.student.name : ('Siswa ' + (log.device_user_id || ''));
-                        
-                        // Abaikan jika user adalah admin
-                        const lowerName = (studentName || '').toLowerCase();
-                        if (lowerName.includes('admin') || (log.student && log.student.privilege > 0)) {
-                            return;
-                        }
-
-                        const className = (log.student && log.student.school_class) ? log.student.school_class.name : ((log.student && log.student.schoolClass) ? log.student.schoolClass.name : '-');
-                        const timeStr = (log.timestamp && log.timestamp.includes(' ')) ? log.timestamp.split(' ')[1].substring(0, 5) : '07:00';
-
-                        // Masukkan data baru ke paling atas daftar Top 10 Hari Ini
-                        dailyData.unshift({
-                            name: studentName,
-                            cls: className,
-                            time: timeStr,
-                            ini: studentName.charAt(0).toUpperCase(),
-                            is_ontime: true
-                        });
-
-                        if (dailyData.length > 10) dailyData.pop();
-
-                        renderDaily();
-
-                        // Tampilkan modal overlay absensi & langsung alihkan slide ke slide 2 (Kehadiran Hari Ini)
-                        if (typeof showAttendanceOverlay === 'function') {
-                            showAttendanceOverlay(studentName, timeStr, className);
-                        }
-
-                        // Update live summary stats di Slide 1
-                        if (typeof updateLiveStats === 'function') {
-                            updateLiveStats(timeStr);
-                        }
-
-                        // Update maxTvLogId agar polling tidak menduplikasi
-                        if (log.id && typeof maxTvLogId !== 'undefined' && log.id > maxTvLogId) {
-                            maxTvLogId = log.id;
-                        }
-
-                        // Efek highlight panel
-                        const pnl = document.getElementById('daily-top3');
-                        if (pnl) {
-                            pnl.style.transition = 'transform 0.3s, filter 0.3s';
-                            pnl.style.transform = 'scale(1.02)';
-                            setTimeout(() => {
-                                pnl.style.transform = 'scale(1)';
-                            }, 500);
+                        if (typeof window.processNewAttendanceLog === 'function') {
+                            window.processNewAttendanceLog(e.log);
                         }
                     });
             }

@@ -17,9 +17,12 @@ Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->name('login.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-// Halaman Publik (Mode TV & API Realtime Polling)
+// Halaman Publik (Mode TV, Simulasi Uji Coba & API Realtime Polling)
 Route::get('tv', [TvController::class, 'index'])->name('tv.index');
 Route::get('attendance/latest', [AttendanceController::class, 'latest'])->name('attendance.latest');
+Route::match(['get', 'post'], 'attendance/simulate', [AttendanceController::class, 'simulate'])->name('attendance.simulate');
+Route::post('attendance/simulate/seed-demo', [AttendanceController::class, 'seedDemoStudents'])->name('attendance.simulate.seed_demo');
+Route::post('attendance/simulate/reset-today', [AttendanceController::class, 'resetTodayAttendance'])->name('attendance.simulate.reset_today');
 
 // Halaman Portal Manajemen (Dilindungi Autentikasi Login)
 Route::middleware('auth')->group(function () {

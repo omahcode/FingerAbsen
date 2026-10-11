@@ -16,6 +16,8 @@ class Student extends Model
         'manual_streak'
     ];
 
+    protected $appends = ['photo_url'];
+
     public function getPhotoUrlAttribute(): ?string
     {
         if ($this->photo) {
