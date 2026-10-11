@@ -213,12 +213,12 @@ class AttendanceController extends Controller
             return redirect()->back()->with('error', 'Data siswa tidak ditemukan.');
         }
 
-        // Tentukan waktu absen
+        // Tentukan waktu absen (WIB)
         $customTime = $request->input('time'); // misal "06:15"
         if ($customTime) {
-            $timestamp = Carbon::today()->format('Y-m-d') . ' ' . $customTime . ':00';
+            $timestamp = Carbon::today('Asia/Jakarta')->format('Y-m-d') . ' ' . $customTime . ':00';
         } else {
-            $timestamp = $request->input('timestamp', Carbon::now()->toDateTimeString());
+            $timestamp = $request->input('timestamp', Carbon::now('Asia/Jakarta')->toDateTimeString());
         }
 
         $statusCode = (int) $request->input('status_code', 0); // 0 = Masuk

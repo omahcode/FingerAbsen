@@ -1016,7 +1016,7 @@
                     <p class="s1-sub">{{ $tvSettings['tv_subtitle'] }}</p>
 
                     <div class="s1-clock-wrap">
-                        <div class="s1-time" id="clock-time">00<span class="blink">:</span>00<span class="blink">:</span>00</div>
+                        <div class="s1-time" id="clock-time">00<span class="blink">:</span>00<span class="blink">:</span>00 <span style="font-size:0.42em;letter-spacing:1px;color:#38bdf8;font-weight:800;vertical-align:middle;margin-left:4px;">WIB</span></div>
                         <div class="s1-date-box">
                             <div class="s1-day" id="clock-day">Memuat...</div>
                             <div class="s1-date" id="clock-date"></div>
@@ -1622,7 +1622,15 @@
             const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
             const rClass = sampleClasses[Math.floor(Math.random() * sampleClasses.length)];
             const n = new Date();
-            const timeStr = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+            const nowWibParts = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).formatToParts(n);
+            const hWib = nowWibParts.find(p => p.type === 'hour')?.value || String(n.getHours()).padStart(2,'0');
+            const mWib = nowWibParts.find(p => p.type === 'minute')?.value || String(n.getMinutes()).padStart(2,'0');
+            const timeStr = `${hWib}:${mWib}`;
             
             const existingIdx = dailyData.findIndex(d => (d.name || '').toLowerCase() === rName.toLowerCase());
             let finalTime = timeStr;
@@ -1767,26 +1775,32 @@
             el.innerHTML = h;
         }
 
-        // ======================== REALTIME CLOCK ========================
+        // ======================== REALTIME CLOCK (WIB / ASIA/JAKARTA) ========================
         function updateClock() {
             const n = new Date();
-            const h = String(n.getHours()).padStart(2,'0');
-            const m = String(n.getMinutes()).padStart(2,'0');
-            const s = String(n.getSeconds()).padStart(2,'0');
+            const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const parts = timeFormatter.formatToParts(n);
+            const h = parts.find(p => p.type === 'hour')?.value || String(n.getHours()).padStart(2,'0');
+            const m = parts.find(p => p.type === 'minute')?.value || String(n.getMinutes()).padStart(2,'0');
+            const s = parts.find(p => p.type === 'second')?.value || String(n.getSeconds()).padStart(2,'0');
             
             const timeEl = document.getElementById('clock-time');
-            if (timeEl) timeEl.innerHTML = `${h}<span class="blink">:</span>${m}<span class="blink">:</span>${s}`;
+            if (timeEl) timeEl.innerHTML = `${h}<span class="blink">:</span>${m}<span class="blink">:</span>${s} <span style="font-size:0.42em;letter-spacing:1px;color:#38bdf8;font-weight:800;vertical-align:middle;margin-left:4px;">WIB</span>`;
             
-            const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-            const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            const dayFormatter = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' });
+            const dateOnlyFormatter = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' });
             
             const dayEl = document.getElementById('clock-day');
             const dateEl = document.getElementById('clock-date');
-            const dailyDateEl = document.getElementById('daily-active-date');
             
-            if (dayEl) dayEl.textContent = days[n.getDay()];
-            if (dateEl) dateEl.textContent = `${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}`;
-            if (dailyDateEl) dailyDateEl.textContent = `${days[n.getDay()]}, ${String(n.getDate()).padStart(2,'0')} ${months[n.getMonth()]} ${n.getFullYear()}`;
+            if (dayEl) dayEl.textContent = dayFormatter.format(n);
+            if (dateEl) dateEl.textContent = dateOnlyFormatter.format(n);
         }
 
         // ======================== ROBUST CAROUSEL CONTROLLER ========================

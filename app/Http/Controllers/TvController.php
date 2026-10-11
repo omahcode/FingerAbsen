@@ -38,8 +38,8 @@ class TvController extends Controller
             'tv_theme' => Setting::get('tv_theme', 'aurora'),
         ];
 
-        // 2. Data Harian (Daily) - HANYA Siswa (Bukan Admin) & HANYA Absen Masuk
-        $today = Carbon::today()->toDateString();
+        // 2. Data Harian (Daily) - HANYA Siswa (Bukan Admin) & HANYA Absen Masuk (WIB)
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
 
         // Scope filter agar admin tidak pernah masuk ke data mode TV
         $isStudentScope = function ($query) {
@@ -67,7 +67,7 @@ class TvController extends Controller
                 ->latest('timestamp')
                 ->first();
 
-            $activeDate = $latestLog ? Carbon::parse($latestLog->timestamp)->toDateString() : $today;
+            $activeDate = $latestLog ? Carbon::parse($latestLog->timestamp, 'Asia/Jakarta')->toDateString() : $today;
         }
 
         // Ambil tap masuk pertama tiap siswa di hari aktif (diurutkan paling awal)
