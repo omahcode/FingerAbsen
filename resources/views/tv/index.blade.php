@@ -1212,7 +1212,7 @@
                 </button>
 
                 <div class="tv-sim-footer">
-                    <a href="{{ route('attendance.simulate') }}" target="_blank" class="tv-sim-link">
+                    <a href="/attendance/simulate" target="_blank" class="tv-sim-link">
                         <i class="fas fa-external-link-alt"></i> Buka Halaman Simulator Lengkap
                     </a>
                 </div>
@@ -1281,6 +1281,33 @@
         let weeklyData = {!! json_encode($weeklyData) !!};
         let monthlyData = {!! json_encode($monthlyData) !!};
         let hofData = {!! json_encode($hofData) !!};
+
+        // Simpan cache ke localStorage agar saat refresh (biasa / hard) data tidak pernah hilang
+        try {
+            if (dailyData && dailyData.length > 0) {
+                localStorage.setItem('tv_daily_cache', JSON.stringify(dailyData));
+            } else {
+                const cachedDaily = localStorage.getItem('tv_daily_cache');
+                if (cachedDaily) {
+                    const parsed = JSON.parse(cachedDaily);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        dailyData = parsed;
+                    }
+                }
+            }
+
+            if (weeklyData && weeklyData.length > 0) {
+                localStorage.setItem('tv_weekly_cache', JSON.stringify(weeklyData));
+            } else {
+                const cachedWeekly = localStorage.getItem('tv_weekly_cache');
+                if (cachedWeekly) {
+                    const parsed = JSON.parse(cachedWeekly);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        weeklyData = parsed;
+                    }
+                }
+            }
+        } catch(e) {}
 
         // Urutkan siswa berdasarkan waktu kedatangan paling awal (ascending) agar peringkat #1 adalah yang datang paling pagi
         function sortDailyData() {
@@ -1530,7 +1557,7 @@
             btnRunTvSim.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses Absensi...';
 
             try {
-                const res = await fetch("{{ route('attendance.simulate') }}", {
+                const res = await fetch("/attendance/simulate", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1565,7 +1592,7 @@
             setTimeout(() => { if (btn) btn.style.transform = ''; }, 200);
 
             try {
-                const res = await fetch("{{ route('attendance.simulate') }}", {
+                const res = await fetch("/attendance/simulate", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1621,6 +1648,7 @@
 
             sortDailyData();
             if (dailyData.length > 10) dailyData = dailyData.slice(0, 10);
+            try { localStorage.setItem('tv_daily_cache', JSON.stringify(dailyData)); } catch(e) {}
             renderDaily();
 
             showAttendanceOverlay(rName, timeStr, rClass, null);
@@ -2052,6 +2080,8 @@
             if (dailyData.length > 10) {
                 dailyData = dailyData.slice(0, 10);
             }
+
+            try { localStorage.setItem('tv_daily_cache', JSON.stringify(dailyData)); } catch(e) {}
 
             // Render ulang tampilan Slide 2
             renderDaily();

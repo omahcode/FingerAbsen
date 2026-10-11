@@ -40,7 +40,6 @@ class TvController extends Controller
 
         // 2. Data Harian (Daily) - HANYA Siswa (Bukan Admin) & HANYA Absen Masuk
         $today = Carbon::today()->toDateString();
-        $activeDate = $today;
 
         // Scope filter agar admin tidak pernah masuk ke data mode TV
         $isStudentScope = function ($query) {
@@ -48,6 +47,28 @@ class TvController extends Controller
                 $q->where('privilege', 0)->orWhereNull('privilege');
             })->whereRaw('LOWER(name) NOT LIKE ?', ['%admin%']);
         };
+
+        // Cek apakah hari ini ada data absensi masuk
+        $hasTodayLogs = AttendanceLog::whereHas('student', $isStudentScope)
+            ->whereDate('timestamp', $today)
+            ->whereNotNull('student_id')
+            ->where('status_code', 0)
+            ->exists();
+
+        // Jika hari ini sudah ada presensi, gunakan hari ini ($today).
+        // Jika belum ada siswa yang absen hari ini (misal pagi hari sebelum siswa datang atau saat libur/uji coba),
+        // gunakan tanggal log terakhir yang ada di sistem agar TV tetap menampilkan data Top 10 dan tidak kosong melompong.
+        if ($hasTodayLogs) {
+            $activeDate = $today;
+        } else {
+            $latestLog = AttendanceLog::whereHas('student', $isStudentScope)
+                ->whereNotNull('student_id')
+                ->where('status_code', 0)
+                ->latest('timestamp')
+                ->first();
+
+            $activeDate = $latestLog ? Carbon::parse($latestLog->timestamp)->toDateString() : $today;
+        }
 
         // Ambil tap masuk pertama tiap siswa di hari aktif (diurutkan paling awal)
         $rawDailyLogs = AttendanceLog::with(['student.schoolClass'])
@@ -91,56 +112,62 @@ class TvController extends Controller
             'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y'),
         ];
 
-        // 4. Hitung Peringkat Mingguan (Weekly) - HANYA Siswa & HANYA Absen Masuk
-        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
-        $endOfWeek = Carbon::now()->endOfWeek()->toDateString();
+        // 4. Hitung Peringkat Mingguan (Weekly) - Sinkron dengan activeDate agar tidak kosong jika baru pergantian minggu
+        $activeCarbon = Carbon::parse($activeDate);
+        $startOfWeek = $activeCarbon->copy()->startOfWeek()->toDateString();
+        $endOfWeek = $activeCarbon->copy()->endOfWeek()->toDateString();
 
         $weeklyLogs = AttendanceLog::with('student.schoolClass')
             ->whereHas('student', $isStudentScope)
             ->whereBetween('timestamp', [$startOfWeek . ' 00:00:00', $endOfWeek . ' 23:59:59'])
             ->whereNotNull('student_id')
             ->where('status_code', 0)
-            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $weeklyData = $this->calculateLeaderboard($weeklyLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, 50, false, $isStudentScope);
 
-        // 5. Hitung Peringkat Bulanan (Monthly) - HANYA Siswa & HANYA Absen Masuk
-        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
-        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
+        // 5. Hitung Peringkat Bulanan (Monthly)
+        $startOfMonth = $activeCarbon->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $activeCarbon->copy()->endOfMonth()->toDateString();
 
         $monthlyLogs = AttendanceLog::with('student.schoolClass')
             ->whereHas('student', $isStudentScope)
             ->whereBetween('timestamp', [$startOfMonth . ' 00:00:00', $endOfMonth . ' 23:59:59'])
             ->whereNotNull('student_id')
             ->where('status_code', 0)
-            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $monthlyData = $this->calculateLeaderboard($monthlyLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, 200, false, $isStudentScope);
 
-        // 6. Hitung Hall of Fame (All-Time Leaderboard) - HANYA Siswa & HANYA Absen Masuk
+        // 6. Hitung Hall of Fame (All-Time Leaderboard)
         $allLogs = AttendanceLog::with('student.schoolClass')
             ->whereHas('student', $isStudentScope)
             ->whereNotNull('student_id')
             ->where('status_code', 0)
-            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
         $hofData = $this->calculateLeaderboard($allLogs, $checkinStart, $checkinEnd, $pointsOntime, $pointsLate, $pointMode, null, true, $isStudentScope);
 
-        // Jika data mingguan / bulanan / HoF kosong karena sistem baru dan belum ada streak manual, isi dengan fallback
-        if (empty($weeklyData) && !empty($dailyData)) {
-            $weeklyData = $this->generateFallbackBoard($dailyData, 1);
+        $allStudents = Student::where($isStudentScope)->with('schoolClass')->orderBy('name')->get();
+
+        // Jika data mingguan / bulanan / HoF kosong karena sistem baru atau belum ada akumulasi, gunakan fallback
+        if (empty($weeklyData)) {
+            $weeklyData = !empty($dailyData) 
+                ? $this->generateFallbackBoard($dailyData, 1)
+                : $this->generateFallbackFromStudents($allStudents, 1);
         }
-        if (empty($monthlyData) && !empty($dailyData)) {
-            $monthlyData = $this->generateFallbackBoard($dailyData, 4);
+        if (empty($monthlyData)) {
+            $monthlyData = !empty($dailyData) 
+                ? $this->generateFallbackBoard($dailyData, 4)
+                : $this->generateFallbackFromStudents($allStudents, 4);
         }
-        if (empty($hofData) && !empty($dailyData)) {
-            $hofData = $this->generateFallbackBoard($dailyData, 10);
+        if (empty($hofData)) {
+            $hofData = !empty($dailyData) 
+                ? $this->generateFallbackBoard($dailyData, 10)
+                : $this->generateFallbackFromStudents($allStudents, 10);
         }
 
         // Ambil juga raw logs masuk terbaru untuk live socket feed (Khusus Siswa)
@@ -148,13 +175,11 @@ class TvController extends Controller
             ->whereHas('student', $isStudentScope)
             ->whereNotNull('student_id')
             ->where('status_code', 0)
-            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'desc')
             ->limit(30)
             ->get();
 
         $maxLogId = AttendanceLog::max('id') ?? 0;
-        $allStudents = Student::where($isStudentScope)->with('schoolClass')->orderBy('name')->get();
 
         return view('tv.index', compact(
             'logs',
@@ -318,7 +343,29 @@ class TvController extends Controller
                 'streak' => max(1, 10 - $i),
                 'tap' => $d['time'] ?? '06:45',
                 'days' => max(1, 5 - $i),
+                'photo' => $d['photo'] ?? null,
             ];
         }, $dailyData, array_keys($dailyData));
+    }
+
+    /**
+     * Helper fallback dari daftar seluruh siswa jika belum ada data presensi sama sekali
+     */
+    private function generateFallbackFromStudents($students, int $multiplier): array
+    {
+        return $students->take(10)->values()->map(function ($s, $i) use ($multiplier) {
+            $pts = (10 - $i) * 5 * $multiplier;
+            return [
+                'name' => $s->name,
+                'ini' => strtoupper(substr($s->name, 0, 1)),
+                'cls' => $s->schoolClass->name ?? '-',
+                'pts' => $pts,
+                'max' => 50 * $multiplier,
+                'streak' => max(1, 10 - $i),
+                'tap' => '06:30',
+                'days' => max(1, 5 - $i),
+                'photo' => $s->photo ? asset('storage/' . $s->photo) : null,
+            ];
+        })->toArray();
     }
 }
