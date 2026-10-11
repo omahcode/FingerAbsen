@@ -49,13 +49,12 @@ class TvController extends Controller
             })->whereRaw('LOWER(name) NOT LIKE ?', ['%admin%']);
         };
 
-        // Ambil tap masuk pertama tiap siswa di hari aktif
+        // Ambil tap masuk pertama tiap siswa di hari aktif (diurutkan paling awal)
         $rawDailyLogs = AttendanceLog::with(['student.schoolClass'])
             ->whereHas('student', $isStudentScope)
             ->whereDate('timestamp', $activeDate)
             ->whereNotNull('student_id')
             ->where('status_code', 0)
-            ->whereTime('timestamp', '<', $checkoutStart)
             ->orderBy('timestamp', 'asc')
             ->get();
 
@@ -70,6 +69,7 @@ class TvController extends Controller
                 'name' => $student->name ?? 'Siswa ' . $log->device_user_id,
                 'cls' => $student->schoolClass->name ?? '-',
                 'time' => $timeStr,
+                'timestamp' => $log->timestamp,
                 'ini' => strtoupper(substr($student->name ?? 'S', 0, 1)),
                 'photo' => ($student && $student->photo) ? asset('storage/' . $student->photo) : null,
             ];

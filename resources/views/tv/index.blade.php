@@ -1282,6 +1282,21 @@
         let monthlyData = {!! json_encode($monthlyData) !!};
         let hofData = {!! json_encode($hofData) !!};
 
+        // Urutkan siswa berdasarkan waktu kedatangan paling awal (ascending) agar peringkat #1 adalah yang datang paling pagi
+        function sortDailyData() {
+            dailyData.sort((a, b) => {
+                const timeA = (a.time || '99:99').trim();
+                const timeB = (b.time || '99:99').trim();
+                if (timeA !== timeB) {
+                    return timeA.localeCompare(timeB);
+                }
+                const stampA = a.timestamp || '';
+                const stampB = b.timestamp || '';
+                return stampA.localeCompare(stampB);
+            });
+        }
+        sortDailyData();
+
         // ======================== MOTIVATIONAL QUOTES ========================
         const motivationalQuotes = [
             "Disiplin adalah jembatan antara cita-cita dan pencapaian nyata.",
@@ -1582,17 +1597,30 @@
             const n = new Date();
             const timeStr = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
             
-            dailyData = dailyData.filter(d => (d.name || '').toLowerCase() !== rName.toLowerCase());
-            dailyData.unshift({
+            const existingIdx = dailyData.findIndex(d => (d.name || '').toLowerCase() === rName.toLowerCase());
+            let finalTime = timeStr;
+            if (existingIdx !== -1) {
+                const existing = dailyData[existingIdx];
+                if (existing.time && existing.time <= timeStr) {
+                    finalTime = existing.time;
+                }
+                dailyData.splice(existingIdx, 1);
+            }
+
+            dailyData.forEach(d => d.is_just_attended = false);
+
+            dailyData.push({
                 name: rName,
                 cls: rClass,
-                time: timeStr,
+                time: finalTime,
                 ini: rName.charAt(0).toUpperCase(),
                 photo: null,
                 is_ontime: true,
                 is_just_attended: true
             });
-            if (dailyData.length > 10) dailyData.pop();
+
+            sortDailyData();
+            if (dailyData.length > 10) dailyData = dailyData.slice(0, 10);
             renderDaily();
 
             showAttendanceOverlay(rName, timeStr, rClass, null);
@@ -1987,21 +2015,43 @@
 
             const photoUrl = student?.photo_url || (student?.photo ? ('/storage/' + student.photo) : null);
 
-            // Perbarui dailyData: Hapus data siswa yang sama jika sudah ada agar tidak duplikat
-            dailyData = dailyData.filter(d => (d.name || '').toLowerCase() !== studentName.toLowerCase());
+            // Perbarui dailyData: Cek apakah siswa sudah ada
+            const existingIdx = dailyData.findIndex(d => (d.name || '').toLowerCase() === studentName.toLowerCase());
+            let finalTime = timeStr;
+            let finalTimestamp = log.timestamp || null;
 
-            // Tambahkan ke paling atas
-            dailyData.unshift({
+            if (existingIdx !== -1) {
+                const existing = dailyData[existingIdx];
+                // Pertahankan waktu kedatangan paling awal jika siswa sudah tap sebelumnya
+                if (existing.time && existing.time <= timeStr) {
+                    finalTime = existing.time;
+                    finalTimestamp = existing.timestamp || finalTimestamp;
+                }
+                dailyData.splice(existingIdx, 1);
+            }
+
+            // Tandai siswa yang baru absen dengan badge 'BARU'
+            dailyData.forEach(d => d.is_just_attended = false);
+
+            // Tambahkan data siswa
+            dailyData.push({
                 name: studentName,
                 cls: className,
-                time: timeStr,
+                time: finalTime,
+                timestamp: finalTimestamp,
                 ini: studentName.charAt(0).toUpperCase(),
                 photo: photoUrl,
                 is_ontime: true,
                 is_just_attended: true
             });
 
-            if (dailyData.length > 10) dailyData.pop();
+            // Urutkan siswa: yang datang paling awal waktunya jadi peringkat pertama (#1)
+            sortDailyData();
+
+            // Batasi top 10
+            if (dailyData.length > 10) {
+                dailyData = dailyData.slice(0, 10);
+            }
 
             // Render ulang tampilan Slide 2
             renderDaily();
