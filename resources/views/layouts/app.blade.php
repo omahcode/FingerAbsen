@@ -11,6 +11,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @vite(['resources/js/app.js'])
+    
+    <script>
+        // Cek preferensi sidebar minimized dari localStorage sebelum DOM di-render agar tidak ada kedipan
+        if (localStorage.getItem('sidebar_collapsed') === 'true') {
+            document.documentElement.classList.add('sidebar-collapsed-init');
+        }
+    </script>
+
     <style>
         /* Custom Scrollbar untuk Sidebar */
         .sidebar-scroll::-webkit-scrollbar {
@@ -26,6 +34,72 @@
         .sidebar-scroll::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+
+        /* Responsive Sidebar Width & Smooth Transitions */
+        #main-sidebar {
+            width: 17rem;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #main-wrapper {
+            padding-left: 17rem;
+            transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (max-width: 767px) {
+            #main-wrapper {
+                padding-left: 0 !important;
+            }
+            #main-sidebar {
+                width: 17rem !important;
+            }
+        }
+
+        /* ================================================= */
+        /* COLLAPSED / MINIMIZED SIDEBAR STATE (DESKTOP)     */
+        /* ================================================= */
+        html.sidebar-collapsed-init body #main-sidebar,
+        body.sidebar-collapsed #main-sidebar {
+            width: 5rem !important; /* 80px */
+        }
+
+        html.sidebar-collapsed-init body #main-wrapper,
+        body.sidebar-collapsed #main-wrapper {
+            padding-left: 5rem !important;
+        }
+
+        body.sidebar-collapsed .sidebar-text,
+        body.sidebar-collapsed .sidebar-section-title,
+        body.sidebar-collapsed .sidebar-badge,
+        body.sidebar-collapsed .sidebar-logo-text,
+        body.sidebar-collapsed .sidebar-user-info {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed .sidebar-link {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        body.sidebar-collapsed .sidebar-link i {
+            margin: 0 !important;
+            font-size: 1.15rem !important;
+        }
+
+        body.sidebar-collapsed .sidebar-brand-box {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        body.sidebar-collapsed .sidebar-user-card {
+            justify-content: center !important;
+            padding: 0.4rem !important;
+        }
+
+        body.sidebar-collapsed #sidebar-collapse-icon {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased">
@@ -37,50 +111,55 @@
         <!-- ============================================== -->
         <!-- SIDEBAR NAVIGATION                             -->
         <!-- ============================================== -->
-        <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 xl:w-72 bg-slate-950 border-r border-slate-800/80 text-slate-300 flex flex-col transition-transform duration-300 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
+        <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 bg-slate-950 border-r border-slate-800/80 text-slate-300 flex flex-col transition-all duration-300 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
             
-            <!-- Brand Logo & Name Header -->
-            <div class="h-16 px-5 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/90 shrink-0">
-                <a href="{{ url('/') }}" class="flex items-center space-x-3 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:scale-105 transition">
+            <!-- Brand Logo & Minimize Button Header -->
+            <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/90 shrink-0 sidebar-brand-box">
+                <a href="{{ url('/') }}" class="flex items-center space-x-3 group overflow-hidden">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:scale-105 transition shrink-0">
                         <i class="fas fa-fingerprint text-yellow-300 text-xl"></i>
                     </div>
-                    <div>
+                    <div class="sidebar-logo-text whitespace-nowrap overflow-hidden transition-all duration-300">
                         <div class="font-extrabold text-white text-base tracking-tight leading-none group-hover:text-blue-300 transition">FingerAbsen</div>
                         <div class="text-[11px] text-slate-400 font-medium tracking-wide mt-1">Presensi Biometrik</div>
                     </div>
                 </a>
 
+                <!-- Desktop Minimize Button in Sidebar Header -->
+                <button type="button" id="sidebar-collapse-btn" class="hidden md:flex text-slate-400 hover:text-white hover:bg-slate-900 p-2 rounded-xl transition focus:outline-none" title="Minimize / Perluas Sidebar">
+                    <i id="sidebar-collapse-icon" class="fas fa-chevron-left text-xs transition-transform duration-300"></i>
+                </button>
+
                 <!-- Mobile Close Button -->
-                <button type="button" id="sidebar-close-btn" class="md:hidden text-slate-400 hover:text-white p-1 rounded-lg focus:outline-none">
+                <button type="button" id="sidebar-close-btn" class="md:hidden text-slate-400 hover:text-white p-2 rounded-lg focus:outline-none">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
 
             <!-- Scrollable Navigation Menu -->
-            <div class="flex-1 overflow-y-auto sidebar-scroll px-3.5 py-4 space-y-6">
+            <div class="flex-1 overflow-y-auto sidebar-scroll px-3 py-4 space-y-6">
                 
                 @auth
                 <!-- SECTION 1: MONITORING & PRESENSI -->
                 <div>
-                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
                         Monitoring & Presensi
                     </div>
                     <nav class="space-y-1">
-                        <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('guru.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-chalkboard-teacher w-4 text-center {{ request()->routeIs('guru.*') ? 'text-white' : 'text-indigo-400' }}"></i>
-                            <span>Monitoring Kelas</span>
+                        <a href="{{ route('guru.dashboard') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('guru.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Monitoring Kelas">
+                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('guru.*') ? 'text-white' : 'text-indigo-400' }}"></i>
+                            <span class="sidebar-text truncate">Monitoring Kelas</span>
                         </a>
 
-                        <a href="{{ route('monitoring.jurusan') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('monitoring.jurusan*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-layer-group w-4 text-center {{ request()->routeIs('monitoring.jurusan*') ? 'text-white' : 'text-violet-400' }}"></i>
-                            <span>Monitoring Jurusan</span>
+                        <a href="{{ route('monitoring.jurusan') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('monitoring.jurusan*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Monitoring Jurusan">
+                            <i class="fas fa-layer-group w-5 text-center shrink-0 {{ request()->routeIs('monitoring.jurusan*') ? 'text-white' : 'text-violet-400' }}"></i>
+                            <span class="sidebar-text truncate">Monitoring Jurusan</span>
                         </a>
 
                         @if(Auth::user()->isAdmin())
-                        <a href="{{ route('attendance.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('attendance.*') && !request()->routeIs('attendance.simulate') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-clipboard-check w-4 text-center {{ request()->routeIs('attendance.index') ? 'text-white' : 'text-emerald-400' }}"></i>
-                            <span>Log & Rekap Absensi</span>
+                        <a href="{{ route('attendance.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('attendance.*') && !request()->routeIs('attendance.simulate') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Log & Rekap Absensi">
+                            <i class="fas fa-clipboard-check w-5 text-center shrink-0 {{ request()->routeIs('attendance.index') ? 'text-white' : 'text-emerald-400' }}"></i>
+                            <span class="sidebar-text truncate">Log & Rekap Absensi</span>
                         </a>
                         @endif
                     </nav>
@@ -88,36 +167,36 @@
 
                 <!-- SECTION 2: PENGUMUMAN & LAYAR TV -->
                 <div>
-                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
                         Display & Informasi
                     </div>
                     <nav class="space-y-1">
-                        <a href="{{ route('announcements.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('announcements.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-bullhorn w-4 text-center {{ request()->routeIs('announcements.*') ? 'text-white' : 'text-amber-400' }}"></i>
-                            <span>Pengumuman TV</span>
+                        <a href="{{ route('announcements.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('announcements.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Pengumuman TV">
+                            <i class="fas fa-bullhorn w-5 text-center shrink-0 {{ request()->routeIs('announcements.*') ? 'text-white' : 'text-amber-400' }}"></i>
+                            <span class="sidebar-text truncate">Pengumuman TV</span>
                         </a>
 
                         @if(Auth::user()->isAdmin())
                         @php $pendingBadge = \App\Models\TvAnnouncement::where('status', 'pending')->count(); @endphp
-                        <a href="{{ route('admin.announcements.index') }}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.announcements.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <div class="flex items-center gap-3">
-                                <i class="fas fa-check-double w-4 text-center {{ request()->routeIs('admin.announcements.*') ? 'text-white' : 'text-sky-400' }}"></i>
-                                <span>Approval TV</span>
+                        <a href="{{ route('admin.announcements.index') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.announcements.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Persetujuan Pengumuman TV">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-check-double w-5 text-center shrink-0 {{ request()->routeIs('admin.announcements.*') ? 'text-white' : 'text-sky-400' }}"></i>
+                                <span class="sidebar-text truncate">Approval TV</span>
                             </div>
                             @if($pendingBadge > 0)
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white animate-pulse">
+                            <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white animate-pulse shrink-0">
                                 {{ $pendingBadge }}
                             </span>
                             @endif
                         </a>
                         @endif
 
-                        <a href="{{ route('tv.index') }}" target="_blank" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300 transition border border-emerald-500/20 bg-emerald-500/5">
-                            <div class="flex items-center gap-3">
-                                <i class="fas fa-tv w-4 text-center"></i>
-                                <span>Buka Layar Mode TV</span>
+                        <a href="{{ route('tv.index') }}" target="_blank" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300 transition border border-emerald-500/20 bg-emerald-500/5" title="Buka Layar Mode TV">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-tv w-5 text-center shrink-0"></i>
+                                <span class="sidebar-text truncate">Buka Mode TV</span>
                             </div>
-                            <i class="fas fa-external-link-alt text-[10px] opacity-75"></i>
+                            <i class="fas fa-external-link-alt text-[10px] opacity-75 sidebar-text shrink-0"></i>
                         </a>
                     </nav>
                 </div>
@@ -125,61 +204,61 @@
                 <!-- SECTION 3: MASTER DATA & PERANGKAT (ADMIN ONLY) -->
                 @if(Auth::user()->isAdmin())
                 <div>
-                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                        Master Data & Perangkat
+                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
+                        Master Data & Mesin
                     </div>
                     <nav class="space-y-1">
-                        <a href="{{ route('devices.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('devices.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-hdd w-4 text-center {{ request()->routeIs('devices.*') ? 'text-white' : 'text-blue-400' }}"></i>
-                            <span>Mesin Fingerprint</span>
+                        <a href="{{ route('devices.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('devices.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Mesin Fingerprint">
+                            <i class="fas fa-hdd w-5 text-center shrink-0 {{ request()->routeIs('devices.*') ? 'text-white' : 'text-blue-400' }}"></i>
+                            <span class="sidebar-text truncate">Mesin Fingerprint</span>
                         </a>
 
-                        <a href="{{ route('majors.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('majors.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-graduation-cap w-4 text-center {{ request()->routeIs('majors.*') ? 'text-white' : 'text-indigo-400' }}"></i>
-                            <span>Data Jurusan</span>
+                        <a href="{{ route('majors.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('majors.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Jurusan">
+                            <i class="fas fa-graduation-cap w-5 text-center shrink-0 {{ request()->routeIs('majors.*') ? 'text-white' : 'text-indigo-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Jurusan</span>
                         </a>
 
-                        <a href="{{ route('classes.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('classes.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-chalkboard w-4 text-center {{ request()->routeIs('classes.*') ? 'text-white' : 'text-purple-400' }}"></i>
-                            <span>Data Kelas</span>
+                        <a href="{{ route('classes.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('classes.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Kelas">
+                            <i class="fas fa-chalkboard w-5 text-center shrink-0 {{ request()->routeIs('classes.*') ? 'text-white' : 'text-purple-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Kelas</span>
                         </a>
 
-                        <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('students.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-user-graduate w-4 text-center {{ request()->routeIs('students.*') ? 'text-white' : 'text-teal-400' }}"></i>
-                            <span>Data Siswa</span>
+                        <a href="{{ route('students.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('students.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Siswa">
+                            <i class="fas fa-user-graduate w-5 text-center shrink-0 {{ request()->routeIs('students.*') ? 'text-white' : 'text-teal-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Siswa</span>
                         </a>
 
-                        <a href="{{ route('admin.teachers.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.teachers.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-user-tie w-4 text-center {{ request()->routeIs('admin.teachers.*') ? 'text-white' : 'text-cyan-400' }}"></i>
-                            <span>Kelola Akun Guru</span>
+                        <a href="{{ route('admin.teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.teachers.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Kelola Akun Guru">
+                            <i class="fas fa-user-tie w-5 text-center shrink-0 {{ request()->routeIs('admin.teachers.*') ? 'text-white' : 'text-cyan-400' }}"></i>
+                            <span class="sidebar-text truncate">Kelola Akun Guru</span>
                         </a>
                     </nav>
                 </div>
 
                 <!-- SECTION 4: SISTEM & LAPORAN (ADMIN ONLY) -->
                 <div>
-                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                        Sistem & Pengaturan
+                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
+                        Sistem & Laporan
                     </div>
                     <nav class="space-y-1">
-                        <a href="{{ route('reports.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('reports.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-chart-bar w-4 text-center {{ request()->routeIs('reports.*') ? 'text-white' : 'text-amber-400' }}"></i>
-                            <span>Rekap & Ekspor PDF</span>
+                        <a href="{{ route('reports.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('reports.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Rekap & Ekspor PDF">
+                            <i class="fas fa-chart-bar w-5 text-center shrink-0 {{ request()->routeIs('reports.*') ? 'text-white' : 'text-amber-400' }}"></i>
+                            <span class="sidebar-text truncate">Rekap & PDF</span>
                         </a>
 
-                        <a href="{{ route('sync.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('sync.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-sync-alt w-4 text-center {{ request()->routeIs('sync.*') ? 'text-white' : 'text-yellow-400' }}"></i>
-                            <span>Sinkronisasi ADMS</span>
+                        <a href="{{ route('sync.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('sync.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Sinkronisasi ADMS Mesin">
+                            <i class="fas fa-sync-alt w-5 text-center shrink-0 {{ request()->routeIs('sync.*') ? 'text-white' : 'text-yellow-400' }}"></i>
+                            <span class="sidebar-text truncate">Sinkronisasi ADMS</span>
                         </a>
 
-                        <a href="{{ route('settings.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('settings.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                            <i class="fas fa-cog w-4 text-center {{ request()->routeIs('settings.*') ? 'text-white' : 'text-slate-400' }}"></i>
-                            <span>Pengaturan Sistem</span>
+                        <a href="{{ route('settings.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('settings.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Pengaturan Sistem">
+                            <i class="fas fa-cog w-5 text-center shrink-0 {{ request()->routeIs('settings.*') ? 'text-white' : 'text-slate-400' }}"></i>
+                            <span class="sidebar-text truncate">Pengaturan Sistem</span>
                         </a>
 
-                        <a href="{{ route('attendance.simulate') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('attendance.simulate') ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30' : 'text-purple-300 hover:bg-slate-900 hover:text-purple-200' }}">
-                            <i class="fas fa-flask w-4 text-center text-purple-400"></i>
-                            <span>Simulasi Absensi</span>
+                        <a href="{{ route('attendance.simulate') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('attendance.simulate') ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30' : 'text-purple-300 hover:bg-slate-900 hover:text-purple-200' }}" title="Simulasi Uji Coba Absensi">
+                            <i class="fas fa-flask w-5 text-center shrink-0 text-purple-400"></i>
+                            <span class="sidebar-text truncate">Simulasi Absensi</span>
                         </a>
                     </nav>
                 </div>
@@ -190,24 +269,24 @@
 
             <!-- Sidebar User Profile Footer -->
             @auth
-            <div class="p-3.5 border-t border-slate-800/80 bg-slate-950 shrink-0">
-                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+            <div class="p-3 border-t border-slate-800/80 bg-slate-950 shrink-0">
+                <div class="sidebar-user-card flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                     <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-bold flex items-center justify-center shrink-0 text-sm">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-bold flex items-center justify-center shrink-0 text-xs">
                             {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                         </div>
-                        <div class="overflow-hidden">
-                            <div class="font-bold text-white text-xs truncate max-w-[110px] xl:max-w-[130px]">{{ Auth::user()->name }}</div>
-                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40' }}">
+                        <div class="sidebar-user-info overflow-hidden">
+                            <div class="font-bold text-white text-xs truncate max-w-[100px] xl:max-w-[120px]">{{ Auth::user()->name }}</div>
+                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1 py-0.2 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40' }}">
                                 {{ Auth::user()->isGuru() ? 'Wali Kelas' : 'Admin' }}
                             </span>
                         </div>
                     </div>
 
-                    <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question">
+                    <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question" class="sidebar-user-info">
                         @csrf
-                        <button type="submit" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition" title="Keluar">
-                            <i class="fas fa-sign-out-alt text-sm"></i>
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition" title="Keluar">
+                            <i class="fas fa-sign-out-alt text-xs"></i>
                         </button>
                     </form>
                 </div>
@@ -215,7 +294,7 @@
             @else
             <div class="p-4 border-t border-slate-800/80 bg-slate-950">
                 <a href="{{ route('login') }}" class="block text-center py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">
-                    <i class="fas fa-sign-in-alt mr-1"></i> Login Akun
+                    <i class="fas fa-sign-in-alt mr-1"></i> <span class="sidebar-text">Login Akun</span>
                 </a>
             </div>
             @endauth
@@ -225,7 +304,7 @@
         <!-- ============================================== -->
         <!-- MAIN CONTENT AREA & TOPBAR                     -->
         <!-- ============================================== -->
-        <div class="flex-1 flex flex-col min-w-0 md:pl-64 xl:pl-72 transition-all">
+        <div id="main-wrapper" class="flex-1 flex flex-col min-w-0 transition-all duration-300">
             
             <!-- Sticky Dashboard Topbar -->
             <header class="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between shadow-sm">
@@ -234,6 +313,11 @@
                     <!-- Mobile Hamburger Button -->
                     <button type="button" id="sidebar-open-btn" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition focus:outline-none" aria-label="Buka Menu">
                         <i class="fas fa-bars text-lg"></i>
+                    </button>
+
+                    <!-- Desktop Minimize Toggle Button -->
+                    <button type="button" id="desktop-toggle-btn" class="hidden md:flex p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition focus:outline-none" title="Minimize / Perluas Sidebar">
+                        <i class="fas fa-bars-staggered text-base"></i>
                     </button>
 
                     <!-- Breadcrumb / Context Title -->
@@ -310,33 +394,60 @@
         </div>
     </div>
 
-    <!-- Sidebar Toggle Script -->
+    <!-- Sidebar Collapse & Mobile Drawer Script -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const sidebar = document.getElementById('main-sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             const openBtn = document.getElementById('sidebar-open-btn');
             const closeBtn = document.getElementById('sidebar-close-btn');
+            const desktopToggleBtn = document.getElementById('desktop-toggle-btn');
+            const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
 
-            function openSidebar() {
+            // 1. Mobile Drawer Functions
+            function openMobileSidebar() {
                 sidebar?.classList.remove('-translate-x-full');
                 backdrop?.classList.remove('hidden');
                 document.body.classList.add('overflow-hidden', 'md:overflow-auto');
             }
 
-            function closeSidebar() {
+            function closeMobileSidebar() {
                 sidebar?.classList.add('-translate-x-full');
                 backdrop?.classList.add('hidden');
                 document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
             }
 
-            openBtn?.addEventListener('click', openSidebar);
-            closeBtn?.addEventListener('click', closeSidebar);
-            backdrop?.addEventListener('click', closeSidebar);
+            openBtn?.addEventListener('click', openMobileSidebar);
+            closeBtn?.addEventListener('click', closeMobileSidebar);
+            backdrop?.addEventListener('click', closeMobileSidebar);
+
+            // 2. Desktop Collapse / Minimize Functions with LocalStorage Persistence
+            function initDesktopCollapseState() {
+                const savedState = localStorage.getItem('sidebar_collapsed');
+                if (savedState === 'true') {
+                    document.body.classList.add('sidebar-collapsed');
+                } else {
+                    document.body.classList.remove('sidebar-collapsed');
+                }
+                // Hapus class inisialisasi sementara
+                document.documentElement.classList.remove('sidebar-collapsed-init');
+            }
+
+            function toggleDesktopSidebar() {
+                document.body.classList.toggle('sidebar-collapsed');
+                const isNowCollapsed = document.body.classList.contains('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed', isNowCollapsed ? 'true' : 'false');
+            }
+
+            desktopToggleBtn?.addEventListener('click', toggleDesktopSidebar);
+            sidebarCollapseBtn?.addEventListener('click', toggleDesktopSidebar);
+
+            // Jalankan inisialisasi status
+            initDesktopCollapseState();
 
             // Close on escape key
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') closeSidebar();
+                if (e.key === 'Escape') closeMobileSidebar();
             });
         });
     </script>
