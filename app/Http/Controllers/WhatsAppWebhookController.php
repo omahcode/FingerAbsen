@@ -17,6 +17,18 @@ class WhatsAppWebhookController extends Controller
      */
     public function handleWebhook(Request $request)
     {
+        // Jika dibuka langsung via browser (GET tanpa payload webhook), tampilkan informasi status endpoint
+        if ($request->isMethod('get') && !$request->has('event') && !$request->has('data')) {
+            return response()->json([
+                'status' => 'online',
+                'service' => 'OpenWA Webhook Receiver',
+                'message' => 'Endpoint Webhook OpenWA aktif dan siap menerima data POST secara real-time dari server OpenWA.',
+                'endpoint_url' => url('/api/webhook/openwa'),
+                'supported_events' => ['message.received', 'onMessage'],
+                'help' => 'Salin endpoint_url ini ke pengaturan Webhook di server OpenWA Anda.'
+            ]);
+        }
+
         Log::info("OpenWA Webhook Received: " . json_encode($request->all()));
 
         $event = $request->input('event');
