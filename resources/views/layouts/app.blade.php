@@ -26,34 +26,60 @@
 
                 <!-- Desktop Navigation Links (Visible on Large Screens) -->
                 <div class="hidden xl:flex items-center space-x-1 font-medium text-sm">
-                    <a href="{{ route('devices.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-hdd mr-1 text-xs"></i> Mesin
-                    </a>
-                    <a href="{{ route('majors.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-graduation-cap mr-1 text-xs"></i> Jurusan
-                    </a>
-                    <a href="{{ route('classes.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-chalkboard mr-1 text-xs"></i> Kelas
-                    </a>
-                    <a href="{{ route('students.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-user-graduate mr-1 text-xs"></i> Siswa
-                    </a>
-                    <a href="{{ route('attendance.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-clipboard-check mr-1 text-xs"></i> Absensi
-                    </a>
-                    <a href="{{ route('reports.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-chart-bar mr-1 text-xs"></i> Rekap
-                    </a>
-                    <a href="{{ route('sync.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold shadow-sm' : 'bg-yellow-400/20 text-yellow-200 hover:bg-yellow-400 hover:text-gray-900' }} transition">
-                        <i class="fas fa-sync-alt mr-1 text-xs"></i> Sinkronisasi
-                    </a>
-                    <a href="{{ route('settings.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                        <i class="fas fa-cog mr-1 text-xs"></i> Pengaturan
-                    </a>
-                    <a href="{{ route('attendance.simulate') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold shadow-sm' : 'bg-purple-500/20 text-purple-200 hover:bg-purple-500 hover:text-white border border-purple-400/30' }} transition">
-                        <i class="fas fa-flask mr-1 text-xs"></i> Simulasi
-                    </a>
-                    <a href="{{ route('tv.index') }}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-200 hover:text-white border border-emerald-400/30 transition">
+                    @auth
+                        @if(Auth::user()->isGuru())
+                            <a href="{{ route('guru.dashboard') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                                <i class="fas fa-chalkboard-teacher mr-1 text-xs"></i> Monitoring Kelas
+                            </a>
+                            <a href="{{ route('announcements.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                                <i class="fas fa-bullhorn mr-1 text-xs"></i> Pengumuman TV
+                            </a>
+                        @else
+                            <!-- Admin Navigation -->
+                            <a href="{{ route('devices.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-hdd mr-1 text-xs"></i> Mesin
+                            </a>
+                            <a href="{{ route('majors.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-graduation-cap mr-1 text-xs"></i> Jurusan
+                            </a>
+                            <a href="{{ route('classes.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-chalkboard mr-1 text-xs"></i> Kelas
+                            </a>
+                            <a href="{{ route('students.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-user-graduate mr-1 text-xs"></i> Siswa
+                            </a>
+                            <a href="{{ route('attendance.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-clipboard-check mr-1 text-xs"></i> Absensi
+                            </a>
+                            <a href="{{ route('guru.dashboard') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-user-clock mr-1 text-xs"></i> Monitoring
+                            </a>
+                            <a href="{{ route('admin.announcements.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('admin.announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs relative">
+                                <i class="fas fa-bullhorn mr-1 text-xs"></i> TV Approval
+                                @php $pendingBadge = \App\Models\TvAnnouncement::where('status', 'pending')->count(); @endphp
+                                @if($pendingBadge > 0)
+                                <span class="inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black leading-none text-white bg-rose-500 rounded-full ml-0.5">{{ $pendingBadge }}</span>
+                                @endif
+                            </a>
+                            <a href="{{ route('admin.teachers.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('admin.teachers.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-chalkboard-teacher mr-1 text-xs"></i> Guru
+                            </a>
+                            <a href="{{ route('reports.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-chart-bar mr-1 text-xs"></i> Rekap
+                            </a>
+                            <a href="{{ route('sync.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold shadow-sm' : 'bg-yellow-400/20 text-yellow-200 hover:bg-yellow-400 hover:text-gray-900' }} transition text-xs">
+                                <i class="fas fa-sync-alt mr-1 text-xs"></i> Sinkron
+                            </a>
+                            <a href="{{ route('settings.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-cog mr-1 text-xs"></i> Pengaturan
+                            </a>
+                            <a href="{{ route('attendance.simulate') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold shadow-sm' : 'bg-purple-500/20 text-purple-200 hover:bg-purple-500 hover:text-white border border-purple-400/30' }} transition text-xs">
+                                <i class="fas fa-flask mr-1 text-xs"></i> Simulasi
+                            </a>
+                        @endif
+                    @endauth
+
+                    <a href="{{ route('tv.index') }}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-200 hover:text-white border border-emerald-400/30 transition text-xs font-semibold">
                         <i class="fas fa-tv mr-1 text-xs"></i> Mode TV
                     </a>
 
@@ -93,40 +119,60 @@
             <!-- Mobile Navigation Drawer / Dropdown -->
             <div id="mobile-menu" class="hidden xl:hidden py-3 border-t border-blue-600/60 transition-all duration-200">
                 <div class="grid grid-cols-2 gap-2 text-sm font-medium pb-3">
-                    <a href="{{ route('devices.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-hdd w-5 text-center text-blue-300"></i> Mesin
-                    </a>
-                    <a href="{{ route('majors.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-graduation-cap w-5 text-center text-indigo-300"></i> Jurusan
-                    </a>
-                    <a href="{{ route('classes.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-chalkboard w-5 text-center text-purple-300"></i> Kelas
-                    </a>
-                    <a href="{{ route('students.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-user-graduate w-5 text-center text-emerald-300"></i> Siswa
-                    </a>
-                    <a href="{{ route('attendance.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-clipboard-check w-5 text-center text-green-300"></i> Absensi
-                    </a>
-                    <a href="{{ route('reports.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-chart-bar w-5 text-center text-amber-300"></i> Rekap
-                    </a>
-                    <a href="{{ route('sync.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold' : 'bg-yellow-400/20 text-yellow-200' }}">
-                        <i class="fas fa-sync-alt w-5 text-center"></i> Sinkronisasi
-                    </a>
-                    <a href="{{ route('settings.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                        <i class="fas fa-cog w-5 text-center text-sky-300"></i> Pengaturan
-                    </a>
-                    <a href="{{ route('attendance.simulate') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold' : 'text-purple-200 hover:bg-white/10' }}">
-                        <i class="fas fa-flask w-5 text-center text-purple-300"></i> Simulasi
-                    </a>
+                    @auth
+                        @if(Auth::user()->isGuru())
+                            <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-chalkboard-teacher w-5 text-center text-yellow-300"></i> Monitoring
+                            </a>
+                            <a href="{{ route('announcements.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-bullhorn w-5 text-center text-amber-300"></i> Pengumuman TV
+                            </a>
+                        @else
+                            <a href="{{ route('devices.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('devices.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-hdd w-5 text-center text-blue-300"></i> Mesin
+                            </a>
+                            <a href="{{ route('majors.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('majors.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-graduation-cap w-5 text-center text-indigo-300"></i> Jurusan
+                            </a>
+                            <a href="{{ route('classes.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('classes.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-chalkboard w-5 text-center text-purple-300"></i> Kelas
+                            </a>
+                            <a href="{{ route('students.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('students.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-user-graduate w-5 text-center text-emerald-300"></i> Siswa
+                            </a>
+                            <a href="{{ route('attendance.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-clipboard-check w-5 text-center text-green-300"></i> Absensi
+                            </a>
+                            <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-user-clock w-5 text-center text-yellow-300"></i> Monitoring
+                            </a>
+                            <a href="{{ route('admin.announcements.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('admin.announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-bullhorn w-5 text-center text-amber-300"></i> TV Approval
+                            </a>
+                            <a href="{{ route('admin.teachers.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('admin.teachers.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-chalkboard-teacher w-5 text-center text-teal-300"></i> Guru
+                            </a>
+                            <a href="{{ route('reports.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-chart-bar w-5 text-center text-amber-300"></i> Rekap
+                            </a>
+                            <a href="{{ route('sync.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('sync.*') ? 'bg-yellow-400 text-gray-900 font-bold' : 'bg-yellow-400/20 text-yellow-200' }}">
+                                <i class="fas fa-sync-alt w-5 text-center"></i> Sinkronisasi
+                            </a>
+                            <a href="{{ route('settings.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-cog w-5 text-center text-sky-300"></i> Pengaturan
+                            </a>
+                            <a href="{{ route('attendance.simulate') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('attendance.simulate') ? 'bg-purple-500 text-white font-semibold' : 'text-purple-200 hover:bg-white/10' }}">
+                                <i class="fas fa-flask w-5 text-center text-purple-300"></i> Simulasi
+                            </a>
+                        @endif
+                    @endauth
                 </div>
 
                 @auth
                 <div class="pt-3 border-t border-blue-600/60 flex items-center justify-between">
                     <div class="flex items-center space-x-2 text-xs text-blue-100">
                         <i class="fas fa-user-circle text-lg text-yellow-300"></i>
-                        <span>Login: <strong>{{ Auth::user()->name }}</strong></span>
+                        <span>Login: <strong>{{ Auth::user()->name }}</strong> ({{ strtoupper(Auth::user()->role ?? 'admin') }})</span>
                     </div>
                     <form action="{{ route('logout') }}" method="POST" data-confirm="Apakah Anda yakin ingin keluar dari sistem?" data-title="Konfirmasi Logout" data-danger="true" data-icon="question">
                         @csrf
@@ -138,7 +184,7 @@
                 @else
                 <div class="pt-3 border-t border-blue-600/60">
                     <a href="{{ route('login') }}" class="block text-center text-sm font-bold bg-white text-blue-800 py-2 rounded-lg hover:bg-blue-50 transition shadow-sm">
-                        <i class="fas fa-sign-in-alt mr-1"></i> Login Admin
+                        <i class="fas fa-sign-in-alt mr-1"></i> Login Akun
                     </a>
                 </div>
                 @endauth
@@ -218,7 +264,7 @@
             });
         @endif
 
-        @if($errors->any())
+        @if(isset($errors) && $errors->any())
             Swal.fire({
                 icon: 'error',
                 title: 'Validasi Gagal!',

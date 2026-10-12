@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\MajorController;
@@ -11,6 +12,11 @@ use App\Http\Controllers\SyncController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TvController;
 use App\Http\Controllers\IclockController;
+use App\Http\Controllers\TeacherDashboardController;
+use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\TeacherManagementController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\WhatsAppWebhookController;
 
 // Rute Autentikasi
 Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -27,9 +33,39 @@ Route::post('attendance/simulate/reset-today', [AttendanceController::class, 're
 // Halaman Portal Manajemen (Dilindungi Autentikasi Login)
 Route::middleware('auth')->group(function () {
     Route::get('/', function () {
+        if (Auth::user()->isGuru()) {
+            return redirect()->route('guru.dashboard');
+        }
         return redirect()->route('devices.index');
     });
 
+    // ====================================================
+    // FITUR GURU & WALI KELAS
+    // ====================================================
+    // Fitur 1: Monitoring Presensi Khusus Kelas Wali Kelas
+    Route::get('guru/dashboard', [TeacherDashboardController::class, 'index'])->name('guru.dashboard');
+    // Fitur 2: Pengingat WhatsApp 1-Klik ke Orang Tua Murid
+    Route::post('guru/reminder/{student}', [TeacherDashboardController::class, 'sendParentReminder'])->name('guru.reminder');
+    Route::post('guru/reminder-all', [TeacherDashboardController::class, 'sendParentReminderAll'])->name('guru.reminder_all');
+
+    // Fitur 3: Pengajuan Pengumuman TV oleh Guru
+    Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+    Route::delete('announcements/{id}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+    // ====================================================
+    // FITUR ADMINISTRATOR
+    // ====================================================
+    // Approval Pengumuman TV (Admin)
+    Route::get('admin/announcements', [AnnouncementController::class, 'adminIndex'])->name('admin.announcements.index');
+    Route::post('admin/announcements/{id}/approve', [AnnouncementController::class, 'approve'])->name('admin.announcements.approve');
+    Route::post('admin/announcements/{id}/reject', [AnnouncementController::class, 'reject'])->name('admin.announcements.reject');
+    Route::delete('admin/announcements/{id}', [AnnouncementController::class, 'adminDestroy'])->name('admin.announcements.destroy');
+
+    // Manajemen Akun Guru (Admin)
+    Route::resource('admin/teachers', TeacherManagementController::class)->names('admin.teachers')->except(['create', 'show', 'edit']);
+
+    // Manajemen Mesin & Master Data
     Route::post('devices/sync-time-all', [DeviceController::class, 'syncTimeAll'])->name('devices.sync_time_all');
     Route::resource('devices', DeviceController::class);
     Route::post('devices/{device}/check', [DeviceController::class, 'checkStatus'])->name('devices.check');
@@ -60,16 +96,16 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
     Route::get('reports/matrix-pdf', [ReportController::class, 'exportMatrixPdf'])->name('reports.matrix_pdf');
 
-    Route::get('settings', [\App\Http\Controllers\SettingController::class, 'index'])->name('settings.index');
-    Route::post('settings', [\App\Http\Controllers\SettingController::class, 'update'])->name('settings.update');
-    Route::post('settings/test-whatsapp', [\App\Http\Controllers\SettingController::class, 'testWhatsApp'])->name('settings.test_whatsapp');
-    Route::post('settings/manual-streak', [\App\Http\Controllers\SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
-    Route::post('settings/manual-streak/reset', [\App\Http\Controllers\SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
-    Route::post('settings/manual-streak/simulate-top3', [\App\Http\Controllers\SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
+    Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('settings/test-whatsapp', [SettingController::class, 'testWhatsApp'])->name('settings.test_whatsapp');
+    Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
+    Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
+    Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
 });
 
 // Route Webhook OpenWA (Public & Bebas CSRF)
-Route::match(['get', 'post'], 'webhook/openwa', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handleWebhook'])->name('webhook.openwa');
+Route::match(['get', 'post'], 'webhook/openwa', [WhatsAppWebhookController::class, 'handleWebhook'])->name('webhook.openwa');
 
 // Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco) - Public & Unrestricted
 Route::match(['get', 'post'], 'iclock/cdata', [IclockController::class, 'cdata']);

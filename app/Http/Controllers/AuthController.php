@@ -15,7 +15,9 @@ class AuthController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return redirect()->route('devices.index');
+            return Auth::user()->isGuru()
+                ? redirect()->route('guru.dashboard')
+                : redirect()->route('devices.index');
         }
 
         return view('auth.login');
@@ -33,13 +35,14 @@ class AuthController extends Controller
 
         $remember = $request->boolean('remember');
 
-        // Dukungan login menggunakan email atau username
-        $loginType = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'email';
-        
         // Coba autentikasi
         if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']], $remember)) {
             $request->session()->regenerate();
-            return redirect()->intended(route('devices.index'))->with('success', 'Selamat datang kembali, ' . Auth::user()->name . '!');
+            $user = Auth::user();
+
+            $targetRoute = $user->isGuru() ? route('guru.dashboard') : route('devices.index');
+
+            return redirect()->intended($targetRoute)->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 
         return back()->withErrors([

@@ -72,6 +72,36 @@
         .s3-header h2 { color: #34d399; text-shadow: 0 0 25px rgba(52,211,153,0.4); } .s3-header::after { background: linear-gradient(90deg, #34d399, #6ee7b7); }
         .s4-header h2 { color: #c084fc; text-shadow: 0 0 25px rgba(192,132,252,0.4); } .s4-header::after { background: linear-gradient(90deg, #c084fc, #e879f9); }
         .s5-header h2 { color: #fbbf24; text-shadow: 0 0 25px rgba(251,191,36,0.4); } .s5-header::after { background: linear-gradient(90deg, #fbbf24, #fde047); }
+        .s6-header h2 { color: #f59e0b; text-shadow: 0 0 25px rgba(245,158,11,0.4); } .s6-header::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        /* S6 ANNOUNCEMENTS GRID & CARDS */
+        .ann-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; flex: 1; align-items: stretch; overflow: hidden; padding: 0.5rem 0; }
+        .ann-card { background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 24px; padding: 1.6rem; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 10px 30px rgba(0,0,0,0.35); position: relative; overflow: hidden; }
+        .ann-card::before { content: ''; position: absolute; top: 0; left: 0; width: 6px; height: 100%; }
+        .ann-card.type-exam::before { background: #f59e0b; }
+        .ann-card.type-reminder::before { background: #a855f7; }
+        .ann-card.type-urgent::before { background: #ef4444; }
+        .ann-card.type-info::before { background: #38bdf8; }
+        .ann-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+        .ann-badge { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; padding: 5px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; }
+        .ann-badge.badge-exam { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .ann-badge.badge-reminder { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+        .ann-badge.badge-urgent { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .ann-badge.badge-info { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+        .ann-class { font-size: 0.85rem; font-weight: 700; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 12px; }
+        .ann-title { font-family: 'Poppins', sans-serif; font-size: 1.45rem; font-weight: 800; color: #ffffff; line-height: 1.3; margin-bottom: 0.6rem; }
+        .ann-desc { font-size: 1.05rem; color: #cbd5e1; line-height: 1.5; flex: 1; word-break: break-word; }
+        .ann-footer { margin-top: 1.2rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; font-size: 0.88rem; color: #94a3b8; font-weight: 600; }
+        .ann-author { display: flex; align-items: center; gap: 6px; color: #e2e8f0; }
+        .ann-date { display: flex; align-items: center; gap: 6px; }
+
+        body.theme-light .s6-header h2 { color: #d97706; }
+        body.theme-light .ann-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+        body.theme-light .ann-title { color: #0f172a; }
+        body.theme-light .ann-desc { color: #334155; }
+        body.theme-light .ann-footer { border-top-color: #f1f5f9; color: #64748b; }
+        body.theme-light .ann-author { color: #0f172a; }
+        body.theme-light .ann-class { background: #f1f5f9; color: #475569; }
 
         /* S1 WELCOME & STATS (BIGGER & HIGH CONTRAST) */
         .s1-wrap { 
@@ -1114,6 +1144,41 @@
                     <p>Akumulasi kehadiran dan rekor kedisiplinan tertinggi sepanjang masa</p>
                 </div>
                 <div class="board" id="hof-board"></div>
+            </div>
+            @endif
+
+            <!-- SLIDE 6: PENGUMUMAN & AGENDA SEKOLAH (APPROVED DARI GURU) -->
+            @if(isset($activeAnnouncements) && $activeAnnouncements->isNotEmpty())
+            <div class="slide" data-slide-name="announcements">
+                <div class="s-header s6-header">
+                    <h2><i class="fas fa-bullhorn"></i> Pengumuman & Agenda Guru</h2>
+                    <p>Informasi jadwal ulangan, reminder tugas, dan agenda penting sekolah</p>
+                </div>
+                <div class="ann-grid">
+                    @foreach($activeAnnouncements->take(6) as $ann)
+                    @php $badge = $ann->type_badge; @endphp
+                    <div class="ann-card type-{{ $ann->type }}">
+                        <div class="ann-top">
+                            <span class="ann-badge badge-{{ $ann->type }}">
+                                <i class="fas {{ $badge['icon'] }}"></i> {{ $ann->type_label }}
+                            </span>
+                            <span class="ann-class">
+                                <i class="fas fa-chalkboard mr-1 text-xs"></i> {{ $ann->schoolClass ? $ann->schoolClass->name : 'Semua Siswa' }}
+                            </span>
+                        </div>
+                        <h3 class="ann-title">{{ $ann->title }}</h3>
+                        <p class="ann-desc">{{ $ann->content }}</p>
+                        <div class="ann-footer">
+                            <div class="ann-author">
+                                <i class="fas fa-user-tie text-amber-400"></i> {{ $ann->user->name ?? 'Dewan Guru' }}
+                            </div>
+                            <div class="ann-date">
+                                <i class="fas fa-calendar-check text-blue-400"></i> s.d {{ \Carbon\Carbon::parse($ann->end_date)->translatedFormat('d M Y') }}
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
             </div>
             @endif
 

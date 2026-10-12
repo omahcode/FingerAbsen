@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AttendanceLog;
 use App\Models\Student;
 use App\Models\Setting;
+use App\Models\TvAnnouncement;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,6 +180,19 @@ class TvController extends Controller
             ->limit(30)
             ->get();
 
+        // 7. Ambil Pengumuman TV yang Aktif & Disetujui (Approved) Hari Ini
+        $activeAnnouncements = TvAnnouncement::with(['user', 'schoolClass'])
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->latest()
+            ->get();
+
+        if ($activeAnnouncements->isNotEmpty()) {
+            $announcementHeadlines = $activeAnnouncements->map(fn($a) => "📢 [{$a->type_label}] {$a->title}: {$a->content}")->implode('  ✦  ');
+            $tvSettings['tv_running_text'] = $announcementHeadlines . '  ✦  ' . $tvSettings['tv_running_text'];
+        }
+
         $maxLogId = AttendanceLog::max('id') ?? 0;
 
         return view('tv.index', compact(
@@ -190,7 +204,8 @@ class TvController extends Controller
             'stats',
             'tvSettings',
             'maxLogId',
-            'allStudents'
+            'allStudents',
+            'activeAnnouncements'
         ));
     }
 
