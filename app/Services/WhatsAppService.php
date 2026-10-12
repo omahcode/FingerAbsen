@@ -33,11 +33,11 @@ class WhatsAppService
         }
 
         // Ambil jam presensi
-        $scanTime = Carbon::parse($timestamp);
+        $scanTime = Carbon::parse($timestamp, 'Asia/Jakarta');
         $timeOnly = $scanTime->format('H:i');
 
         // Ambil pengaturan jam
-        $checkinEnd = Setting::get('checkin_end', '07:15');
+        $checkinEnd = Setting::get('checkin_end', '06:30');
         $checkoutStart = Setting::get('checkout_start', '14:00');
         $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
 
@@ -62,34 +62,100 @@ class WhatsAppService
                  . "🏢 {$schoolName}\n\n"
                  . "_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._";
 
-        try {
-            $apiKey = env('WA_API_KEY', 'mysecretkey123');
-            $gatewayUrl = env('WA_GATEWAY_URL', 'https://wa-gateway.neperone.id/api/send/text');
-
-            Log::info("Mengirim WA ke {$receiver} untuk siswa {$student->name}...");
-
-            $response = Http::timeout(5)->withHeaders([
-                'x-api-key' => $apiKey,
-            ])->post($gatewayUrl, [
-                'receiver' => $receiver,
-                'message'  => $message,
-            ]);
-
-            if ($response->successful()) {
-                Log::info("✅ WhatsApp berhasil terkirim ke {$receiver} (Siswa: {$student->name})");
-                return true;
-            } else {
-                Log::warning("❌ WhatsApp gagal terkirim ke {$receiver}: HTTP " . $response->status() . " Body: " . $response->body());
-                return false;
-            }
-        } catch (\Exception $e) {
-            Log::error("❌ WhatsApp Exception error ke {$receiver}: " . $e->getMessage());
-            return false;
-        }
+        return self::sendRawMessage($receiver, $message, $student->name);
     }
 
     /**
-     * Format nomor HP agar standar (misal 0812... menjadi 62812... atau tetap standar internasional)
+     * Kirim pesan teks sembarang via OpenWA REST API / Gateway
+     * 
+     * @param string $to Nomor tujuan atau JID (e.g. 628123456789 atau 80535200227425@lid atau 6281234@c.us)
+     * @param string $message Isi pesan teks
+     * @param string|null $recipientName Nama penerima untuk logging
+     */
+    public static function sendRawMessage(string $to, string $message, ?string $recipientName = null): bool
+    {
+        // Format destination JID / ChatId jika belum berformat @
+        $chatId = self::formatChatId($to);
+
+        $openwaUrl = rtrim(Setting::get('openwa_url', env('OPENWA_URL', env('WA_GATEWAY_URL', 'http://localhost:2785'))), '/');
+        $sessionId = Setting::get('openwa_session', env('OPENWA_SESSION', 'default'));
+        $apiKey = Setting::get('openwa_api_key', env('OPENWA_API_KEY', env('WA_API_KEY', '')));
+
+        Log::info("OpenWA: Mengirim pesan ke {$chatId}" . ($recipientName ? " ({$recipientName})" : "") . " via {$openwaUrl}");
+
+        $headers = [
+            'Content-Type' => 'application/json',
+            'Accept'       => 'application/json',
+        ];
+        if (!empty($apiKey)) {
+            $headers['X-API-Key'] = $apiKey;
+            $headers['x-api-key'] = $apiKey;
+            $headers['Authorization'] = 'Bearer ' . $apiKey;
+        }
+
+        // Susun payload yang kompatibel dengan OpenWA Easy API, REST API, & bridge gateway
+        $payload = [
+            'chatId'   => $chatId,
+            'to'       => $chatId,
+            'receiver' => $chatId,
+            'text'     => $message,
+            'message'  => $message,
+        ];
+
+        // Tentukan kandidat endpoint
+        if (str_contains($openwaUrl, '/send') || str_contains($openwaUrl, '/messages')) {
+            $endpoints = [$openwaUrl];
+        } else {
+            $endpoints = [
+                "{$openwaUrl}/api/sessions/{$sessionId}/messages/send-text",
+                "{$openwaUrl}/sendText",
+                "{$openwaUrl}/api/sendText",
+                "{$openwaUrl}/api/send/text",
+            ];
+        }
+
+        $lastError = null;
+
+        foreach ($endpoints as $url) {
+            try {
+                $response = Http::timeout(6)->withHeaders($headers)->post($url, $payload);
+
+                if ($response->successful()) {
+                    Log::info("✅ OpenWA berhasil terkirim ke {$chatId} via [{$url}]");
+                    return true;
+                } else {
+                    $lastError = "HTTP {$response->status()} Body: " . substr($response->body(), 0, 150);
+                    Log::warning("OpenWA attempt gagal [{$url}]: {$lastError}");
+                }
+            } catch (\Exception $e) {
+                $lastError = $e->getMessage();
+                Log::warning("OpenWA exception pada [{$url}]: {$lastError}");
+            }
+        }
+
+        Log::error("❌ OpenWA gagal terkirim ke {$chatId} setelah mencoba endpoint. Error: {$lastError}");
+        return false;
+    }
+
+    /**
+     * Format chatId / JID untuk WhatsApp (OpenWA membutuhkan format JID seperti 628xxx@c.us atau tetap @lid / @g.us)
+     */
+    public static function formatChatId(string $to): string
+    {
+        $to = trim($to);
+
+        // Jika sudah berupa JID (mengandung @ seperti @c.us, @lid, @g.us, @s.whatsapp.net)
+        if (str_contains($to, '@')) {
+            return $to;
+        }
+
+        // Jika berupa nomor telepon biasa, bersihkan dan format ke 628xxx@c.us
+        $phone = self::formatPhoneNumber($to);
+        return $phone ? ($phone . '@c.us') : $to;
+    }
+
+    /**
+     * Format nomor HP agar standar internasional (0812... menjadi 62812...)
      */
     public static function formatPhoneNumber(string $phone): string
     {

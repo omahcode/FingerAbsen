@@ -124,3 +124,6 @@ Route::post('/sync/templates', function(Request $request) {
         'new_templates' => $newTemplates
     ]);
 });
+
+// Webhook OpenWA untuk Pesan Masuk & Auto-Reply
+Route::match(['get', 'post'], '/webhook/openwa', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handleWebhook']);

@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'iclock/*',
             'iclock',
             'api/*',
+            'webhook/*',
+            'webhook',
             'attendance/simulate*',
         ]);
     })
