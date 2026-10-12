@@ -29,7 +29,10 @@
                     @auth
                         @if(Auth::user()->isGuru())
                             <a href="{{ route('guru.dashboard') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
-                                <i class="fas fa-chalkboard-teacher mr-1 text-xs"></i> Monitoring Kelas
+                                <i class="fas fa-chalkboard-teacher mr-1 text-xs"></i> Mon. Kelas
+                            </a>
+                            <a href="{{ route('monitoring.jurusan') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('monitoring.jurusan*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
+                                <i class="fas fa-layer-group mr-1 text-xs"></i> Mon. Jurusan
                             </a>
                             <a href="{{ route('announcements.index') }}" class="px-2.5 py-1.5 rounded-lg {{ request()->routeIs('announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition">
                                 <i class="fas fa-bullhorn mr-1 text-xs"></i> Pengumuman TV
@@ -52,7 +55,10 @@
                                 <i class="fas fa-clipboard-check mr-1 text-xs"></i> Absensi
                             </a>
                             <a href="{{ route('guru.dashboard') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
-                                <i class="fas fa-user-clock mr-1 text-xs"></i> Monitoring
+                                <i class="fas fa-user-clock mr-1 text-xs"></i> Mon. Kelas
+                            </a>
+                            <a href="{{ route('monitoring.jurusan') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('monitoring.jurusan*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs">
+                                <i class="fas fa-layer-group mr-1 text-xs"></i> Mon. Jurusan
                             </a>
                             <a href="{{ route('admin.announcements.index') }}" class="px-2 py-1.5 rounded-lg {{ request()->routeIs('admin.announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white' }} transition text-xs relative">
                                 <i class="fas fa-bullhorn mr-1 text-xs"></i> TV Approval
@@ -122,7 +128,10 @@
                     @auth
                         @if(Auth::user()->isGuru())
                             <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                                <i class="fas fa-chalkboard-teacher w-5 text-center text-yellow-300"></i> Monitoring
+                                <i class="fas fa-chalkboard-teacher w-5 text-center text-yellow-300"></i> Mon. Kelas
+                            </a>
+                            <a href="{{ route('monitoring.jurusan') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('monitoring.jurusan*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-layer-group w-5 text-center text-indigo-300"></i> Mon. Jurusan
                             </a>
                             <a href="{{ route('announcements.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
                                 <i class="fas fa-bullhorn w-5 text-center text-amber-300"></i> Pengumuman TV
@@ -144,7 +153,10 @@
                                 <i class="fas fa-clipboard-check w-5 text-center text-green-300"></i> Absensi
                             </a>
                             <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('guru.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
-                                <i class="fas fa-user-clock w-5 text-center text-yellow-300"></i> Monitoring
+                                <i class="fas fa-user-clock w-5 text-center text-yellow-300"></i> Mon. Kelas
+                            </a>
+                            <a href="{{ route('monitoring.jurusan') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('monitoring.jurusan*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
+                                <i class="fas fa-layer-group w-5 text-center text-indigo-300"></i> Mon. Jurusan
                             </a>
                             <a href="{{ route('admin.announcements.index') }}" class="flex items-center gap-2 p-2.5 rounded-lg {{ request()->routeIs('admin.announcements.*') ? 'bg-white/20 text-white font-semibold' : 'text-blue-100 hover:bg-white/10' }}">
                                 <i class="fas fa-bullhorn w-5 text-center text-amber-300"></i> TV Approval

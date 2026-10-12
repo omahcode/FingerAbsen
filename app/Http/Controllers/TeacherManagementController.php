@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\SchoolClass;
+use App\Models\Major;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,14 +15,15 @@ class TeacherManagementController extends Controller
      */
     public function index()
     {
-        $teachers = User::with('schoolClass')
+        $teachers = User::with(['schoolClass', 'major'])
             ->where('role', 'guru')
             ->orderBy('name')
             ->get();
 
         $classes = SchoolClass::orderBy('name')->get();
+        $majors = Major::orderBy('name')->get();
 
-        return view('admin.teachers.index', compact('teachers', 'classes'));
+        return view('admin.teachers.index', compact('teachers', 'classes', 'majors'));
     }
 
     /**
@@ -34,6 +36,7 @@ class TeacherManagementController extends Controller
             'email'           => 'required|email|unique:users,email',
             'password'        => 'required|string|min:6',
             'school_class_id' => 'nullable|exists:school_classes,id',
+            'major_id'        => 'nullable|exists:majors,id',
         ]);
 
         User::create([
@@ -42,6 +45,7 @@ class TeacherManagementController extends Controller
             'password'        => Hash::make($request->password),
             'role'            => 'guru',
             'school_class_id' => $request->school_class_id,
+            'major_id'        => $request->major_id,
         ]);
 
         return back()->with('success', "Akun Guru {$request->name} berhasil dibuat!");
@@ -59,12 +63,14 @@ class TeacherManagementController extends Controller
             'email'           => "required|email|unique:users,email,{$id}",
             'password'        => 'nullable|string|min:6',
             'school_class_id' => 'nullable|exists:school_classes,id',
+            'major_id'        => 'nullable|exists:majors,id',
         ]);
 
         $data = [
             'name'            => $request->name,
             'email'           => $request->email,
             'school_class_id' => $request->school_class_id,
+            'major_id'        => $request->major_id,
         ];
 
         if ($request->filled('password')) {

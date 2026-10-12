@@ -15,6 +15,7 @@ use App\Http\Controllers\IclockController;
 use App\Http\Controllers\TeacherDashboardController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\TeacherManagementController;
+use App\Http\Controllers\MajorMonitoringController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\WhatsAppWebhookController;
 
@@ -47,6 +48,11 @@ Route::middleware('auth')->group(function () {
     // Fitur 2: Pengingat WhatsApp 1-Klik ke Orang Tua Murid
     Route::post('guru/reminder/{student}', [TeacherDashboardController::class, 'sendParentReminder'])->name('guru.reminder');
     Route::post('guru/reminder-all', [TeacherDashboardController::class, 'sendParentReminderAll'])->name('guru.reminder_all');
+
+    // Fitur Monitoring Tingkat Jurusan (Guru & Admin)
+    Route::get('monitoring/jurusan', [MajorMonitoringController::class, 'index'])->name('monitoring.jurusan');
+    Route::post('monitoring/jurusan/{major}/reminder-all', [MajorMonitoringController::class, 'sendMajorReminderAll'])->name('monitoring.jurusan.reminder_all');
+    Route::post('monitoring/jurusan/{major}/class/{schoolClass}/reminder-all', [MajorMonitoringController::class, 'sendClassReminderAll'])->name('monitoring.jurusan.class_reminder_all');
 
     // Fitur 3: Pengajuan Pengumuman TV oleh Guru
     Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');

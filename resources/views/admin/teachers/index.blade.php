@@ -44,7 +44,7 @@
                         <th class="py-3 px-4 w-12 text-center">No</th>
                         <th class="py-3 px-4">Nama Lengkap Guru</th>
                         <th class="py-3 px-4">Email Login</th>
-                        <th class="py-3 px-4">Tugas Wali Kelas</th>
+                        <th class="py-3 px-4">Tugas Penugasan</th>
                         <th class="py-3 px-4 text-center">Status Akun</th>
                         <th class="py-3 px-4 text-right">Aksi</th>
                     </tr>
@@ -58,7 +58,14 @@
                                 <div class="w-9 h-9 rounded-full bg-teal-100 text-teal-700 font-bold flex items-center justify-center text-sm shrink-0">
                                     {{ strtoupper(substr($teacher->name, 0, 1)) }}
                                 </div>
-                                <div class="font-bold text-gray-900">{{ $teacher->name }}</div>
+                                <div>
+                                    <div class="font-bold text-gray-900">{{ $teacher->name }}</div>
+                                    @if($teacher->major)
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 mt-0.5">
+                                        <i class="fas fa-layer-group text-[10px]"></i> Kaprogli: {{ $teacher->major->name }}
+                                    </span>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                         <td class="py-3.5 px-4 font-mono text-xs text-gray-600">
@@ -70,7 +77,7 @@
                                 <i class="fas fa-chalkboard"></i> Wali Kelas: {{ $teacher->schoolClass->name }}
                             </span>
                             @else
-                            <span class="text-xs text-gray-400 italic">Belum Ditugaskan</span>
+                            <span class="text-xs text-gray-400 italic">Bukan Wali Kelas</span>
                             @endif
                         </td>
                         <td class="py-3.5 px-4 text-center">
@@ -80,7 +87,7 @@
                         </td>
                         <td class="py-3.5 px-4 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <button type="button" onclick="openEditTeacherModal({{ $teacher->id }}, '{{ addslashes($teacher->name) }}', '{{ $teacher->email }}', '{{ $teacher->school_class_id }}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Edit Data Guru">
+                                <button type="button" onclick="openEditTeacherModal({{ $teacher->id }}, '{{ addslashes($teacher->name) }}', '{{ $teacher->email }}', '{{ $teacher->school_class_id }}', '{{ $teacher->major_id }}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Edit Data Guru">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <form action="{{ route('admin.teachers.destroy', $teacher->id) }}" method="POST" data-confirm="Hapus akun guru '{{ $teacher->name }}'?" data-title="Hapus Akun Guru" data-danger="true" data-icon="warning">
@@ -140,9 +147,19 @@
             <div>
                 <label for="school_class_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tugas Sebagai Wali Kelas</label>
                 <select id="school_class_id" name="school_class_id" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
-                    <option value="">-- Bukan Wali Kelas (Hanya Guru) --</option>
+                    <option value="">-- Bukan Wali Kelas --</option>
                     @foreach($classes as $cls)
                         <option value="{{ $cls->id }}">{{ $cls->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="major_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tugas Kaprogli / Jurusan (Opsional)</label>
+                <select id="major_id" name="major_id" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                    <option value="">-- Bukan Kaprogli --</option>
+                    @foreach($majors as $m)
+                        <option value="{{ $m->id }}">{{ $m->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -192,9 +209,19 @@
             <div>
                 <label for="edit_school_class_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tugas Sebagai Wali Kelas</label>
                 <select id="edit_school_class_id" name="school_class_id" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    <option value="">-- Bukan Wali Kelas (Hanya Guru) --</option>
+                    <option value="">-- Bukan Wali Kelas --</option>
                     @foreach($classes as $cls)
                         <option value="{{ $cls->id }}">{{ $cls->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="edit_major_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Tugas Kaprogli / Jurusan (Opsional)</label>
+                <select id="edit_major_id" name="major_id" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <option value="">-- Bukan Kaprogli --</option>
+                    @foreach($majors as $m)
+                        <option value="{{ $m->id }}">{{ $m->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -212,7 +239,7 @@
 </div>
 
 <script>
-    function openEditTeacherModal(id, name, email, classId) {
+    function openEditTeacherModal(id, name, email, classId, majorId) {
         const modal = document.getElementById('modal-edit-teacher');
         const form = document.getElementById('form-edit-teacher');
         form.action = `/admin/teachers/${id}`;
@@ -220,6 +247,7 @@
         document.getElementById('edit_email').value = email;
         document.getElementById('edit_password').value = '';
         document.getElementById('edit_school_class_id').value = classId || '';
+        document.getElementById('edit_major_id').value = majorId || '';
         modal.classList.remove('hidden');
     }
 </script>
