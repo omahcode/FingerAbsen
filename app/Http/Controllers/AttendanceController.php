@@ -240,14 +240,32 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Buat log absensi baru
-        $log = AttendanceLog::create([
-            'device_id' => $device->id,
-            'device_user_id' => (string) ($student->device_user_id ?? $student->id),
-            'timestamp' => $timestamp,
-            'student_id' => $student->id,
-            'status_code' => $statusCode,
-        ]);
+        $deviceUserId = (string) ($student->device_user_id ?? $student->id);
+
+        // Cari apakah ada log yang sama di timestamp ini (termasuk trashed)
+        $log = AttendanceLog::withTrashed()
+            ->where('device_id', $device->id)
+            ->where('device_user_id', $deviceUserId)
+            ->where('timestamp', $timestamp)
+            ->first();
+
+        if ($log) {
+            if ($log->trashed()) {
+                $log->restore();
+            }
+            $log->update([
+                'student_id' => $student->id,
+                'status_code' => $statusCode,
+            ]);
+        } else {
+            $log = AttendanceLog::create([
+                'device_id' => $device->id,
+                'device_user_id' => $deviceUserId,
+                'timestamp' => $timestamp,
+                'student_id' => $student->id,
+                'status_code' => $statusCode,
+            ]);
+        }
 
         // Siarkan realtime event untuk WebSocket / Reverb
         try {

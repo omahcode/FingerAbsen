@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\Student;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -401,6 +402,8 @@ class StudentDepartureMonitoringController extends Controller
         }
         $deviceId = $device->id;
 
+        $deviceUserId = (string) $student->device_user_id;
+
         $todayLogs = AttendanceLog::where('student_id', $student->id)
             ->whereDate('timestamp', $today)
             ->get();
@@ -412,29 +415,92 @@ class StudentDepartureMonitoringController extends Controller
             // 1. Jika belum ada log masuk pagi sama sekali, buatkan log masuk default
             if (! $masukLog) {
                 $checkinStart = Setting::get('checkin_start', '06:30');
-                AttendanceLog::create([
-                    'device_id' => $deviceId,
-                    'device_user_id' => $student->device_user_id,
-                    'student_id' => $student->id,
-                    'timestamp' => "{$today} {$checkinStart}:00",
-                    'status_code' => 0,
-                ]);
+                $inTimestamp = "{$today} {$checkinStart}:00";
+
+                $existingIn = AttendanceLog::withTrashed()
+                    ->where('device_id', $deviceId)
+                    ->where('device_user_id', $deviceUserId)
+                    ->where('timestamp', $inTimestamp)
+                    ->first();
+
+                if ($existingIn) {
+                    if ($existingIn->trashed()) {
+                        $existingIn->restore();
+                    }
+                    $existingIn->update([
+                        'student_id' => $student->id,
+                        'status_code' => 0,
+                    ]);
+                    $masukLog = $existingIn;
+                } else {
+                    $masukLog = AttendanceLog::create([
+                        'device_id' => $deviceId,
+                        'device_user_id' => $deviceUserId,
+                        'student_id' => $student->id,
+                        'timestamp' => $inTimestamp,
+                        'status_code' => 0,
+                    ]);
+                }
             }
 
-            // 2. Buat atau perbarui log pulang (status_code = 1)
-            $pulangLog = $pulangLogs->last();
-            if ($pulangLog) {
-                $pulangLog->update([
-                    'timestamp' => $timestamp,
-                ]);
-            } else {
-                $pulangLog = AttendanceLog::create([
-                    'device_id' => $deviceId,
-                    'device_user_id' => $student->device_user_id,
+            // 2. Jika timestamp pulang sama persis dengan timestamp masuk, tambahkan 1 detik agar tidak bentrok
+            if ($masukLog && $timestamp === $masukLog->timestamp) {
+                $timestamp = Carbon::parse($timestamp)->addSecond()->format('Y-m-d H:i:s');
+            }
+
+            // 3. Cek apakah ada record yang cocok di timestamp ini (termasuk trashed)
+            $existingPulang = AttendanceLog::withTrashed()
+                ->where('device_id', $deviceId)
+                ->where('device_user_id', $deviceUserId)
+                ->where('timestamp', $timestamp)
+                ->first();
+
+            if ($existingPulang) {
+                if ($existingPulang->trashed()) {
+                    $existingPulang->restore();
+                }
+                $existingPulang->update([
                     'student_id' => $student->id,
-                    'timestamp' => $timestamp,
                     'status_code' => 1,
                 ]);
+                $pulangLog = $existingPulang;
+            } else {
+                $pulangLog = $pulangLogs->last();
+                if ($pulangLog) {
+                    $pulangLog->update([
+                        'timestamp' => $timestamp,
+                        'device_id' => $deviceId,
+                    ]);
+                } else {
+                    try {
+                        $pulangLog = AttendanceLog::create([
+                            'device_id' => $deviceId,
+                            'device_user_id' => $deviceUserId,
+                            'student_id' => $student->id,
+                            'timestamp' => $timestamp,
+                            'status_code' => 1,
+                        ]);
+                    } catch (QueryException $e) {
+                        // Fallback jika terjadi tabrakan constraint 1062
+                        $pulangLog = AttendanceLog::withTrashed()
+                            ->where('device_id', $deviceId)
+                            ->where('device_user_id', $deviceUserId)
+                            ->where('timestamp', $timestamp)
+                            ->first();
+
+                        if ($pulangLog) {
+                            if ($pulangLog->trashed()) {
+                                $pulangLog->restore();
+                            }
+                            $pulangLog->update([
+                                'student_id' => $student->id,
+                                'status_code' => 1,
+                            ]);
+                        } else {
+                            throw $e;
+                        }
+                    }
+                }
             }
 
             // Siarkan realtime WebSocket event
@@ -462,23 +528,39 @@ class StudentDepartureMonitoringController extends Controller
             $message = "Status {$student->name} berhasil diubah menjadi SUDAH PULANG ({$timeStr} WIB).";
 
         } elseif ($action === 'in_school') {
-            // Batalkan status pulang: Hapus log pulang hari ini
-            if ($pulangLogs->isNotEmpty()) {
-                AttendanceLog::where('student_id', $student->id)
-                    ->whereDate('timestamp', $today)
-                    ->where('status_code', 1)
-                    ->forceDelete();
-            }
+            // Batalkan status pulang: Hapus log pulang hari ini secara permanen
+            AttendanceLog::withTrashed()
+                ->where('student_id', $student->id)
+                ->whereDate('timestamp', $today)
+                ->where('status_code', 1)
+                ->forceDelete();
 
             // Jika belum ada log masuk pagi, buatkan log masuk
             if (! $masukLog) {
-                $logMasuk = AttendanceLog::create([
-                    'device_id' => $deviceId,
-                    'device_user_id' => $student->device_user_id,
-                    'student_id' => $student->id,
-                    'timestamp' => $timestamp,
-                    'status_code' => 0,
-                ]);
+                $existingIn = AttendanceLog::withTrashed()
+                    ->where('device_id', $deviceId)
+                    ->where('device_user_id', $deviceUserId)
+                    ->where('timestamp', $timestamp)
+                    ->first();
+
+                if ($existingIn) {
+                    if ($existingIn->trashed()) {
+                        $existingIn->restore();
+                    }
+                    $existingIn->update([
+                        'student_id' => $student->id,
+                        'status_code' => 0,
+                    ]);
+                    $logMasuk = $existingIn;
+                } else {
+                    $logMasuk = AttendanceLog::create([
+                        'device_id' => $deviceId,
+                        'device_user_id' => $deviceUserId,
+                        'student_id' => $student->id,
+                        'timestamp' => $timestamp,
+                        'status_code' => 0,
+                    ]);
+                }
 
                 try {
                     broadcast(new AttendanceCreated($logMasuk));
@@ -490,8 +572,9 @@ class StudentDepartureMonitoringController extends Controller
             $message = "Status {$student->name} berhasil diubah menjadi MASUK (DI SEKOLAH).";
 
         } elseif ($action === 'reset') {
-            // Hapus semua log kehadiran hari ini untuk siswa ini
-            AttendanceLog::where('student_id', $student->id)
+            // Hapus semua log kehadiran hari ini untuk siswa ini secara permanen
+            AttendanceLog::withTrashed()
+                ->where('student_id', $student->id)
                 ->whereDate('timestamp', $today)
                 ->forceDelete();
 

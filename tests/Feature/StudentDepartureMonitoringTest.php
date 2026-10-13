@@ -255,4 +255,42 @@ class StudentDepartureMonitoringTest extends TestCase
         $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
         $this->assertEquals('not_present', $target['status_code']);
     }
+
+    public function test_manual_status_update_does_not_fail_when_matching_or_soft_deleted_log_exists(): void
+    {
+        $today = Carbon::today('Asia/Jakarta')->format('Y-m-d');
+        $time = '14:15';
+        $timestamp = "{$today} {$time}:00";
+
+        // Buat log dan soft-delete (kondisi yang sebelumnya memicu Integrity constraint violation 1062 di MySQL)
+        $log = AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => $timestamp,
+            'status_code' => 1,
+        ]);
+        $log->delete();
+
+        // Panggil manual update status
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'departed',
+            'time' => $time,
+            'notify_parent' => 0,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'departed',
+        ]);
+
+        // Record harus di-restore kembali aktif
+        $this->assertDatabaseHas('attendance_logs', [
+            'id' => $log->id,
+            'student_id' => $this->student->id,
+            'status_code' => 1,
+            'deleted_at' => null,
+        ]);
+    }
 }
