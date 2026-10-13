@@ -165,6 +165,7 @@ class StudentDepartureMonitoringController extends Controller
             'departed_percentage' => $departedPercent,
             'checkout_start' => $checkoutStart,
             'school_name' => $schoolName,
+            'today' => $today,
             'today_formatted' => $nowWib->translatedFormat('l, d F Y'),
             'current_time' => $nowWib->format('H:i'),
         ];
@@ -180,7 +181,8 @@ class StudentDepartureMonitoringController extends Controller
             'selectedMajorId',
             'selectedStatus',
             'search',
-            'maxLogId'
+            'maxLogId',
+            'today'
         ));
     }
 
@@ -295,6 +297,8 @@ class StudentDepartureMonitoringController extends Controller
             'status' => 'success',
             'max_id' => AttendanceLog::max('id') ?? 0,
             'time' => $nowWib->format('H:i:s'),
+            'date' => $today,
+            'date_formatted' => $nowWib->translatedFormat('l, d F Y'),
             'stats' => [
                 'total' => $totalCount,
                 'attended_today' => $attendedTodayCount,

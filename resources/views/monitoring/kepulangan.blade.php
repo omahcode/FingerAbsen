@@ -561,6 +561,8 @@
 
     // Realtime Polling Engine (Every 2 seconds)
     let isFetching = false;
+    let currentMonitoringDate = '{{ $today }}';
+
     async function fetchDepartureData() {
         if (isFetching) return;
         isFetching = true;
@@ -576,6 +578,15 @@
             const data = await res.json();
 
             if (data.status === 'success') {
+                // Deteksi otomatis pergantian hari (pukul 00:00 tengah malam)
+                if (data.date && data.date !== currentMonitoringDate) {
+                    currentMonitoringDate = data.date;
+                    showToast(`Pergantian hari ke ${data.date_formatted || data.date}. Halaman dimuat ulang untuk hari baru...`, 'info');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                    return;
+                }
                 // Update stats counter
                 if (data.stats) {
                     const inSchoolEl = document.getElementById('stat-in-school');
@@ -988,5 +999,15 @@
                 });
         }
     });
+
+    // Watcher otomatis jika hari berganti saat layar monitor standby (pukul 00:00 tengah malam)
+    let lastCalendarDay = new Date().getDate();
+    setInterval(() => {
+        const currentCalendarDay = new Date().getDate();
+        if (currentCalendarDay !== lastCalendarDay) {
+            lastCalendarDay = currentCalendarDay;
+            window.location.reload();
+        }
+    }, 30000);
 </script>
 @endsection
