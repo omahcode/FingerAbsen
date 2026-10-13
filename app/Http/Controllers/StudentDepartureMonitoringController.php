@@ -110,17 +110,17 @@ class StudentDepartureMonitoringController extends Controller
             // Durasi di sekolah jika ada jam masuk & jam pulang
             $durationString = null;
             if ($masukLog && $pulangLog) {
-                $inTime = Carbon::parse($masukLog->timestamp);
-                $outTime = Carbon::parse($pulangLog->timestamp);
-                $diffHours = $inTime->diffInHours($outTime);
-                $diffMins = $inTime->diffInMinutes($outTime) % 60;
-                $durationString = "{$diffHours}j {$diffMins}m";
+                $durationString = $this->formatDurationString(
+                    Carbon::parse($masukLog->timestamp),
+                    Carbon::parse($pulangLog->timestamp),
+                    false
+                );
             } elseif ($masukLog) {
-                $inTime = Carbon::parse($masukLog->timestamp);
-                $now = Carbon::now('Asia/Jakarta');
-                $diffHours = $inTime->diffInHours($now);
-                $diffMins = $inTime->diffInMinutes($now) % 60;
-                $durationString = "{$diffHours}j {$diffMins}m (aktif)";
+                $durationString = $this->formatDurationString(
+                    Carbon::parse($masukLog->timestamp),
+                    Carbon::now('Asia/Jakarta'),
+                    true
+                );
             }
 
             return [
@@ -257,17 +257,17 @@ class StudentDepartureMonitoringController extends Controller
 
             $durationString = null;
             if ($masukLog && $pulangLog) {
-                $inTime = Carbon::parse($masukLog->timestamp);
-                $outTime = Carbon::parse($pulangLog->timestamp);
-                $diffHours = $inTime->diffInHours($outTime);
-                $diffMins = $inTime->diffInMinutes($outTime) % 60;
-                $durationString = "{$diffHours}j {$diffMins}m";
+                $durationString = $this->formatDurationString(
+                    Carbon::parse($masukLog->timestamp),
+                    Carbon::parse($pulangLog->timestamp),
+                    false
+                );
             } elseif ($masukLog) {
-                $inTime = Carbon::parse($masukLog->timestamp);
-                $now = Carbon::now('Asia/Jakarta');
-                $diffHours = $inTime->diffInHours($now);
-                $diffMins = $inTime->diffInMinutes($now) % 60;
-                $durationString = "{$diffHours}j {$diffMins}m (aktif)";
+                $durationString = $this->formatDurationString(
+                    Carbon::parse($masukLog->timestamp),
+                    Carbon::now('Asia/Jakarta'),
+                    true
+                );
             }
 
             return [
@@ -509,5 +509,27 @@ class StudentDepartureMonitoringController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * Format durasi waktu menjadi jam dan menit singkat dan bulat (tanpa desimal panjang)
+     */
+    private function formatDurationString(Carbon $start, Carbon $end, bool $isActive = false): string
+    {
+        $totalMinutes = (int) abs($start->diffInMinutes($end));
+        $hours = intdiv($totalMinutes, 60);
+        $mins = $totalMinutes % 60;
+
+        if ($totalMinutes < 1) {
+            $formatted = '< 1 menit';
+        } elseif ($hours > 0 && $mins > 0) {
+            $formatted = "{$hours} jam {$mins} menit";
+        } elseif ($hours > 0) {
+            $formatted = "{$hours} jam";
+        } else {
+            $formatted = "{$mins} menit";
+        }
+
+        return $isActive ? "{$formatted} (aktif)" : $formatted;
     }
 }

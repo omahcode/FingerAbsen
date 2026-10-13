@@ -127,6 +127,7 @@ class StudentDepartureMonitoringTest extends TestCase
         $response->assertSee('SUDAH PULANG');
         $response->assertSee('06:20 WIB');
         $response->assertSee('14:15 WIB');
+        $response->assertSee('7 jam 55 menit');
     }
 
     public function test_realtime_data_endpoint_returns_json_with_correct_status_and_stats(): void
