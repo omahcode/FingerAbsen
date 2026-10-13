@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\Student;
 use App\Models\Setting;
+use App\Models\Student;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class WhatsAppService
 {
@@ -17,18 +17,21 @@ class WhatsAppService
     {
         // Cek apakah fitur notifikasi WhatsApp aktif di pengaturan
         if (Setting::get('wa_notification', '1') !== '1') {
-            Log::info("WhatsApp Skip: Notifikasi WhatsApp dinonaktifkan di Pengaturan Sistem.");
+            Log::info('WhatsApp Skip: Notifikasi WhatsApp dinonaktifkan di Pengaturan Sistem.');
+
             return false;
         }
 
         if (empty($student->parent_phone)) {
             Log::info("WhatsApp Skip: Siswa {$student->name} (PIN: {$student->device_user_id}) tidak memiliki nomor WA ortu.");
+
             return false;
         }
 
         $receiver = self::formatPhoneNumber($student->parent_phone);
         if (empty($receiver)) {
             Log::warning("WhatsApp Skip: Format nomor WA ortu siswa {$student->name} tidak valid: {$student->parent_phone}");
+
             return false;
         }
 
@@ -50,27 +53,27 @@ class WhatsAppService
             $statusText = 'MASUK (TEPAT WAKTU)';
         }
 
-        $jamFormatted = $scanTime->translatedFormat('l, d F Y - H:i') . ' WIB';
-        $location = $deviceName ? " pada {$deviceName}" : "";
+        $jamFormatted = $scanTime->translatedFormat('l, d F Y - H:i').' WIB';
+        $location = $deviceName ? " pada {$deviceName}" : '';
         $className = $student->schoolClass->name ?? '-';
 
         $message = "📢 *NOTIFIKASI PRESENSI SISWA*\n\n"
-                 . "Yth. Orang Tua / Wali Murid dari *{$student->name}*,\n\n"
-                 . "Menginformasikan bahwa ananda telah presensi *{$statusText}* pada:\n"
-                 . "📅 Waktu: {$jamFormatted}{$location}\n"
-                 . "🏫 Kelas: *{$className}*\n"
-                 . "🏢 {$schoolName}\n\n"
-                 . "_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._";
+                 ."Yth. Orang Tua / Wali Murid dari *{$student->name}*,\n\n"
+                 ."Menginformasikan bahwa ananda telah presensi *{$statusText}* pada:\n"
+                 ."📅 Waktu: {$jamFormatted}{$location}\n"
+                 ."🏫 Kelas: *{$className}*\n"
+                 ."🏢 {$schoolName}\n\n"
+                 .'_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._';
 
         return self::sendRawMessage($receiver, $message, $student->name);
     }
 
     /**
      * Kirim pesan teks sembarang via OpenWA REST API / Gateway
-     * 
-     * @param string $to Nomor tujuan atau JID (e.g. 628123456789 atau 80535200227425@lid atau 6281234@c.us)
-     * @param string $message Isi pesan teks
-     * @param string|null $recipientName Nama penerima untuk logging
+     *
+     * @param  string  $to  Nomor tujuan atau JID (e.g. 628123456789 atau 80535200227425@lid atau 6281234@c.us)
+     * @param  string  $message  Isi pesan teks
+     * @param  string|null  $recipientName  Nama penerima untuk logging
      */
     public static function sendRawMessage(string $to, string $message, ?string $recipientName = null): bool
     {
@@ -81,25 +84,25 @@ class WhatsAppService
         $sessionId = Setting::get('openwa_session', env('OPENWA_SESSION', 'default'));
         $apiKey = Setting::get('openwa_api_key', env('OPENWA_API_KEY', env('WA_API_KEY', '')));
 
-        Log::info("OpenWA: Mengirim pesan ke {$chatId}" . ($recipientName ? " ({$recipientName})" : "") . " via {$openwaUrl}");
+        Log::info("OpenWA: Mengirim pesan ke {$chatId}".($recipientName ? " ({$recipientName})" : '')." via {$openwaUrl}");
 
         $headers = [
             'Content-Type' => 'application/json',
-            'Accept'       => 'application/json',
+            'Accept' => 'application/json',
         ];
-        if (!empty($apiKey)) {
+        if (! empty($apiKey)) {
             $headers['X-API-Key'] = $apiKey;
             $headers['x-api-key'] = $apiKey;
-            $headers['Authorization'] = 'Bearer ' . $apiKey;
+            $headers['Authorization'] = 'Bearer '.$apiKey;
         }
 
         // Susun payload yang kompatibel dengan OpenWA Easy API, REST API, & bridge gateway
         $payload = [
-            'chatId'   => $chatId,
-            'to'       => $chatId,
+            'chatId' => $chatId,
+            'to' => $chatId,
             'receiver' => $chatId,
-            'text'     => $message,
-            'message'  => $message,
+            'text' => $message,
+            'message' => $message,
         ];
 
         // Tentukan kandidat endpoint
@@ -122,9 +125,10 @@ class WhatsAppService
 
                 if ($response->successful()) {
                     Log::info("✅ OpenWA berhasil terkirim ke {$chatId} via [{$url}]");
+
                     return true;
                 } else {
-                    $lastError = "HTTP {$response->status()} Body: " . substr($response->body(), 0, 150);
+                    $lastError = "HTTP {$response->status()} Body: ".substr($response->body(), 0, 150);
                     Log::warning("OpenWA attempt gagal [{$url}]: {$lastError}");
                 }
             } catch (\Exception $e) {
@@ -134,6 +138,7 @@ class WhatsAppService
         }
 
         Log::error("❌ OpenWA gagal terkirim ke {$chatId} setelah mencoba endpoint. Error: {$lastError}");
+
         return false;
     }
 
@@ -151,7 +156,8 @@ class WhatsAppService
 
         // Jika berupa nomor telepon biasa, bersihkan dan format ke 628xxx@c.us
         $phone = self::formatPhoneNumber($to);
-        return $phone ? ($phone . '@c.us') : $to;
+
+        return $phone ? ($phone.'@c.us') : $to;
     }
 
     /**
@@ -165,9 +171,9 @@ class WhatsAppService
         }
 
         if (str_starts_with($cleaned, '08')) {
-            $cleaned = '628' . substr($cleaned, 2);
+            $cleaned = '628'.substr($cleaned, 2);
         } elseif (str_starts_with($cleaned, '8')) {
-            $cleaned = '62' . $cleaned;
+            $cleaned = '62'.$cleaned;
         }
 
         return $cleaned;

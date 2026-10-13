@@ -119,7 +119,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
                     @foreach($students as $student)
                     @php
-                        $todayLog = $recentLogs->where('student_id', $student->id)->where('status_code', 0)->first();
+                        $todayMasuk = $recentLogs->where('student_id', $student->id)->where('status_code', 0)->first();
+                        $todayPulang = $recentLogs->where('student_id', $student->id)->where('status_code', 1)->first();
                     @endphp
                     <div class="bg-gray-50/80 hover:bg-white rounded-2xl p-4 border border-gray-100 hover:border-indigo-200 hover:shadow-md transition duration-200 flex flex-col justify-between" id="card-student-{{ $student->id }}">
                         <div class="flex items-center gap-3.5 mb-3">
@@ -142,12 +143,14 @@
                         </div>
 
                         <!-- Status Absen Hari Ini -->
-                        <div class="mb-3 text-[11px] flex items-center justify-between px-2.5 py-1 rounded-lg {{ $todayLog ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-gray-100/70 text-gray-500' }}">
+                        <div class="mb-3 text-[11px] flex items-center justify-between px-2.5 py-1.5 rounded-lg {{ $todayPulang ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/50' : ($todayMasuk ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-gray-100/70 text-gray-500') }}">
                             <span class="font-medium">
-                                @if($todayLog)
-                                    <i class="fas fa-check-circle text-emerald-500 mr-1"></i> Sudah Absen ({{ \Carbon\Carbon::parse($todayLog->timestamp)->format('H:i') }} WIB)
+                                @if($todayPulang)
+                                    <i class="fas fa-walking text-indigo-600 mr-1"></i> Pulang ({{ \Carbon\Carbon::parse($todayPulang->timestamp)->format('H:i') }} WIB)
+                                @elseif($todayMasuk)
+                                    <i class="fas fa-school text-emerald-500 mr-1"></i> Masuk ({{ \Carbon\Carbon::parse($todayMasuk->timestamp)->format('H:i') }} WIB)
                                 @else
-                                    <i class="far fa-circle text-gray-400 mr-1"></i> Belum Ada Absen Masuk
+                                    <i class="far fa-circle text-gray-400 mr-1"></i> Belum Absen
                                 @endif
                             </span>
                             @if($student->manual_streak > 0)
@@ -155,19 +158,23 @@
                             @endif
                         </div>
 
-                        <!-- Action Buttons -->
-                        <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-gray-100">
-                            <button type="button" onclick="simulateTap({{ $student->id }}, 'now', '{{ addslashes($student->name) }}')" class="px-2 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap dengan jam sekarang">
+                        <!-- Action Buttons (Masuk & Pulang) -->
+                        <div class="grid grid-cols-4 gap-1 pt-2 border-t border-gray-100">
+                            <button type="button" onclick="simulateTap({{ $student->id }}, 'now', '{{ addslashes($student->name) }}', 0)" class="px-1.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap Masuk Jam Sekarang">
                                 <i class="fas fa-bolt text-xs text-yellow-300"></i>
-                                <span>Sekarang</span>
+                                <span>Masuk</span>
                             </button>
-                            <button type="button" onclick="simulateTap({{ $student->id }}, '06:15', '{{ addslashes($student->name) }}')" class="px-2 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap tepat waktu (06:15)">
+                            <button type="button" onclick="simulateTap({{ $student->id }}, '06:15', '{{ addslashes($student->name) }}', 0)" class="px-1.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap Tepat Waktu (06:15)">
                                 <i class="far fa-clock text-xs text-emerald-600"></i>
-                                <span>06:15 WIB</span>
+                                <span>06:15</span>
                             </button>
-                            <button type="button" onclick="simulateTap({{ $student->id }}, '06:45', '{{ addslashes($student->name) }}')" class="px-2 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[11px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap terlambat (06:45)">
+                            <button type="button" onclick="simulateTap({{ $student->id }}, '06:45', '{{ addslashes($student->name) }}', 0)" class="px-1.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5" title="Tap Terlambat (06:45)">
                                 <i class="fas fa-running text-xs text-amber-600"></i>
-                                <span>06:45 WIB</span>
+                                <span>06:45</span>
+                            </button>
+                            <button type="button" onclick="simulateTap({{ $student->id }}, 'now', '{{ addslashes($student->name) }}', 1)" class="px-1.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold text-center transition flex flex-col items-center justify-center gap-0.5 shadow-sm shadow-purple-500/20" title="Tap Pulang (Jam Sekarang / 14:15)">
+                                <i class="fas fa-walking text-xs text-amber-300"></i>
+                                <span>Pulang</span>
                             </button>
                         </div>
                     </div>
@@ -259,15 +266,19 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     // Simulate Tap Function
-    async function simulateTap(studentId, timeType, studentName) {
+    async function simulateTap(studentId, timeType, studentName, statusCode = 0) {
         let timeVal = null;
         if (timeType !== 'now') {
             timeVal = timeType;
+        } else if (statusCode === 1) {
+            timeVal = '14:15';
         }
+
+        const typeLabel = statusCode === 1 ? 'Absen Pulang' : 'Absen Masuk';
 
         try {
             Swal.fire({
-                title: 'Mengirim Absensi...',
+                title: `Mengirim ${typeLabel}...`,
                 text: `Memproses absensi untuk ${studentName}`,
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
@@ -283,7 +294,7 @@
                 body: JSON.stringify({
                     student_id: studentId,
                     time: timeVal,
-                    status_code: 0
+                    status_code: statusCode
                 })
             });
 
@@ -291,17 +302,18 @@
             Swal.close();
 
             if (data.status === 'success') {
+                const isPulang = (statusCode === 1);
                 Swal.fire({
                     icon: 'success',
-                    title: 'Absensi Terkirim!',
-                    html: `<b>${data.student.name}</b> (${data.student.class})<br>Waktu Tap: <span class="font-mono text-indigo-600 font-bold">${data.time} WIB</span><br><br><span class="text-xs text-gray-500">Periksa tab Mode TV sekarang untuk melihat pop-up dan geseran otomatis ke Slide 2!</span>`,
+                    title: isPulang ? 'Absen Pulang Terkirim!' : 'Absen Masuk Terkirim!',
+                    html: `<b>${data.student.name}</b> (${data.student.class})<br>Status: <span class="font-bold ${isPulang ? 'text-purple-600' : 'text-emerald-600'}">${isPulang ? 'PULANG' : 'MASUK'}</span><br>Waktu Tap: <span class="font-mono text-indigo-600 font-bold">${data.time} WIB</span><br><br><span class="text-xs text-gray-500">Periksa tab <b>Mode TV</b> dan <b>Monitoring Kepulangan</b> sekarang untuk melihat pembaruan realtime!</span>`,
                     timer: 3500,
                     showConfirmButton: true,
                     confirmButtonText: 'Mantap',
-                    confirmButtonColor: '#4f46e5'
+                    confirmButtonColor: isPulang ? '#7c3aed' : '#4f46e5'
                 });
 
-                prependLogFeed(data.student.name, data.student.class, data.time);
+                prependLogFeed(data.student.name, data.student.class, data.time, statusCode);
             } else {
                 Swal.fire('Gagal', data.message || 'Terjadi kesalahan.', 'error');
             }
@@ -420,25 +432,26 @@
     });
 
     // Prepend to feed helper
-    function prependLogFeed(name, className, timeStr) {
+    function prependLogFeed(name, className, timeStr, statusCode = 0) {
         const feed = document.getElementById('simulation-logs-feed');
         const emptyState = document.getElementById('empty-log-state');
         if (emptyState) emptyState.remove();
 
+        const isPulang = (parseInt(statusCode) === 1);
         const item = document.createElement('div');
-        item.className = 'flex items-center justify-between p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/60 text-xs transition duration-300 transform -translate-y-2';
+        item.className = `flex items-center justify-between p-3 rounded-xl ${isPulang ? 'bg-purple-50/80 border border-purple-200/60' : 'bg-emerald-50/70 border border-emerald-200/60'} text-xs transition duration-300 transform -translate-y-2`;
         item.innerHTML = `
             <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
-                    <i class="fas fa-check"></i>
+                <div class="w-8 h-8 rounded-lg ${isPulang ? 'bg-purple-600' : 'bg-emerald-500'} text-white flex items-center justify-center font-bold">
+                    <i class="fas ${isPulang ? 'fa-walking' : 'fa-check'}"></i>
                 </div>
                 <div class="truncate">
                     <div class="font-bold text-gray-900 truncate">${name}</div>
-                    <div class="text-[11px] text-gray-500">${className}</div>
+                    <div class="text-[11px] text-gray-500">${className} &bull; <span class="font-bold ${isPulang ? 'text-purple-600' : 'text-emerald-600'}">${isPulang ? 'Pulang' : 'Masuk'}</span></div>
                 </div>
             </div>
             <div class="text-right flex-shrink-0">
-                <span class="font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded shadow-sm">${timeStr} WIB</span>
+                <span class="font-mono font-bold ${isPulang ? 'text-purple-700' : 'text-emerald-700'} bg-white px-2 py-0.5 rounded shadow-sm">${timeStr} WIB</span>
             </div>
         `;
 

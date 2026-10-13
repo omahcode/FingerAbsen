@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 
 class TvAnnouncement extends Model
 {
@@ -22,7 +22,7 @@ class TvAnnouncement extends Model
 
     protected $casts = [
         'start_date' => 'date',
-        'end_date'   => 'date',
+        'end_date' => 'date',
     ];
 
     public function user()
@@ -54,6 +54,7 @@ class TvAnnouncement extends Model
     public function scopeActiveToday($query)
     {
         $today = Carbon::today('Asia/Jakarta')->toDateString();
+
         return $query->where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today);
@@ -65,10 +66,10 @@ class TvAnnouncement extends Model
     public function getTypeLabelAttribute(): string
     {
         return match ($this->type) {
-            'exam'     => 'Ulangan / Asesmen',
+            'exam' => 'Ulangan / Asesmen',
             'reminder' => 'Pengingat Tugas',
-            'urgent'   => 'Penting & Mendesak',
-            default    => 'Informasi Umum',
+            'urgent' => 'Penting & Mendesak',
+            default => 'Informasi Umum',
         };
     }
 
@@ -78,10 +79,10 @@ class TvAnnouncement extends Model
     public function getTypeBadgeAttribute(): array
     {
         return match ($this->type) {
-            'exam'     => ['bg' => 'bg-amber-500/20 text-amber-300 border-amber-500/30', 'icon' => 'fa-file-signature', 'color' => '#f59e0b'],
+            'exam' => ['bg' => 'bg-amber-500/20 text-amber-300 border-amber-500/30', 'icon' => 'fa-file-signature', 'color' => '#f59e0b'],
             'reminder' => ['bg' => 'bg-purple-500/20 text-purple-300 border-purple-500/30', 'icon' => 'fa-bell', 'color' => '#a855f7'],
-            'urgent'   => ['bg' => 'bg-red-500/20 text-red-300 border-red-500/30', 'icon' => 'fa-exclamation-triangle', 'color' => '#ef4444'],
-            default    => ['bg' => 'bg-blue-500/20 text-blue-300 border-blue-500/30', 'icon' => 'fa-info-circle', 'color' => '#38bdf8'],
+            'urgent' => ['bg' => 'bg-red-500/20 text-red-300 border-red-500/30', 'icon' => 'fa-exclamation-triangle', 'color' => '#ef4444'],
+            default => ['bg' => 'bg-blue-500/20 text-blue-300 border-blue-500/30', 'icon' => 'fa-info-circle', 'color' => '#38bdf8'],
         };
     }
 }

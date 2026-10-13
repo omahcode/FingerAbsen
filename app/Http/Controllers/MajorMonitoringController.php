@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceLog;
 use App\Models\Major;
 use App\Models\SchoolClass;
-use App\Models\Student;
-use App\Models\AttendanceLog;
 use App\Models\Setting;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
@@ -43,13 +43,13 @@ class MajorMonitoringController extends Controller
 
         $majorStats = [
             'total_students' => 0,
-            'ontime_count'   => 0,
-            'late_count'     => 0,
-            'absent_count'   => 0,
-            'percentage'     => 0,
-            'today_formatted'=> Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
-            'current_time'   => $currentTimeWib,
-            'checkin_end'    => $checkinEnd,
+            'ontime_count' => 0,
+            'late_count' => 0,
+            'absent_count' => 0,
+            'percentage' => 0,
+            'today_formatted' => Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
+            'current_time' => $currentTimeWib,
+            'checkin_end' => $checkinEnd,
         ];
 
         $classBreakdown = collect();
@@ -104,7 +104,7 @@ class MajorMonitoringController extends Controller
                         $statusLabel = 'Hadir Terlambat';
                         $lateTotal++;
                     }
-                    $tapTime = $timeStr . ' WIB';
+                    $tapTime = $timeStr.' WIB';
                 } else {
                     $status = 'absent';
                     $statusLabel = 'Belum Hadir / Alpha';
@@ -113,16 +113,16 @@ class MajorMonitoringController extends Controller
                 }
 
                 return [
-                    'id'              => $student->id,
-                    'name'            => $student->name,
-                    'photo'           => $student->photo_url,
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'photo' => $student->photo_url,
                     'school_class_id' => $student->school_class_id,
-                    'class_name'      => $student->schoolClass->name ?? '-',
-                    'parent_phone'    => $student->parent_phone,
-                    'status'          => $status,
-                    'status_label'    => $statusLabel,
-                    'tap_time'        => $tapTime,
-                    'device_user_id'  => $student->device_user_id,
+                    'class_name' => $student->schoolClass->name ?? '-',
+                    'parent_phone' => $student->parent_phone,
+                    'status' => $status,
+                    'status_label' => $statusLabel,
+                    'tap_time' => $tapTime,
+                    'device_user_id' => $student->device_user_id,
                 ];
             });
 
@@ -132,10 +132,10 @@ class MajorMonitoringController extends Controller
             $majorPercentage = $totalStudents > 0 ? round(($presentTotal / $totalStudents) * 100, 1) : 0;
 
             $majorStats['total_students'] = $totalStudents;
-            $majorStats['ontime_count']   = $ontimeTotal;
-            $majorStats['late_count']     = $lateTotal;
-            $majorStats['absent_count']   = $absentTotal;
-            $majorStats['percentage']     = $majorPercentage;
+            $majorStats['ontime_count'] = $ontimeTotal;
+            $majorStats['late_count'] = $lateTotal;
+            $majorStats['absent_count'] = $absentTotal;
+            $majorStats['percentage'] = $majorPercentage;
 
             // 3. Breakdown per Kelas dalam Jurusan
             $classBreakdown = $classes->map(function ($cls) use ($studentsList, $homeroomTeachers) {
@@ -149,14 +149,14 @@ class MajorMonitoringController extends Controller
                 $wali = $homeroomTeachers->get($cls->id);
 
                 return [
-                    'id'         => $cls->id,
-                    'name'       => $cls->name,
-                    'wali_name'  => $wali ? $wali->name : 'Belum Ditugaskan',
-                    'total'      => $total,
-                    'ontime'     => $ontime,
-                    'late'       => $late,
-                    'absent'     => $absent,
-                    'present'    => $present,
+                    'id' => $cls->id,
+                    'name' => $cls->name,
+                    'wali_name' => $wali ? $wali->name : 'Belum Ditugaskan',
+                    'total' => $total,
+                    'ontime' => $ontime,
+                    'late' => $late,
+                    'absent' => $absent,
+                    'present' => $present,
                     'percentage' => $pct,
                 ];
             })->sortByDesc('percentage')->values();
@@ -212,13 +212,13 @@ class MajorMonitoringController extends Controller
         foreach ($absentStudents as $student) {
             $className = $student->schoolClass->name ?? '-';
             $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-                . "Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-                . "Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada jurusan *{$major->name}* (Kelas: *{$className}*).\n\n"
-                . "Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-                . "Terima kasih atas perhatian dan kerja samanya.\n\n"
-                . "Salam hormat,\n"
-                . "Manajemen Jurusan {$major->name}\n"
-                . "🏫 *{$schoolName}*";
+                ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
+                ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada jurusan *{$major->name}* (Kelas: *{$className}*).\n\n"
+                ."Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
+                ."Terima kasih atas perhatian dan kerja samanya.\n\n"
+                ."Salam hormat,\n"
+                ."Manajemen Jurusan {$major->name}\n"
+                ."🏫 *{$schoolName}*";
 
             if (WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name)) {
                 $sentCount++;
@@ -262,13 +262,13 @@ class MajorMonitoringController extends Controller
         $sentCount = 0;
         foreach ($absentStudents as $student) {
             $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-                . "Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-                . "Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$schoolClass->name}* ({$major->name}).\n\n"
-                . "Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-                . "Terima kasih atas perhatian dan kerja samanya.\n\n"
-                . "Salam hormat,\n"
-                . "Wali Kelas & Manajemen Jurusan {$major->name}\n"
-                . "🏫 *{$schoolName}*";
+                ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
+                ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$schoolClass->name}* ({$major->name}).\n\n"
+                ."Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
+                ."Terima kasih atas perhatian dan kerja samanya.\n\n"
+                ."Salam hormat,\n"
+                ."Wali Kelas & Manajemen Jurusan {$major->name}\n"
+                ."🏫 *{$schoolName}*";
 
             if (WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name)) {
                 $sentCount++;

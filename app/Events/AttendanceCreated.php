@@ -27,7 +27,7 @@ class AttendanceCreated implements ShouldBroadcastNow
             new Channel('attendance'),
         ];
     }
-    
+
     public function broadcastAs(): string
     {
         return 'AttendanceCreated';

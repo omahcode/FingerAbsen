@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Device;
+use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
+use App\Models\Student;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SyncController extends Controller
 {
@@ -12,9 +15,10 @@ class SyncController extends Controller
     {
         $devices = Device::all();
         $classes = SchoolClass::with('major')->get();
-        $studentsCount = \App\Models\Student::count();
-        $templatesCount = \App\Models\FingerprintTemplate::count();
-        $admsLogs = \Illuminate\Support\Facades\Cache::get('adms_recent_logs', []);
+        $studentsCount = Student::count();
+        $templatesCount = FingerprintTemplate::count();
+        $admsLogs = Cache::get('adms_recent_logs', []);
+
         return view('sync.index', compact('devices', 'classes', 'studentsCount', 'templatesCount', 'admsLogs'));
     }
 
@@ -23,8 +27,8 @@ class SyncController extends Controller
      */
     public function pushAll(Request $request)
     {
-        $students = \App\Models\Student::all();
-        $templates = \App\Models\FingerprintTemplate::all();
+        $students = Student::all();
+        $templates = FingerprintTemplate::all();
 
         if ($students->isEmpty()) {
             return redirect()->back()->with('error', 'Belum ada data siswa di database.');
@@ -32,15 +36,15 @@ class SyncController extends Controller
 
         $userCount = 0;
         foreach ($students as $student) {
-            \App\Http\Controllers\IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$student->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
-            \App\Http\Controllers\IclockController::queueCommand("DATA UPDATE USER PIN={$student->device_user_id}\tName={$student->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
+            IclockController::queueCommand("DATA USER PIN={$student->device_user_id}\tName={$student->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
+            IclockController::queueCommand("DATA UPDATE USER PIN={$student->device_user_id}\tName={$student->name}\tPri=0\tPasswd=\tCard=\tGrp=1\tTZ=0000000100000000\tVerify=0");
             $userCount++;
         }
 
         $fpCount = 0;
         foreach ($templates as $t) {
-            \App\Http\Controllers\IclockController::queueCommand("DATA FP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
-            \App\Http\Controllers\IclockController::queueCommand("DATA UPDATE FINGERTMP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
+            IclockController::queueCommand("DATA FP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
+            IclockController::queueCommand("DATA UPDATE FINGERTMP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}");
             $fpCount++;
         }
 
@@ -57,18 +61,18 @@ class SyncController extends Controller
         $targetSn = $device ? $device->serial_number : null;
 
         // Kirim semua variasi perintah penarikan sidik jari ADMS
-        \App\Http\Controllers\IclockController::queueCommand("CHECK", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("QUERY FINGERTMP PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY FINGERTMP", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("QUERY BIODATA PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY BIODATA", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("QUERY USER PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USER PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("QUERY USERINFO PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USERINFO PIN=0", $targetSn);
-        \App\Http\Controllers\IclockController::queueCommand("DATA QUERY USERINFO", $targetSn);
+        IclockController::queueCommand('CHECK', $targetSn);
+        IclockController::queueCommand('QUERY FINGERTMP PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY FINGERTMP PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY FINGERTMP', $targetSn);
+        IclockController::queueCommand('QUERY BIODATA PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY BIODATA', $targetSn);
+        IclockController::queueCommand('QUERY USER PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY USER PIN=0', $targetSn);
+        IclockController::queueCommand('QUERY USERINFO PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY USERINFO PIN=0', $targetSn);
+        IclockController::queueCommand('DATA QUERY USERINFO', $targetSn);
 
-        return redirect()->back()->with('success', "Perintah backup sidik jari & data siswa telah dikirim ke " . ($device->name ?? 'Semua Mesin') . ". Mesin akan segera mengunggah data ke server.");
+        return redirect()->back()->with('success', 'Perintah backup sidik jari & data siswa telah dikirim ke '.($device->name ?? 'Semua Mesin').'. Mesin akan segera mengunggah data ke server.');
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Device;
-use App\Models\Student;
+use App\Events\AttendanceCreated;
+use App\Jobs\SendWhatsAppAttendanceJob;
 use App\Models\AttendanceLog;
+use App\Models\Device;
 use App\Models\Major;
 use App\Models\SchoolClass;
-use App\Events\AttendanceCreated;
+use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -20,7 +21,7 @@ class AttendanceController extends Controller
         $query = AttendanceLog::with(['student.schoolClass', 'device'])->orderBy('timestamp', 'desc');
 
         $filter = $request->query('filter', 'all');
-        
+
         if ($filter === 'registered') {
             $query->whereNotNull('student_id');
         } elseif ($filter === 'unregistered') {
@@ -31,7 +32,7 @@ class AttendanceController extends Controller
         $devices = Device::all();
         $isStrict = env('STRICT_ATTENDANCE', true);
         $maxLogId = AttendanceLog::max('id') ?? 0;
-        
+
         return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict', 'maxLogId'));
     }
 
@@ -55,7 +56,7 @@ class AttendanceController extends Controller
         return response()->json([
             'status' => 'success',
             'max_id' => AttendanceLog::max('id') ?? $sinceId,
-            'logs' => $logs
+            'logs' => $logs,
         ]);
     }
 
@@ -65,15 +66,16 @@ class AttendanceController extends Controller
         if (file_exists($path)) {
             $current = env('STRICT_ATTENDANCE', true) ? 'true' : 'false';
             $new = $current === 'true' ? 'false' : 'true';
-            
+
             $content = file_get_contents($path);
-            
+
             if (strpos($content, 'STRICT_ATTENDANCE=') !== false) {
                 file_put_contents($path, preg_replace('/^STRICT_ATTENDANCE=.*$/m', 'STRICT_ATTENDANCE='.$new, $content));
             } else {
-                file_put_contents($path, $content . "\nSTRICT_ATTENDANCE=" . $new);
+                file_put_contents($path, $content."\nSTRICT_ATTENDANCE=".$new);
             }
         }
+
         return redirect()->back()->with('success', 'Mode Anti-Duplikat berhasil diubah.');
     }
 
@@ -86,16 +88,18 @@ class AttendanceController extends Controller
         try {
             $response = Http::timeout(30)->post('http://127.0.0.1:5000/api/get_attendance', [
                 'ip_address' => $device->ip_address,
-                'port' => $device->port
+                'port' => $device->port,
             ]);
 
             if ($response->successful() && $response->json('status') === 'success') {
                 $attendances = $response->json('attendance');
                 $newCount = 0;
-                
+
                 foreach ($attendances as $att) {
-                    if (!$att['user_id']) continue;
-                    
+                    if (! $att['user_id']) {
+                        continue;
+                    }
+
                     $student = Student::where('device_user_id', (string) $att['user_id'])->first();
                     $statusCode = $att['status'] ?? 0;
                     $timestamp = $att['timestamp'];
@@ -103,23 +107,23 @@ class AttendanceController extends Controller
                     if ($isStrict && $student) {
                         // Strict Mode: 1 Murid hanya boleh 1x Masuk (0) dan 1x Pulang (1) per HARI di mesin manapun
                         $date = substr($timestamp, 0, 10); // Ambil YYYY-MM-DD
-                        
+
                         $existingLog = AttendanceLog::withTrashed()
                             ->where('student_id', $student->id)
                             ->where('status_code', $statusCode)
                             ->whereDate('timestamp', $date)
                             ->first();
-                            
-                        if (!$existingLog) {
+
+                        if (! $existingLog) {
                             AttendanceLog::create([
                                 'device_id' => $device->id,
                                 'device_user_id' => (string) $att['user_id'],
                                 'timestamp' => $timestamp,
                                 'student_id' => $student->id,
-                                'status_code' => $statusCode
+                                'status_code' => $statusCode,
                             ]);
-                            if ($student && !empty($student->parent_phone)) {
-                                \App\Jobs\SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
+                            if ($student && ! empty($student->parent_phone)) {
+                                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
                             }
                             $newCount++;
                         }
@@ -128,30 +132,31 @@ class AttendanceController extends Controller
                         $existingLog = AttendanceLog::withTrashed()->where([
                             'device_id' => $device->id,
                             'device_user_id' => (string) $att['user_id'],
-                            'timestamp' => $timestamp
+                            'timestamp' => $timestamp,
                         ])->first();
 
-                        if (!$existingLog) {
+                        if (! $existingLog) {
                             AttendanceLog::create([
                                 'device_id' => $device->id,
                                 'device_user_id' => (string) $att['user_id'],
                                 'timestamp' => $timestamp,
                                 'student_id' => $student ? $student->id : null,
-                                'status_code' => $statusCode
+                                'status_code' => $statusCode,
                             ]);
-                            if ($student && !empty($student->parent_phone)) {
-                                \App\Jobs\SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
+                            if ($student && ! empty($student->parent_phone)) {
+                                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device->name);
                             }
                             $newCount++;
                         }
                     }
                 }
+
                 return redirect()->back()->with('success', "Sinkronisasi selesai. $newCount absen baru ditambahkan.");
             }
-            
-            return redirect()->back()->with('error', 'Gagal menarik absen dari mesin: ' . $response->json('error', 'Unknown Error'));
+
+            return redirect()->back()->with('error', 'Gagal menarik absen dari mesin: '.$response->json('error', 'Unknown Error'));
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal koneksi ke Service Python: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal koneksi ke Service Python: '.$e->getMessage());
         }
     }
 
@@ -159,6 +164,7 @@ class AttendanceController extends Controller
     {
         $log = AttendanceLog::findOrFail($id);
         $log->delete();
+
         return redirect()->back()->with('success', 'Data absensi berhasil dihapus dari sistem (data di dalam mesin X1000-C tidak ikut terhapus).');
     }
 
@@ -166,7 +172,7 @@ class AttendanceController extends Controller
     {
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:attendance_logs,id'
+            'ids.*' => 'exists:attendance_logs,id',
         ]);
 
         $count = count($request->ids);
@@ -200,36 +206,37 @@ class AttendanceController extends Controller
             $this->createDemoStudentsInternal();
         }
 
-        if (!$studentId || $studentId === 'random') {
+        if (! $studentId || $studentId === 'random') {
             $student = Student::inRandomOrder()->first();
         } else {
             $student = Student::find($studentId);
         }
 
-        if (!$student) {
+        if (! $student) {
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['status' => 'error', 'message' => 'Data siswa tidak ditemukan.'], 404);
             }
+
             return redirect()->back()->with('error', 'Data siswa tidak ditemukan.');
         }
 
         // Tentukan waktu absen (WIB)
         $customTime = $request->input('time'); // misal "06:15"
         if ($customTime) {
-            $timestamp = Carbon::today('Asia/Jakarta')->format('Y-m-d') . ' ' . $customTime . ':00';
+            $timestamp = Carbon::today('Asia/Jakarta')->format('Y-m-d').' '.$customTime.':00';
         } else {
             $timestamp = $request->input('timestamp', Carbon::now('Asia/Jakarta')->toDateTimeString());
         }
 
         $statusCode = (int) $request->input('status_code', 0); // 0 = Masuk
         $device = Device::first();
-        if (!$device) {
+        if (! $device) {
             $device = Device::create([
                 'name' => 'Mesin Fingerprint Utama',
                 'ip_address' => '192.168.1.201',
                 'port' => 4370,
                 'status' => 'online',
-                'serial_number' => 'DEV-DEMO-001'
+                'serial_number' => 'DEV-DEMO-001',
             ]);
         }
 
@@ -239,14 +246,23 @@ class AttendanceController extends Controller
             'device_user_id' => (string) ($student->device_user_id ?? $student->id),
             'timestamp' => $timestamp,
             'student_id' => $student->id,
-            'status_code' => $statusCode
+            'status_code' => $statusCode,
         ]);
 
         // Siarkan realtime event untuk WebSocket / Reverb
         try {
             broadcast(new AttendanceCreated($log));
         } catch (\Throwable $e) {
-            Log::warning('Broadcast AttendanceCreated failed in simulation: ' . $e->getMessage());
+            Log::warning('Broadcast AttendanceCreated failed in simulation: '.$e->getMessage());
+        }
+
+        // Kirim notifikasi WhatsApp jika nomor orang tua tersedia
+        if (! empty($student->parent_phone)) {
+            try {
+                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $statusCode, $device?->name);
+            } catch (\Throwable $e) {
+                Log::warning('Dispatch SendWhatsAppAttendanceJob failed in simulation: '.$e->getMessage());
+            }
         }
 
         $timeFormatted = Carbon::parse($timestamp)->format('H:i');
@@ -279,6 +295,7 @@ class AttendanceController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['status' => 'success', 'message' => "$count data siswa demo berhasil dibuat!"]);
         }
+
         return redirect()->back()->with('success', "$count data siswa demo berhasil dibuat!");
     }
 
@@ -292,6 +309,7 @@ class AttendanceController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['status' => 'success', 'message' => "$count absensi hari ini berhasil dibersihkan!"]);
         }
+
         return redirect()->back()->with('success', "$count absensi hari ini berhasil dibersihkan untuk pengujian ulang!");
     }
 
@@ -328,10 +346,12 @@ class AttendanceController extends Controller
                     'school_class_id' => $classes[$demo['class']]->id,
                     'parent_phone' => '081234567890',
                     'privilege' => 0,
-                    'manual_streak' => $demo['manual_streak']
+                    'manual_streak' => $demo['manual_streak'],
                 ]
             );
-            if ($student->wasRecentlyCreated) $created++;
+            if ($student->wasRecentlyCreated) {
+                $created++;
+            }
         }
 
         Device::firstOrCreate(

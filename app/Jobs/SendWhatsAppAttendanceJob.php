@@ -12,11 +12,14 @@ use Illuminate\Support\Facades\Log;
 
 class SendWhatsAppAttendanceJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     public Student $student;
+
     public string $timestamp;
+
     public int $statusCode;
+
     public ?string $deviceName;
 
     /**
@@ -60,7 +63,7 @@ class SendWhatsAppAttendanceJob implements ShouldQueue
             $this->deviceName
         );
 
-        if (!$success) {
+        if (! $success) {
             Log::warning("Job WhatsApp belum berhasil terkirim untuk {$this->student->name}.");
         }
 

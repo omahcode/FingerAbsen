@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Services\WhatsAppService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class SettingController extends Controller
@@ -128,9 +129,9 @@ class SettingController extends Controller
         ]);
 
         $to = $request->test_phone;
-        $message = $request->test_message ?: "Halo! Ini adalah pesan uji coba dari Sistem Presensi Fingerprint Sekolah via OpenWA pada " . Carbon::now('Asia/Jakarta')->translatedFormat('d F Y H:i:s') . " WIB.";
+        $message = $request->test_message ?: 'Halo! Ini adalah pesan uji coba dari Sistem Presensi Fingerprint Sekolah via OpenWA pada '.Carbon::now('Asia/Jakarta')->translatedFormat('d F Y H:i:s').' WIB.';
 
-        $sent = \App\Services\WhatsAppService::sendRawMessage($to, $message, 'Test Admin');
+        $sent = WhatsAppService::sendRawMessage($to, $message, 'Test Admin');
 
         if ($sent) {
             return redirect()->back()->with('success', "Pesan uji coba berhasil dikirim ke {$to} via OpenWA!");
@@ -166,11 +167,13 @@ class SettingController extends Controller
             if ($student) {
                 $student->manual_streak = 0;
                 $student->save();
+
                 return redirect()->route('settings.index')->with('success', "Streak simulasi untuk {$student->name} telah di-reset ke 0.");
             }
         }
 
         Student::query()->update(['manual_streak' => 0]);
+
         return redirect()->route('settings.index')->with('success', 'Semua streak simulasi siswa telah di-reset ke 0.');
     }
 

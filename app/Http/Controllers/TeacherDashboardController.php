@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
-use App\Models\SchoolClass;
 use App\Models\AttendanceLog;
+use App\Models\SchoolClass;
 use App\Models\Setting;
+use App\Models\Student;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -87,7 +87,7 @@ class TeacherDashboardController extends Controller
                         $statusLabel = 'Hadir Terlambat';
                         $lateCount++;
                     }
-                    $tapTime = $timeStr . ' WIB';
+                    $tapTime = $timeStr.' WIB';
                 } else {
                     $status = 'absent';
                     $statusLabel = 'Belum Hadir / Alpha';
@@ -162,20 +162,20 @@ class TeacherDashboardController extends Controller
         $teacherName = $user->name;
 
         $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-            . "Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-            . "Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$className}*.\n\n"
-            . "Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-            . "Terima kasih atas perhatian dan kerja samanya.\n\n"
-            . "Salam hormat,\n"
-            . "Wali Kelas: *{$teacherName}*\n"
-            . "🏫 *{$schoolName}*";
+            ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
+            ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$className}*.\n\n"
+            ."Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
+            ."Terima kasih atas perhatian dan kerja samanya.\n\n"
+            ."Salam hormat,\n"
+            ."Wali Kelas: *{$teacherName}*\n"
+            ."🏫 *{$schoolName}*";
 
         $success = WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name);
 
         if ($success) {
             return back()->with('success', "Pesan pengingat WhatsApp berhasil dikirim ke orang tua {$student->name} ({$student->parent_phone}).");
         } else {
-            return back()->with('error', "Gagal mengirim pesan via Gateway WhatsApp. Pastikan OpenWA sedang aktif.");
+            return back()->with('error', 'Gagal mengirim pesan via Gateway WhatsApp. Pastikan OpenWA sedang aktif.');
         }
     }
 
@@ -187,12 +187,12 @@ class TeacherDashboardController extends Controller
         $user = Auth::user();
         $classId = $user->isGuru() ? $user->school_class_id : $request->input('school_class_id');
 
-        if (!$classId) {
+        if (! $classId) {
             return back()->with('error', 'Kelas belum dipilih atau belum ditugaskan.');
         }
 
         $targetClass = SchoolClass::find($classId);
-        if (!$targetClass) {
+        if (! $targetClass) {
             return back()->with('error', 'Data kelas tidak ditemukan.');
         }
 
@@ -226,19 +226,19 @@ class TeacherDashboardController extends Controller
         $sentCount = 0;
         foreach ($absentStudents as $student) {
             $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-                . "Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-                . "Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$targetClass->name}*.\n\n"
-                . "Mohon konfirmasi kepada wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-                . "Terima kasih atas perhatian dan kerja samanya.\n\n"
-                . "Salam hormat,\n"
-                . "Wali Kelas: *{$teacherName}*\n"
-                . "🏫 *{$schoolName}*";
+                ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
+                ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$targetClass->name}*.\n\n"
+                ."Mohon konfirmasi kepada wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
+                ."Terima kasih atas perhatian dan kerja samanya.\n\n"
+                ."Salam hormat,\n"
+                ."Wali Kelas: *{$teacherName}*\n"
+                ."🏫 *{$schoolName}*";
 
             if (WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name)) {
                 $sentCount++;
             }
         }
 
-        return back()->with('success', "Berhasil mengirim pengingat WhatsApp ke {$sentCount} dari " . $absentStudents->count() . " orang tua siswa yang belum hadir.");
+        return back()->with('success', "Berhasil mengirim pengingat WhatsApp ke {$sentCount} dari ".$absentStudents->count().' orang tua siswa yang belum hadir.');
     }
 }

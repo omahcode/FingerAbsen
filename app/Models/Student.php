@@ -13,7 +13,7 @@ class Student extends Model
         'parent_phone',
         'device_user_id',
         'privilege',
-        'manual_streak'
+        'manual_streak',
     ];
 
     protected $appends = ['photo_url'];
@@ -21,8 +21,9 @@ class Student extends Model
     public function getPhotoUrlAttribute(): ?string
     {
         if ($this->photo) {
-            return asset('storage/' . $this->photo);
+            return asset('storage/'.$this->photo);
         }
+
         return null;
     }
 

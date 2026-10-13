@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Device;
-use App\Models\Student;
-use App\Models\FingerprintTemplate;
-use App\Models\AttendanceLog;
-use App\Models\SchoolClass;
 use App\Events\AttendanceCreated;
+use App\Jobs\SendWhatsAppAttendanceJob;
+use App\Models\AttendanceLog;
+use App\Models\Device;
+use App\Models\FingerprintTemplate;
+use App\Models\SchoolClass;
+use App\Models\Setting;
+use App\Models\Student;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class IclockController extends Controller
 {
@@ -27,11 +29,12 @@ class IclockController extends Controller
                 'method' => $method,
                 'sn' => $sn,
                 'info' => $info,
-                'preview' => $body ? substr(trim($body), 0, 150) : null
+                'preview' => $body ? substr(trim($body), 0, 150) : null,
             ]);
             $logs = array_slice($logs, 0, 30);
             Cache::put('adms_recent_logs', $logs, now()->addDays(1));
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
     }
 
     /**
@@ -40,22 +43,23 @@ class IclockController extends Controller
     private function extractRequestBody(Request $request): string
     {
         $content = $request->getContent();
-        if (!empty($content)) {
+        if (! empty($content)) {
             return (string) $content;
         }
 
         $input = @file_get_contents('php://input');
-        if (!empty($input)) {
+        if (! empty($input)) {
             return (string) $input;
         }
 
-        if (!empty($request->all())) {
+        if (! empty($request->all())) {
             $parts = [];
             foreach ($request->all() as $k => $v) {
                 if (is_string($v) && strlen($v) > 0) {
                     $parts[] = "{$k}={$v}";
                 }
             }
+
             return implode("\n", $parts);
         }
 
@@ -70,7 +74,7 @@ class IclockController extends Controller
         $sn = $request->query('SN', 'UNKNOWN');
         $ip = $request->ip();
 
-        Log::info("ADMS cdata request from IP: {$ip}, SN: {$sn}, Method: " . $request->method());
+        Log::info("ADMS cdata request from IP: {$ip}, SN: {$sn}, Method: ".$request->method());
 
         // Cari atau update status mesin
         $this->updateDeviceStatus($sn, $ip);
@@ -78,21 +82,21 @@ class IclockController extends Controller
         // Jika request GET: Mesin meminta parameter inisialisasi / handshake
         if ($request->isMethod('get')) {
             self::recordAdmsLog('/iclock/cdata', 'GET', $sn, 'Inisialisasi Handshake ADMS');
-            $responseContent = "GET OPTION FROM: {$sn}\n" .
-                "ATTLOGStamp=None\n" .
-                "OPERLOGStamp=None\n" .
-                "ATTPHOTOStamp=None\n" .
-                "ServerVersion=3.1.1\n" .
-                "PushOptionsFlag=1\n" .
-                "PushProtVer=2.4.1\n" .
-                "PushOptions=User,FP,AttLog,BioData\n" .
-                "ErrorDelay=15\n" .
-                "Delay=5\n" .
-                "TransTimes=00:00;14:05\n" .
-                "TransInterval=1\n" .
-                "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollFP\tEnrollUser\tFP\tUser\tBioData\tFPTmp\tBioPhoto\n" .
-                "TimeZone=7\n" .
-                "Realtime=1\n" .
+            $responseContent = "GET OPTION FROM: {$sn}\n".
+                "ATTLOGStamp=None\n".
+                "OPERLOGStamp=None\n".
+                "ATTPHOTOStamp=None\n".
+                "ServerVersion=3.1.1\n".
+                "PushOptionsFlag=1\n".
+                "PushProtVer=2.4.1\n".
+                "PushOptions=User,FP,AttLog,BioData\n".
+                "ErrorDelay=15\n".
+                "Delay=5\n".
+                "TransTimes=00:00;14:05\n".
+                "TransInterval=1\n".
+                "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollFP\tEnrollUser\tFP\tUser\tBioData\tFPTmp\tBioPhoto\n".
+                "TimeZone=7\n".
+                "Realtime=1\n".
                 "Encrypt=0\n";
 
             return response($responseContent, 200)
@@ -136,12 +140,12 @@ class IclockController extends Controller
         $table = strtoupper($request->query('table', 'FINGERTMP'));
         $body = $this->extractRequestBody($request);
 
-        Log::info("ADMS fdata from SN {$sn}, Table: {$table}, Query: " . json_encode($request->query()) . ", Length: " . strlen($body));
+        Log::info("ADMS fdata from SN {$sn}, Table: {$table}, Query: ".json_encode($request->query()).', Length: '.strlen($body));
 
         $count = 0;
 
         // Format 1: PIN & FID ada di parameter query URL
-        if ($request->has('PIN') && !empty($body)) {
+        if ($request->has('PIN') && ! empty($body)) {
             $pin = $request->query('PIN');
             $fid = $request->query('FID', 0);
             $size = $request->query('size', strlen($body));
@@ -151,22 +155,22 @@ class IclockController extends Controller
             $student = Student::firstOrCreate(
                 ['device_user_id' => (string) $pin],
                 [
-                    'name' => 'Siswa ' . $pin,
+                    'name' => 'Siswa '.$pin,
                     'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                    'privilege' => '0'
+                    'privilege' => '0',
                 ]
             );
 
             FingerprintTemplate::updateOrCreate(
                 [
                     'device_user_id' => (string) $pin,
-                    'finger_index' => (int) $fid
+                    'finger_index' => (int) $fid,
                 ],
                 [
                     'student_id' => $student->id,
                     'size' => (int) $size,
                     'valid' => 1,
-                    'template_data' => $tmp
+                    'template_data' => $tmp,
                 ]
             );
 
@@ -174,7 +178,7 @@ class IclockController extends Controller
             self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
             $count = 1;
             self::recordAdmsLog('/iclock/fdata', 'POST', $sn, "Kirim Template Sidik Jari PIN: {$pin}, Finger: {$fid}", $tmp);
-        } elseif (!empty($body)) {
+        } elseif (! empty($body)) {
             // Format 2: Multi-line text template di body
             $count = $this->processFingerprintLogs($body, $sn);
             self::recordAdmsLog('/iclock/fdata', 'POST', $sn, "Kirim Multi Template Sidik Jari - {$count} data", $body);
@@ -215,10 +219,11 @@ class IclockController extends Controller
         $devices = Device::all();
 
         if ($targetSn) {
-            $queueKey = "adms_queue_" . $targetSn;
+            $queueKey = 'adms_queue_'.$targetSn;
             $queue = Cache::get($queueKey, []);
             $queue[] = $command;
             Cache::put($queueKey, $queue, now()->addDays(2));
+
             return;
         }
 
@@ -230,10 +235,10 @@ class IclockController extends Controller
                 }
 
                 $keys = [];
-                if (!empty($device->serial_number)) {
-                    $keys[] = "adms_queue_" . $device->serial_number;
+                if (! empty($device->serial_number)) {
+                    $keys[] = 'adms_queue_'.$device->serial_number;
                 }
-                $keys[] = "adms_queue_DEVICE_" . $device->id;
+                $keys[] = 'adms_queue_DEVICE_'.$device->id;
 
                 foreach ($keys as $k) {
                     $q = Cache::get($k, []);
@@ -244,7 +249,7 @@ class IclockController extends Controller
         }
 
         // Antrean global fallback
-        $globalKey = "adms_queue_GLOBAL";
+        $globalKey = 'adms_queue_GLOBAL';
         $globalQueue = Cache::get($globalKey, []);
         $globalQueue[] = $command;
         Cache::put($globalKey, $globalQueue, now()->addDays(2));
@@ -259,20 +264,20 @@ class IclockController extends Controller
         $device = $this->updateDeviceStatus($sn, $request->ip());
 
         // Ambil antrean spesifik untuk mesin ini
-        $queueKey = "adms_queue_" . $sn;
+        $queueKey = 'adms_queue_'.$sn;
         $queue = Cache::get($queueKey, []);
 
         if (empty($queue) && $device) {
-            $queueKey = "adms_queue_DEVICE_" . $device->id;
+            $queueKey = 'adms_queue_DEVICE_'.$device->id;
             $queue = Cache::get($queueKey, []);
         }
 
         if (empty($queue)) {
-            $queueKey = "adms_queue_GLOBAL";
+            $queueKey = 'adms_queue_GLOBAL';
             $queue = Cache::get($queueKey, []);
         }
 
-        if (!empty($queue)) {
+        if (! empty($queue)) {
             // Ambil hingga 15 perintah sekaligus (batch)
             $batch = [];
             $batchCount = min(count($queue), 15);
@@ -281,14 +286,14 @@ class IclockController extends Controller
             }
             Cache::put($queueKey, $queue, now()->addDays(2));
 
-            $responseOutput = "";
+            $responseOutput = '';
             foreach ($batch as $cmd) {
                 $cmdId = rand(1000, 9999);
                 Log::info("Mengirim ADMS Command ke mesin {$sn}: C:{$cmdId}:{$cmd}");
                 $responseOutput .= "C:{$cmdId}:{$cmd}\n";
             }
 
-            self::recordAdmsLog('/iclock/getrequest', 'GET', $sn, "Kirim " . count($batch) . " Perintah Sinkronisasi ke Mesin", $responseOutput);
+            self::recordAdmsLog('/iclock/getrequest', 'GET', $sn, 'Kirim '.count($batch).' Perintah Sinkronisasi ke Mesin', $responseOutput);
 
             return response($responseOutput, 200)
                 ->header('Content-Type', 'text/plain');
@@ -305,7 +310,7 @@ class IclockController extends Controller
         $sn = $request->query('SN', 'UNKNOWN');
         $this->updateDeviceStatus($sn, $request->ip());
         $body = $this->extractRequestBody($request);
-        Log::info("Hasil ADMS Command dari mesin {$sn}: " . $body);
+        Log::info("Hasil ADMS Command dari mesin {$sn}: ".$body);
 
         $fpCount = 0;
         $userCount = 0;
@@ -318,8 +323,12 @@ class IclockController extends Controller
         }
 
         $info = 'Hasil Eksekusi Perintah Mesin';
-        if ($fpCount > 0) $info .= " (Ditemukan {$fpCount} sidik jari)";
-        if ($userCount > 0) $info .= " (Ditemukan {$userCount} user)";
+        if ($fpCount > 0) {
+            $info .= " (Ditemukan {$fpCount} sidik jari)";
+        }
+        if ($userCount > 0) {
+            $info .= " (Ditemukan {$userCount} user)";
+        }
 
         self::recordAdmsLog('/iclock/devicecmd', 'POST', $sn, $info, $body);
 
@@ -337,11 +346,13 @@ class IclockController extends Controller
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $savedCount = 0;
 
-        Log::info("ADMS Raw ATTLOG Body from SN {$sn} (IP: {$ip}):\n" . $rawBody);
+        Log::info("ADMS Raw ATTLOG Body from SN {$sn} (IP: {$ip}):\n".$rawBody);
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
 
             $userId = null;
             $timestamp = null;
@@ -352,7 +363,7 @@ class IclockController extends Controller
             if (count($parts) >= 2) {
                 $userId = trim($parts[0]);
                 $timestamp = trim($parts[1]);
-                $status = isset($parts[2]) ? (int)trim($parts[2]) : 0;
+                $status = isset($parts[2]) ? (int) trim($parts[2]) : 0;
             } else {
                 // Format 2: Key-value string (misal: PIN=101\tCHECKTIME=2026-10-08 17:00:00)
                 parse_str(str_replace("\t", '&', $line), $parsed);
@@ -361,15 +372,16 @@ class IclockController extends Controller
                 $status = $parsed['STATUS'] ?? $parsed['CHECKTYPE'] ?? 0;
             }
 
-            if (!$userId || !$timestamp) {
+            if (! $userId || ! $timestamp) {
                 Log::warning("ADMS: Format line tidak valid: {$line}");
+
                 continue;
             }
 
             // Validasi tanggal
             $timestamp = date('Y-m-d H:i:s', strtotime($timestamp));
             $timeOnly = date('H:i', strtotime($timestamp));
-            $checkoutStart = \App\Models\Setting::get('checkout_start', '14:00');
+            $checkoutStart = Setting::get('checkout_start', '14:00');
 
             // Jika mesin mengirim status default (0) tapi sudah masuk jam pulang sekolah, ubah status jadi Pulang (1)
             if ($status == 0 && $timeOnly >= $checkoutStart) {
@@ -391,6 +403,7 @@ class IclockController extends Controller
                 if ($exists) {
                     Log::info("ADMS Skip: Siswa {$student->name} sudah absen status {$status} hari ini.");
                     $savedCount++;
+
                     continue;
                 }
             } else {
@@ -403,6 +416,7 @@ class IclockController extends Controller
                 if ($exists) {
                     Log::info("ADMS Skip: Duplikat timestamp {$timestamp} untuk user {$userId}");
                     $savedCount++;
+
                     continue;
                 }
             }
@@ -413,14 +427,14 @@ class IclockController extends Controller
                 'device_user_id' => (string) $userId,
                 'timestamp' => $timestamp,
                 'student_id' => $student ? $student->id : null,
-                'status_code' => $status
+                'status_code' => $status,
             ]);
 
-            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: " . ($student->name ?? 'Belum terdaftar') . ")");
+            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: ".($student->name ?? 'Belum terdaftar').')');
 
             // Masukkan pengiriman notifikasi WhatsApp ke antrean antrean (Queue)
-            if ($student && !empty($student->parent_phone)) {
-                \App\Jobs\SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
+            if ($student && ! empty($student->parent_phone)) {
+                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
             }
 
             // Broadcast event websocket / realtime jika ada
@@ -441,13 +455,15 @@ class IclockController extends Controller
      */
     private function processUserLogs(string $rawBody, string $sn): int
     {
-        Log::info("ADMS User Data from SN {$sn}:\n" . $rawBody);
+        Log::info("ADMS User Data from SN {$sn}:\n".$rawBody);
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $count = 0;
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
 
             $tokens = preg_split('/\t+|\s{2,}/', $line);
             $params = [];
@@ -462,10 +478,10 @@ class IclockController extends Controller
             $name = $params['NAME'] ?? null;
             $pri = $params['PRI'] ?? $params['PRIVILEGE'] ?? 0;
 
-            if (!$pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
+            if (! $pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
                 $pin = trim($m[1]);
             }
-            if (!$name && preg_match('/Name=([^\t\r\n]+)/i', $line, $m)) {
+            if (! $name && preg_match('/Name=([^\t\r\n]+)/i', $line, $m)) {
                 $name = trim($m[1]);
             }
 
@@ -474,21 +490,22 @@ class IclockController extends Controller
                 $student = Student::firstOrCreate(
                     ['device_user_id' => (string) $pin],
                     [
-                        'name' => $name ?: 'Siswa ' . $pin,
+                        'name' => $name ?: 'Siswa '.$pin,
                         'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                        'privilege' => (string) $pri
+                        'privilege' => (string) $pri,
                     ]
                 );
 
-                if ($name && $student->name === 'Siswa ' . $pin) {
+                if ($name && $student->name === 'Siswa '.$pin) {
                     $student->update(['name' => $name]);
                 }
 
                 // Replicate ke mesin lain
-                self::queueCommand("DATA USER PIN={$pin}\tName=" . ($student->name ?? $name) . "\tPri={$pri}\tGrp=1", null, $sn);
+                self::queueCommand("DATA USER PIN={$pin}\tName=".($student->name ?? $name)."\tPri={$pri}\tGrp=1", null, $sn);
                 $count++;
             }
         }
+
         return $count;
     }
 
@@ -497,13 +514,15 @@ class IclockController extends Controller
      */
     private function processFingerprintLogs(string $rawBody, string $sn): int
     {
-        Log::info("ADMS Fingerprint Template received from SN {$sn}:\n" . substr($rawBody, 0, 300) . "...");
+        Log::info("ADMS Fingerprint Template received from SN {$sn}:\n".substr($rawBody, 0, 300).'...');
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $count = 0;
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line)) continue;
+            if (empty($line)) {
+                continue;
+            }
 
             $pin = null;
             $fid = 0;
@@ -527,21 +546,21 @@ class IclockController extends Controller
             $tmp = $params['TMP'] ?? $params['TEMPLATE'] ?? null;
 
             // Ekstrak via Regex aman jika tidak terdeteksi via token
-            if (!$pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
+            if (! $pin && preg_match('/PIN=([0-9a-zA-Z_-]+)/i', $line, $m)) {
                 $pin = trim($m[1]);
             }
             if ($fid === null && (preg_match('/FID=([0-9]+)/i', $line, $m) || preg_match('/Index=([0-9]+)/i', $line, $m) || preg_match('/No=([0-9]+)/i', $line, $m))) {
                 $fid = (int) $m[1];
             }
-            if (!$size && preg_match('/Size=([0-9]+)/i', $line, $m)) {
+            if (! $size && preg_match('/Size=([0-9]+)/i', $line, $m)) {
                 $size = (int) $m[1];
             }
-            if (!$tmp && preg_match('/TMP=([A-Za-z0-9+\/=_~-]+)/i', $line, $m)) {
+            if (! $tmp && preg_match('/TMP=([A-Za-z0-9+\/=_~-]+)/i', $line, $m)) {
                 $tmp = trim($m[1]);
             }
 
             // Fallback: positional TSV (PIN\tFID\tSize\tValid\tTMP atau PIN\tFID\tTMP)
-            if (!$pin || !$tmp) {
+            if (! $pin || ! $tmp) {
                 if (count($tokens) >= 3) {
                     $pin = trim($tokens[0]);
                     $fid = (int) trim($tokens[1]);
@@ -556,26 +575,26 @@ class IclockController extends Controller
                 $student = Student::firstOrCreate(
                     ['device_user_id' => (string) $pin],
                     [
-                        'name' => 'Siswa ' . $pin,
+                        'name' => 'Siswa '.$pin,
                         'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                        'privilege' => '0'
+                        'privilege' => '0',
                     ]
                 );
 
                 FingerprintTemplate::updateOrCreate(
                     [
                         'device_user_id' => (string) $pin,
-                        'finger_index' => (int) $fid
+                        'finger_index' => (int) $fid,
                     ],
                     [
                         'student_id' => $student->id,
                         'size' => (int) $size ?: strlen($tmp),
                         'valid' => 1,
-                        'template_data' => $tmp
+                        'template_data' => $tmp,
                     ]
                 );
 
-                Log::info("ADMS Template Saved: PIN {$pin}, Finger {$fid}, Size: " . strlen($tmp));
+                Log::info("ADMS Template Saved: PIN {$pin}, Finger {$fid}, Size: ".strlen($tmp));
 
                 // Replicate template sidik jari ke mesin lain
                 self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
@@ -583,6 +602,7 @@ class IclockController extends Controller
                 $count++;
             }
         }
+
         return $count;
     }
 
@@ -595,31 +615,32 @@ class IclockController extends Controller
             $device = null;
 
             // 1. Cari berdasarkan Serial Number (SN) jika ada
-            if ($sn !== 'UNKNOWN' && !empty($sn)) {
+            if ($sn !== 'UNKNOWN' && ! empty($sn)) {
                 $device = Device::where('serial_number', $sn)->first();
             }
 
             // 2. Jika belum ditemukan dengan SN, cari device yang belum punya SN atau cari berdasarkan IP
-            if (!$device) {
+            if (! $device) {
                 $device = Device::where('ip_address', $ip)->first()
                        ?: Device::whereNull('serial_number')->first();
 
                 // Simpan SN ke device tersebut jika SN valid
-                if ($device && $sn !== 'UNKNOWN' && !empty($sn) && empty($device->serial_number)) {
+                if ($device && $sn !== 'UNKNOWN' && ! empty($sn) && empty($device->serial_number)) {
                     $device->update(['serial_number' => $sn]);
                 }
             }
 
             // 3. Jika tetap belum ada device sama sekali di DB, buatkan otomatis
-            if (!$device && $sn !== 'UNKNOWN') {
+            if (! $device && $sn !== 'UNKNOWN') {
                 $device = Device::create([
-                    'name' => 'Mesin ' . substr($sn, -4),
+                    'name' => 'Mesin '.substr($sn, -4),
                     'serial_number' => $sn,
                     'ip_address' => $ip,
                     'port' => 4370,
                     'status' => 'online',
                     'last_seen_at' => now(),
                 ]);
+
                 return $device;
             }
 
@@ -632,7 +653,8 @@ class IclockController extends Controller
 
             return $device;
         } catch (\Exception $e) {
-            Log::warning("Gagal update device status ADMS: " . $e->getMessage());
+            Log::warning('Gagal update device status ADMS: '.$e->getMessage());
+
             return null;
         }
     }

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Device;
+use App\Models\Student;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -11,6 +13,7 @@ class DeviceController extends Controller
     public function index()
     {
         $devices = Device::all();
+
         return view('devices.index', compact('devices'));
     }
 
@@ -25,7 +28,7 @@ class DeviceController extends Controller
             'name' => 'required',
             'ip_address' => 'required',
             'port' => 'required|integer',
-            'serial_number' => 'nullable|string'
+            'serial_number' => 'nullable|string',
         ]);
 
         Device::create([
@@ -33,7 +36,7 @@ class DeviceController extends Controller
             'serial_number' => $request->serial_number,
             'ip_address' => $request->ip_address,
             'port' => $request->port,
-            'status' => 'offline'
+            'status' => 'offline',
         ]);
 
         return redirect()->route('devices.index')->with('success', 'Mesin berhasil ditambahkan.');
@@ -42,6 +45,7 @@ class DeviceController extends Controller
     public function destroy(Device $device)
     {
         $device->delete();
+
         return redirect()->route('devices.index')->with('success', 'Mesin dihapus.');
     }
 
@@ -50,26 +54,28 @@ class DeviceController extends Controller
         $device = Device::findOrFail($id);
 
         // 1. Cek apakah mesin aktif via ADMS dalam 5 menit terakhir
-        $isRecentlyActive = $device->last_seen_at && \Carbon\Carbon::parse($device->last_seen_at)->gt(now()->subMinutes(5));
+        $isRecentlyActive = $device->last_seen_at && Carbon::parse($device->last_seen_at)->gt(now()->subMinutes(5));
 
         if ($isRecentlyActive) {
             $device->update(['status' => 'online']);
-            return redirect()->back()->with('success', 'Mesin terdeteksi ONLINE (ADMS Aktif: ' . \Carbon\Carbon::parse($device->last_seen_at)->diffForHumans() . ')');
+
+            return redirect()->back()->with('success', 'Mesin terdeteksi ONLINE (ADMS Aktif: '.Carbon::parse($device->last_seen_at)->diffForHumans().')');
         }
 
         // 2. Coba cek via Service Python jika ada URL service
         try {
             $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
-            $response = Http::timeout(3)->post($serviceUrl . '/api/check_status', [
+            $response = Http::timeout(3)->post($serviceUrl.'/api/check_status', [
                 'ip_address' => $device->ip_address,
-                'port' => $device->port
+                'port' => $device->port,
             ]);
 
             if ($response->successful() && ($response->json('status') === 'online')) {
                 $device->update([
                     'status' => 'online',
-                    'last_seen_at' => now()
+                    'last_seen_at' => now(),
                 ]);
+
                 return redirect()->back()->with('success', 'Mesin terdeteksi ONLINE via Bridge.');
             }
         } catch (\Exception $e) {
@@ -77,19 +83,20 @@ class DeviceController extends Controller
         }
 
         $device->update(['status' => 'offline']);
+
         return redirect()->back()->with('error', 'Mesin belum mengirim sinyal (OFFLINE). Pastikan setting ADMS dan Gateway/Internet di mesin sudah benar.');
     }
 
     public function clearAdmin($id)
     {
         $device = Device::findOrFail($id);
-        
+
         // Kirim ke antrean ADMS
-        \App\Http\Controllers\IclockController::queueCommand("CLEAR ADMIN", $device->serial_number);
-        \App\Http\Controllers\IclockController::queueCommand("DATA DELETE USER PIN=0", $device->serial_number);
-        
+        IclockController::queueCommand('CLEAR ADMIN', $device->serial_number);
+        IclockController::queueCommand('DATA DELETE USER PIN=0', $device->serial_number);
+
         // Hapus juga hak admin di database lokal
-        \App\Models\Student::where('privilege', '!=', '0')->update(['privilege' => '0']);
+        Student::where('privilege', '!=', '0')->update(['privilege' => '0']);
 
         return redirect()->back()->with('success', 'Perintah buka kunci mesin telah dikirim ke antrean mesin.');
     }
@@ -100,8 +107,8 @@ class DeviceController extends Controller
         $time = now()->format('Y-m-d H:i:s');
 
         // Kirim ke antrean ADMS
-        \App\Http\Controllers\IclockController::queueCommand("SET OPTIONS DateTime={$time}", $device->serial_number);
-        \App\Http\Controllers\IclockController::queueCommand("SET TIME {$time}", $device->serial_number);
+        IclockController::queueCommand("SET OPTIONS DateTime={$time}", $device->serial_number);
+        IclockController::queueCommand("SET TIME {$time}", $device->serial_number);
 
         return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke mesin.");
     }
@@ -109,8 +116,8 @@ class DeviceController extends Controller
     public function syncTimeAll()
     {
         $time = now()->format('Y-m-d H:i:s');
-        \App\Http\Controllers\IclockController::queueCommand("SET OPTIONS DateTime={$time}");
-        \App\Http\Controllers\IclockController::queueCommand("SET TIME {$time}");
+        IclockController::queueCommand("SET OPTIONS DateTime={$time}");
+        IclockController::queueCommand("SET TIME {$time}");
 
         return redirect()->back()->with('success', "Perintah sinkronisasi waktu ({$time}) telah dikirim ke semua mesin.");
     }

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use App\Services\WhatsAppService;
-use App\Models\Student;
 use App\Models\AttendanceLog;
 use App\Models\Setting;
+use App\Models\Student;
+use App\Services\WhatsAppService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WhatsAppWebhookController extends Controller
 {
@@ -18,18 +18,18 @@ class WhatsAppWebhookController extends Controller
     public function handleWebhook(Request $request)
     {
         // Jika dibuka langsung via browser (GET tanpa payload webhook), tampilkan informasi status endpoint
-        if ($request->isMethod('get') && !$request->has('event') && !$request->has('data')) {
+        if ($request->isMethod('get') && ! $request->has('event') && ! $request->has('data')) {
             return response()->json([
                 'status' => 'online',
                 'service' => 'OpenWA Webhook Receiver',
                 'message' => 'Endpoint Webhook OpenWA aktif dan siap menerima data POST secara real-time dari server OpenWA.',
                 'endpoint_url' => url('/api/webhook/openwa'),
                 'supported_events' => ['message.received', 'onMessage'],
-                'help' => 'Salin endpoint_url ini ke pengaturan Webhook di server OpenWA Anda.'
+                'help' => 'Salin endpoint_url ini ke pengaturan Webhook di server OpenWA Anda.',
             ]);
         }
 
-        Log::info("OpenWA Webhook Received: " . json_encode($request->all()));
+        Log::info('OpenWA Webhook Received: '.json_encode($request->all()));
 
         $event = $request->input('event');
 
@@ -37,28 +37,28 @@ class WhatsAppWebhookController extends Controller
         if ($event === 'message.received' || $event === 'onMessage' || $request->has('data.body') || $request->has('body')) {
 
             // 2. Ambil data penting dari payload OpenWA
-            $senderId = $request->input('data.from') 
-                     ?? $request->input('from') 
-                     ?? $request->input('data.chatId') 
+            $senderId = $request->input('data.from')
+                     ?? $request->input('from')
+                     ?? $request->input('data.chatId')
                      ?? $request->input('chatId');
 
-            $message  = trim((string) (
-                $request->input('data.body') 
-                ?? $request->input('body') 
-                ?? $request->input('data.content') 
+            $message = trim((string) (
+                $request->input('data.body')
+                ?? $request->input('body')
+                ?? $request->input('data.content')
                 ?? $request->input('content')
             ));
 
-            $name     = $request->input('data.contact.pushName') 
-                     ?? $request->input('data.sender.pushname') 
-                     ?? $request->input('contact.pushName') 
-                     ?? $request->input('pushName') 
+            $name = $request->input('data.contact.pushName')
+                     ?? $request->input('data.sender.pushname')
+                     ?? $request->input('contact.pushName')
+                     ?? $request->input('pushName')
                      ?? 'Kak';
 
             // Jangan membalas pesan yang dikirim oleh bot/diri sendiri
             $fromMe = $request->input('data.fromMe') ?? $request->input('fromMe') ?? false;
 
-            if (!empty($senderId) && !empty($message) && !$fromMe) {
+            if (! empty($senderId) && ! empty($message) && ! $fromMe) {
                 $this->processAutoReply($senderId, $message, $name);
             }
         }
@@ -81,14 +81,15 @@ class WhatsAppWebhookController extends Controller
         // 1. Logika Keyword Sapaan Dasar (seperti permintaan user)
         if ($lowerMsg === 'halo' || $lowerMsg === 'hai' || $lowerMsg === 'hello' || $lowerMsg === 'assalamualaikum' || $lowerMsg === 'p') {
             $balasan = "Hai Kak *{$name}*! Ada yang bisa kami bantu?\n\n"
-                     . "Selamat datang di Layanan Informasi Presensi Otomatis *{$schoolName}*.\n\n"
-                     . "📋 *Daftar Perintah Layanan:*\n"
-                     . "• Ketik *CEK [PIN/Nama Siswa]* untuk melihat status presensi ananda hari ini (contoh: *CEK 101* atau *CEK JIBRIL*)\n"
-                     . "• Ketik *INFO* untuk melihat jadwal batas absensi masuk sekolah\n"
-                     . "• Ketik *BANTUAN* untuk menampilkan menu ini kembali\n\n"
-                     . "_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._";
+                     ."Selamat datang di Layanan Informasi Presensi Otomatis *{$schoolName}*.\n\n"
+                     ."📋 *Daftar Perintah Layanan:*\n"
+                     ."• Ketik *CEK [PIN/Nama Siswa]* untuk melihat status presensi ananda hari ini (contoh: *CEK 101* atau *CEK JIBRIL*)\n"
+                     ."• Ketik *INFO* untuk melihat jadwal batas absensi masuk sekolah\n"
+                     ."• Ketik *BANTUAN* untuk menampilkan menu ini kembali\n\n"
+                     .'_Pesan otomatis dari Sistem Presensi Fingerprint Sekolah._';
 
             WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
             return;
         }
 
@@ -98,6 +99,7 @@ class WhatsAppWebhookController extends Controller
             if (empty($query)) {
                 $balasan = "Mohon sertakan PIN atau nama siswa yang ingin dicek.\n\nContoh: *CEK 101* atau *CEK JIBRIL*";
                 WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
                 return;
             }
 
@@ -107,9 +109,10 @@ class WhatsAppWebhookController extends Controller
                 ->orWhere('name', 'LIKE', "%{$query}%")
                 ->first();
 
-            if (!$student) {
+            if (! $student) {
                 $balasan = "Maaf Kak {$name}, data siswa dengan kata kunci *{$query}* tidak ditemukan di sistem sekolah.";
                 WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
                 return;
             }
 
@@ -129,47 +132,50 @@ class WhatsAppWebhookController extends Controller
                 $statusBadge = $isOntime ? '✅ TEPAT WAKTU' : '⚠️ TERLAMBAT';
 
                 $balasan = "📋 *STATUS PRESENSI HARI INI*\n\n"
-                         . "Nama: *{$student->name}*\n"
-                         . "Kelas: *{$className}*\n"
-                         . "Hari/Tgl: {$todayLabel}\n"
-                         . "Waktu Tap: *{$timeStr} WIB*\n"
-                         . "Status: *{$statusBadge}*\n\n"
-                         . "Ananda telah berhasil melakukan presensi sidik jari pada mesin sekolah. Terima kasih!";
+                         ."Nama: *{$student->name}*\n"
+                         ."Kelas: *{$className}*\n"
+                         ."Hari/Tgl: {$todayLabel}\n"
+                         ."Waktu Tap: *{$timeStr} WIB*\n"
+                         ."Status: *{$statusBadge}*\n\n"
+                         .'Ananda telah berhasil melakukan presensi sidik jari pada mesin sekolah. Terima kasih!';
             } else {
                 $balasan = "⚠️ *BELUM MELAKUKAN PRESENSI*\n\n"
-                         . "Nama: *{$student->name}*\n"
-                         . "Kelas: *{$className}*\n"
-                         . "Hari/Tgl: {$todayLabel}\n\n"
-                         . "Ananda tercatat *belum melakukan tap sidik jari masuk* pada hari ini.\n"
-                         . "Batas waktu masuk tepat waktu adalah pukul *{$checkinEnd} WIB*.";
+                         ."Nama: *{$student->name}*\n"
+                         ."Kelas: *{$className}*\n"
+                         ."Hari/Tgl: {$todayLabel}\n\n"
+                         ."Ananda tercatat *belum melakukan tap sidik jari masuk* pada hari ini.\n"
+                         ."Batas waktu masuk tepat waktu adalah pukul *{$checkinEnd} WIB*.";
             }
 
             WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
             return;
         }
 
         // 3. Info Jadwal Sekolah (Keyword 'INFO' / 'JADWAL')
         if ($lowerMsg === 'info' || $lowerMsg === 'jadwal') {
             $balasan = "ℹ️ *INFORMASI JADWAL PRESENSI SEKOLAH*\n\n"
-                     . "🏫 *{$schoolName}*\n"
-                     . "⏰ Gerbang Dibuka: *{$checkinStart} WIB*\n"
-                     . "⏰ Batas Tepat Waktu: *{$checkinEnd} WIB*\n"
-                     . "⏰ Jam Presensi Pulang: *{$checkoutStart} WIB*\n\n"
-                     . "Siswa yang hadir lebih awal akan mendapatkan poin penghargaan tertinggi di layar Live Leaderboard TV Sekolah! 🏆";
+                     ."🏫 *{$schoolName}*\n"
+                     ."⏰ Gerbang Dibuka: *{$checkinStart} WIB*\n"
+                     ."⏰ Batas Tepat Waktu: *{$checkinEnd} WIB*\n"
+                     ."⏰ Jam Presensi Pulang: *{$checkoutStart} WIB*\n\n"
+                     .'Siswa yang hadir lebih awal akan mendapatkan poin penghargaan tertinggi di layar Live Leaderboard TV Sekolah! 🏆';
 
             WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
             return;
         }
 
         // 4. Bantuan (Keyword 'BANTUAN' / 'MENU')
         if ($lowerMsg === 'bantuan' || $lowerMsg === 'menu') {
             $balasan = "📌 *PANDUAN PENGGUNAAN BOT PRESENSI*\n\n"
-                     . "• *CEK [PIN/Nama]* : Melihat status kehadiran anak hari ini\n"
-                     . "• *INFO* : Melihat jam operasional & batas absensi\n"
-                     . "• *HALO* : Menyapa bot presensi\n\n"
-                     . "Layanan Informasi Otomatis Presensi {$schoolName}.";
+                     ."• *CEK [PIN/Nama]* : Melihat status kehadiran anak hari ini\n"
+                     ."• *INFO* : Melihat jam operasional & batas absensi\n"
+                     ."• *HALO* : Menyapa bot presensi\n\n"
+                     ."Layanan Informasi Otomatis Presensi {$schoolName}.";
 
             WhatsAppService::sendRawMessage($senderId, $balasan, $name);
+
             return;
         }
 

@@ -4,17 +4,17 @@ namespace App\Exports;
 
 use App\Models\SchoolClass;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class StudentTemplateExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithColumnFormatting
+class StudentTemplateExport implements FromArray, ShouldAutoSize, WithColumnFormatting, WithHeadings, WithStyles
 {
     public function array(): array
     {
@@ -29,25 +29,25 @@ class StudentTemplateExport implements FromArray, WithHeadings, WithStyles, Shou
                 '1001',
                 'Ahmad Dahlan',
                 $sampleClass1,
-                '081234567890'
+                '081234567890',
             ],
             [
                 '1002',
                 'Budi Santoso',
                 $sampleClass1,
-                '082198765432'
+                '082198765432',
             ],
             [
                 '1003',
                 'Citra Maharani',
                 $sampleClass2,
-                '085712345678'
+                '085712345678',
             ],
             [
                 '1004',
                 'Dewi Anggraini',
                 $sampleClass3,
-                ''
+                '',
             ],
         ];
     }
@@ -58,7 +58,7 @@ class StudentTemplateExport implements FromArray, WithHeadings, WithStyles, Shou
             'NIS',
             'NAMA SISWA',
             'KELAS',
-            'NO HP ORTU'
+            'NO HP ORTU',
         ];
     }
 

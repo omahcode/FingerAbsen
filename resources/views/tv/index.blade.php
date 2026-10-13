@@ -557,6 +557,37 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        /* THEME OVERLAY PULANG */
+        #attendance-overlay.overlay-pulang .att-card {
+            border-color: rgba(168, 85, 247, 0.8) !important;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.85), 0 0 60px rgba(168, 85, 247, 0.4) !important;
+        }
+        #attendance-overlay.overlay-pulang .att-header-badge {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.25)) !important;
+            border-color: rgba(168, 85, 247, 0.5) !important;
+            color: #d8b4fe !important;
+        }
+        #attendance-overlay.overlay-pulang .att-icon-wrap {
+            background: linear-gradient(135deg, #a855f7, #6366f1) !important;
+            box-shadow: 0 10px 35px rgba(168, 85, 247, 0.5) !important;
+        }
+        #attendance-overlay.overlay-pulang .att-time-pill {
+            background: rgba(168, 85, 247, 0.2) !important;
+            border-color: rgba(168, 85, 247, 0.5) !important;
+            color: #d8b4fe !important;
+            text-shadow: 0 0 15px rgba(168, 85, 247, 0.5) !important;
+        }
+        #attendance-overlay.overlay-pulang .att-quote-card {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(99, 102, 241, 0.1)) !important;
+            border-color: rgba(168, 85, 247, 0.4) !important;
+        }
+        #attendance-overlay.overlay-pulang .att-quote-text {
+            color: #f3e8ff !important;
+        }
+        #attendance-overlay.overlay-pulang .att-quote-footer {
+            color: #c084fc !important;
+        }
+
         /* NEW ATTENDANCE HIGHLIGHT & AVATAR */
         @keyframes cardPulseGlow {
             0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border-color: rgba(56, 189, 248, 0.8); }
@@ -1207,8 +1238,8 @@
                 <i class="fas fa-times"></i>
             </button>
             
-            <div class="att-header-badge">
-                <i class="fas fa-check-circle"></i> Absensi Berhasil
+            <div class="att-header-badge" id="att-header-badge">
+                <i class="fas fa-check-circle" id="att-badge-icon"></i> <span id="att-badge-text">Absensi Berhasil</span>
             </div>
 
             <div class="att-icon-wrap" id="att-icon-wrap">
@@ -1216,19 +1247,19 @@
                 <img id="att-photo" src="" alt="Foto Siswa" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
             </div>
 
-            <div class="att-greeting">
-                Halo <span class="att-name-highlight" id="att-name">Siswa</span>,<br>
-                Kamu sudah Absen pukul <span class="att-time-pill" id="att-time">--:-- WIB</span>
+            <div class="att-greeting" id="att-greeting">
+                <span id="att-salutation">Halo</span> <span class="att-name-highlight" id="att-name">Siswa</span>,<br>
+                <span id="att-status-verb">Kamu sudah Absen</span> pukul <span class="att-time-pill" id="att-time">--:-- WIB</span>
             </div>
 
             <div class="att-sub-info">
                 <div class="att-tag"><i class="fas fa-graduation-cap text-sky-400"></i> <span id="att-class">Kelas</span></div>
-                <div class="att-tag"><i class="fas fa-shield-alt text-emerald-400"></i> Terverifikasi Mesin</div>
+                <div class="att-tag" id="att-status-tag"><i class="fas fa-shield-alt text-emerald-400"></i> Terverifikasi Mesin</div>
             </div>
 
-            <div class="att-quote-card">
+            <div class="att-quote-card" id="att-quote-card">
                 <div class="att-quote-text" id="att-quote">"Semangat belajar hari ini! Sukses dimulai dari langkah kecil dan disiplin setiap pagi."</div>
-                <div class="att-quote-footer">
+                <div class="att-quote-footer" id="att-quote-footer">
                     <i class="fas fa-sparkles"></i> Quote Motivasi Hari Ini
                 </div>
             </div>
@@ -1250,8 +1281,16 @@
             </div>
             <div class="tv-sim-body">
                 <p class="tv-sim-desc">
-                    Uji coba notifikasi pop-up absen berhasil dan perpindahan otomatis ke Slide 2 (Top 10 Kehadiran Hari Ini).
+                    Uji coba notifikasi pop-up absen Masuk & Pulang dengan animasi visual dan efek suara realtime.
                 </p>
+
+                <div class="tv-sim-group">
+                    <label>Jenis Presensi:</label>
+                    <div class="tv-sim-time-presets" style="grid-template-columns: 1fr 1fr; margin-bottom: 0.8rem;">
+                        <button type="button" class="tv-status-btn active" data-status="0"><i class="fas fa-sign-in-alt text-emerald-400"></i> Absen Masuk</button>
+                        <button type="button" class="tv-status-btn" data-status="1"><i class="fas fa-walking text-amber-400"></i> Absen Pulang</button>
+                    </div>
+                </div>
 
                 <div class="tv-sim-group">
                     <label>Pilih Siswa untuk Simulasi:</label>
@@ -1265,10 +1304,11 @@
 
                 <div class="tv-sim-group">
                     <label>Preset Waktu Kehadiran:</label>
-                    <div class="tv-sim-time-presets">
+                    <div class="tv-sim-time-presets" style="grid-template-columns: repeat(4, 1fr);">
                         <button type="button" class="tv-time-btn active" data-time="now"><i class="fas fa-bolt"></i> Sekarang</button>
-                        <button type="button" class="tv-time-btn" data-time="06:15"><i class="far fa-clock"></i> 06:15 (Tepat)</button>
-                        <button type="button" class="tv-time-btn" data-time="06:45"><i class="fas fa-running"></i> 06:45 (Telat)</button>
+                        <button type="button" class="tv-time-btn" data-time="06:15"><i class="far fa-clock"></i> 06:15</button>
+                        <button type="button" class="tv-time-btn" data-time="06:45"><i class="fas fa-running"></i> 06:45</button>
+                        <button type="button" class="tv-time-btn" data-time="14:15"><i class="fas fa-home"></i> 14:15</button>
                     </div>
                 </div>
 
@@ -1293,9 +1333,15 @@
         <button type="button" id="btn-theme-tv" class="btn-tv-action" title="Ganti Mode Gelap / Terang (Dark / Light)">
             <i class="fas {{ ($tvSettings['tv_theme'] ?? 'dark') === 'light' ? 'fa-moon' : 'fa-sun' }}" id="tv-theme-icon"></i>
         </button>
-        <button type="button" id="btn-test-popup" class="btn-tv-action" title="Uji Coba Cepat Pop-up Absen (1-Klik)">
-            <i class="fas fa-bell"></i>
+        <button type="button" id="btn-test-popup" class="btn-tv-action" title="Uji Coba Cepat Pop-up Absen Masuk (1-Klik)">
+            <i class="fas fa-sign-in-alt text-emerald-400"></i>
         </button>
+        <button type="button" id="btn-test-pulang" class="btn-tv-action" title="Uji Coba Cepat Pop-up Absen Pulang (1-Klik)">
+            <i class="fas fa-walking text-amber-400"></i>
+        </button>
+        <a href="{{ route('monitoring.kepulangan') }}" class="btn-tv-action" title="Buka Monitoring Kepulangan Siswa" target="_blank" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+            <i class="fas fa-door-open"></i>
+        </a>
         <a href="{{ route('attendance.index') }}" class="btn-tv-action" title="Kembali ke Dashboard">
             <i class="fas fa-th-large"></i>
         </a>
@@ -1460,6 +1506,44 @@
             } catch(e) {}
         }
 
+        function playChimePulang() {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                
+                const playTone = (freq, start, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+                    
+                    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+                    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + start);
+                    osc.stop(ctx.currentTime + start + duration);
+                };
+
+                // Warm descending chime (A5 -> F#5) for pulang
+                playTone(880.00, 0, 0.35);
+                playTone(739.99, 0.15, 0.6);
+            } catch(e) {}
+        }
+
+        const farewellQuotes = [
+            "Terima kasih atas semangat belajar hari ini! Selamat pulang dan hati-hati di perjalanan.",
+            "Hari ini kamu telah berusaha dengan hebat! Istirahatlah dengan baik dan sampai jumpa besok.",
+            "Pulang dengan selamat, salam hangat untuk orang tua dan keluarga di rumah!",
+            "Ilmu yang dipelajari hari ini adalah investasi masa depanmu. Hati-hati di jalan sampai rumah!",
+            "Selesaikan hari ini dengan rasa syukur dan persiapkan energi baru untuk hari esok!"
+        ];
+        function getRandomFarewellQuote() {
+            return farewellQuotes[Math.floor(Math.random() * farewellQuotes.length)];
+        }
+
         // ======================== LIVE STATS REALTIME CONTROLLER ========================
         let statTotal = {{ $stats['total_students'] ?? 0 }};
         let statPresent = {{ $stats['present_count'] ?? 0 }};
@@ -1503,7 +1587,7 @@
             }
         }
 
-        function showAttendanceOverlay(studentName, timeStr, className, photoUrl) {
+        function showAttendanceOverlay(studentName, timeStr, className, photoUrl, type = 'masuk') {
             if (!overlayEl) return;
 
             // Abaikan jika user adalah admin
@@ -1512,36 +1596,69 @@
                 return;
             }
 
+            const isPulang = (type === 'pulang');
+
+            // Sesuaikan tampilan overlay Masuk vs Pulang
+            const badgeIcon = document.getElementById('att-badge-icon');
+            const badgeText = document.getElementById('att-badge-text');
+            const salutationEl = document.getElementById('att-salutation');
+            const statusVerbEl = document.getElementById('att-status-verb');
+            const statusTagEl = document.getElementById('att-status-tag');
+            const fingerIcon = document.getElementById('att-finger-icon');
+            const quoteFooterEl = document.getElementById('att-quote-footer');
+
+            if (isPulang) {
+                overlayEl.classList.add('overlay-pulang');
+                if (badgeIcon) badgeIcon.className = 'fas fa-walking';
+                if (badgeText) badgeText.textContent = 'Absen Pulang Berhasil';
+                if (salutationEl) salutationEl.textContent = 'Sampai Jumpa,';
+                if (statusVerbEl) statusVerbEl.textContent = 'Kamu sudah Absen Pulang';
+                if (statusTagEl) statusTagEl.innerHTML = '<i class="fas fa-check-circle text-indigo-400"></i> Status: Sudah Pulang';
+                if (fingerIcon) fingerIcon.className = 'fas fa-door-open';
+                if (attQuoteEl) attQuoteEl.textContent = `"${getRandomFarewellQuote()}"`;
+                if (quoteFooterEl) quoteFooterEl.innerHTML = '<i class="fas fa-heart text-pink-400"></i> Selamat Beristirahat & Hati-Hati di Jalan';
+            } else {
+                overlayEl.classList.remove('overlay-pulang');
+                if (badgeIcon) badgeIcon.className = 'fas fa-check-circle';
+                if (badgeText) badgeText.textContent = 'Absensi Masuk Berhasil';
+                if (salutationEl) salutationEl.textContent = 'Halo';
+                if (statusVerbEl) statusVerbEl.textContent = 'Kamu sudah Absen';
+                if (statusTagEl) statusTagEl.innerHTML = '<i class="fas fa-shield-alt text-emerald-400"></i> Terverifikasi Mesin';
+                if (fingerIcon) fingerIcon.className = 'fas fa-fingerprint';
+                if (attQuoteEl) attQuoteEl.textContent = `"${getRandomQuote()}"`;
+                if (quoteFooterEl) quoteFooterEl.innerHTML = '<i class="fas fa-sparkles"></i> Quote Motivasi Hari Ini';
+            }
+
             // Isi konten
             if (attNameEl) attNameEl.textContent = studentName || 'Siswa';
             if (attTimeEl) attTimeEl.textContent = (timeStr || '07:00') + ' WIB';
             if (attClassEl) attClassEl.textContent = className || 'Umum';
-            if (attQuoteEl) attQuoteEl.textContent = `"${getRandomQuote()}"`;
 
             // Tampilkan foto siswa atau ikon sidik jari mesin
             const attPhoto = document.getElementById('att-photo');
-            const attFingerIcon = document.getElementById('att-finger-icon');
-            if (attPhoto && attFingerIcon) {
+            if (attPhoto && fingerIcon) {
                 if (photoUrl) {
                     attPhoto.src = photoUrl;
                     attPhoto.style.display = 'block';
-                    attFingerIcon.style.display = 'none';
+                    fingerIcon.style.display = 'none';
                 } else {
                     attPhoto.style.display = 'none';
-                    attFingerIcon.style.display = 'block';
+                    fingerIcon.style.display = 'block';
                 }
             }
 
-            // Otomatis langsung pindah ke Tampilan ke-2 (Slide 2: Kehadiran Hari Ini)
-            goToDailySlide();
+            if (!isPulang) {
+                // Otomatis langsung pindah ke Tampilan ke-2 (Slide 2: Kehadiran Hari Ini)
+                goToDailySlide();
 
-            // Tahan carousel pada Slide 2 selama 8.5 detik agar semua orang melihat siswa yang baru absen
-            isAttendancePaused = true;
-            clearTimeout(attendancePauseTimer);
-            attendancePauseTimer = setTimeout(() => {
-                isAttendancePaused = false;
-                resetProg();
-            }, 8500);
+                // Tahan carousel pada Slide 2 selama 8.5 detik agar semua orang melihat siswa yang baru absen
+                isAttendancePaused = true;
+                clearTimeout(attendancePauseTimer);
+                attendancePauseTimer = setTimeout(() => {
+                    isAttendancePaused = false;
+                    resetProg();
+                }, 8500);
+            }
 
             // Reset countdown bar
             if (attCountdownFill) {
@@ -1551,7 +1668,11 @@
 
             // Tampilkan modal popup
             overlayEl.classList.add('active');
-            playChime();
+            if (isPulang) {
+                playChimePulang();
+            } else {
+                playChime();
+            }
 
             // Jalankan countdown bar animasi 6.5 detik
             setTimeout(() => {
@@ -1610,6 +1731,16 @@
             });
         });
 
+        // Preset Status Selector (Masuk vs Pulang) in TV Modal
+        let selectedSimStatus = 0;
+        document.querySelectorAll('.tv-status-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tv-status-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedSimStatus = parseInt(btn.dataset.status || '0');
+            });
+        });
+
         // Run simulation from TV Modal
         btnRunTvSim?.addEventListener('click', async () => {
             const studentId = document.getElementById('tv-sim-student-select')?.value || 'random';
@@ -1632,7 +1763,7 @@
                     body: JSON.stringify({
                         student_id: studentId,
                         time: timeVal,
-                        status_code: 0
+                        status_code: selectedSimStatus
                     })
                 });
 
@@ -1643,14 +1774,14 @@
                 }
             } catch(e) {
                 // Fallback simulation
-                runLocalFallbackSimulation();
+                runLocalFallbackSimulation(selectedSimStatus);
             } finally {
                 btnRunTvSim.disabled = false;
                 btnRunTvSim.innerHTML = '<i class="fas fa-paper-plane"></i> Simulasikan Tap Absen Sekarang';
             }
         });
 
-        // Quick 1-Click Simulation Button (#btn-test-popup)
+        // Quick 1-Click Simulation Button for Masuk (#btn-test-popup)
         document.getElementById('btn-test-popup')?.addEventListener('click', async () => {
             const btn = document.getElementById('btn-test-popup');
             if (btn) btn.style.transform = 'scale(0.9)';
@@ -1674,14 +1805,46 @@
                 if (data.status === 'success' && data.log) {
                     processNewAttendanceLog(data.log);
                 } else {
-                    runLocalFallbackSimulation();
+                    runLocalFallbackSimulation(0);
                 }
             } catch(err) {
-                runLocalFallbackSimulation();
+                runLocalFallbackSimulation(0);
             }
         });
 
-        function runLocalFallbackSimulation() {
+        // Quick 1-Click Simulation Button for Pulang (#btn-test-pulang)
+        document.getElementById('btn-test-pulang')?.addEventListener('click', async () => {
+            const btn = document.getElementById('btn-test-pulang');
+            if (btn) btn.style.transform = 'scale(0.9)';
+            setTimeout(() => { if (btn) btn.style.transform = ''; }, 200);
+
+            try {
+                const res = await fetch("/attendance/simulate", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: 'random',
+                        status_code: 1,
+                        time: '14:15'
+                    })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success' && data.log) {
+                    processNewAttendanceLog(data.log);
+                } else {
+                    runLocalFallbackSimulation(1);
+                }
+            } catch(err) {
+                runLocalFallbackSimulation(1);
+            }
+        });
+
+        function runLocalFallbackSimulation(statusCode = 0) {
             const sampleNames = ['Mohamad Jibril', 'Achmad Dzaky', 'Kayla Aqila', 'Rafa Abrar', 'Sheren Angelica', 'Aulia Zahra'];
             const sampleClasses = ['XI RPL 1', 'XI RPL 2', 'X PPLG 1', 'XII RPL 1'];
             const rName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
@@ -1695,8 +1858,13 @@
             }).formatToParts(n);
             const hWib = nowWibParts.find(p => p.type === 'hour')?.value || String(n.getHours()).padStart(2,'0');
             const mWib = nowWibParts.find(p => p.type === 'minute')?.value || String(n.getMinutes()).padStart(2,'0');
-            const timeStr = `${hWib}:${mWib}`;
+            const timeStr = statusCode === 1 ? '14:15' : `${hWib}:${mWib}`;
             
+            if (statusCode === 1) {
+                showAttendanceOverlay(rName, timeStr, rClass, null, 'pulang');
+                return;
+            }
+
             const existingIdx = dailyData.findIndex(d => (d.name || '').toLowerCase() === rName.toLowerCase());
             let finalTime = timeStr;
             if (existingIdx !== -1) {
@@ -1724,7 +1892,7 @@
             try { localStorage.setItem('tv_daily_cache', JSON.stringify(dailyData)); } catch(e) {}
             renderDaily();
 
-            showAttendanceOverlay(rName, timeStr, rClass, null);
+            showAttendanceOverlay(rName, timeStr, rClass, null, 'masuk');
             updateLiveStats(timeStr);
         }
 
@@ -2098,11 +2266,6 @@
                 if (log.id > maxTvLogId) maxTvLogId = log.id;
             }
 
-            // HANYA proses absen masuk, abaikan jika absen pulang (status_code == 1)
-            if (log.status_code == 1 || log.status_code === '1') {
-                return;
-            }
-
             const student = log.student;
             const studentName = student ? student.name : ('Siswa ' + (log.device_user_id || ''));
 
@@ -2121,6 +2284,13 @@
                 : '07:00';
 
             const photoUrl = student?.photo_url || (student?.photo ? ('/storage/' + student.photo) : null);
+
+            // JIKA ABSEN PULANG (status_code == 1), TAMPILKAN NOTIFIKASI POP-UP PULANG
+            const isPulang = (log.status_code == 1 || log.status_code === '1');
+            if (isPulang) {
+                showAttendanceOverlay(studentName, timeStr, className, photoUrl, 'pulang');
+                return;
+            }
 
             // Perbarui dailyData: Cek apakah siswa sudah ada
             const existingIdx = dailyData.findIndex(d => (d.name || '').toLowerCase() === studentName.toLowerCase());

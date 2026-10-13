@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\AttendanceLog;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\AttendanceLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
@@ -45,7 +45,7 @@ class ReportController extends Controller
         $reportData = [];
         foreach ($students as $student) {
             $studentLogs = $logs->where('student_id', $student->id);
-            
+
             // Hari unik di mana siswa melakukan absen
             $attendedDates = $studentLogs->map(function ($l) {
                 return substr($l->timestamp, 0, 10);
@@ -63,7 +63,7 @@ class ReportController extends Controller
                 'total_days' => $totalDays,
                 'percentage' => $percentage,
                 'latest_log' => $latestLog,
-                'dates' => $attendedDates->toArray()
+                'dates' => $attendedDates->toArray(),
             ];
         }
 
@@ -107,7 +107,7 @@ class ReportController extends Controller
         $reportData = [];
         foreach ($students as $student) {
             $studentLogs = $logs->where('student_id', $student->id);
-            $attendedDates = $studentLogs->map(fn($l) => substr($l->timestamp, 0, 10))->unique();
+            $attendedDates = $studentLogs->map(fn ($l) => substr($l->timestamp, 0, 10))->unique();
 
             $totalPresent = $attendedDates->count();
             $percentage = $totalDays > 0 ? round(($totalPresent / $totalDays) * 100, 1) : 0;
@@ -126,7 +126,7 @@ class ReportController extends Controller
         }
 
         $className = $selectedClass ? $selectedClass->name : 'Semua Kelas';
-        $fileName = 'Rekap_Presensi_' . str_replace(' ', '_', $className) . "_{$startDate}_{$endDate}.pdf";
+        $fileName = 'Rekap_Presensi_'.str_replace(' ', '_', $className)."_{$startDate}_{$endDate}.pdf";
 
         // Generate PDF via DomPDF
         try {
@@ -142,6 +142,7 @@ class ReportController extends Controller
             if ($request->has('stream')) {
                 return $pdf->stream($fileName);
             }
+
             return $pdf->download($fileName);
         } catch (\Exception $e) {
             // Fallback: render view HTML langsung untuk dicetak
@@ -165,8 +166,8 @@ class ReportController extends Controller
         $selectedClassId = $request->get('class_id', $classes->first()->id ?? null);
         $month = $request->get('month', now()->format('Y-m'));
 
-        $startDate = Carbon::parse($month . '-01')->startOfMonth()->format('Y-m-d');
-        $endDate = Carbon::parse($month . '-01')->endOfMonth()->format('Y-m-d');
+        $startDate = Carbon::parse($month.'-01')->startOfMonth()->format('Y-m-d');
+        $endDate = Carbon::parse($month.'-01')->endOfMonth()->format('Y-m-d');
 
         $selectedClass = $classes->firstWhere('id', $selectedClassId);
 
@@ -191,7 +192,7 @@ class ReportController extends Controller
             $studentLogs = $logs->where('student_id', $student->id);
             $attendedMap = [];
             foreach ($dates as $d) {
-                $hasAttended = $studentLogs->contains(fn($l) => substr($l->timestamp, 0, 10) === $d);
+                $hasAttended = $studentLogs->contains(fn ($l) => substr($l->timestamp, 0, 10) === $d);
                 $attendedMap[$d] = $hasAttended;
             }
 
@@ -200,13 +201,13 @@ class ReportController extends Controller
                 'student' => $student,
                 'days' => $attendedMap,
                 'total_present' => $totalPresent,
-                'percentage' => count($dates) > 0 ? round(($totalPresent / count($dates)) * 100, 1) : 0
+                'percentage' => count($dates) > 0 ? round(($totalPresent / count($dates)) * 100, 1) : 0,
             ];
         }
 
         $className = $selectedClass ? $selectedClass->name : 'Semua Kelas';
         $monthName = Carbon::parse($startDate)->translatedFormat('F Y');
-        $fileName = 'Rekap_Matriks_Bulanan_' . str_replace(' ', '_', $className) . "_{$month}.pdf";
+        $fileName = 'Rekap_Matriks_Bulanan_'.str_replace(' ', '_', $className)."_{$month}.pdf";
 
         try {
             $pdf = Pdf::loadView('reports.matrix_pdf', compact(
@@ -220,6 +221,7 @@ class ReportController extends Controller
             if ($request->has('stream')) {
                 return $pdf->stream($fileName);
             }
+
             return $pdf->download($fileName);
         } catch (\Exception $e) {
             return view('reports.matrix_pdf', compact(

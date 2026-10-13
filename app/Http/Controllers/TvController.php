@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
-use App\Models\Student;
 use App\Models\Setting;
+use App\Models\Student;
 use App\Models\TvAnnouncement;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class TvController extends Controller
@@ -88,19 +86,19 @@ class TvController extends Controller
             $timeStr = $timeObj->format('H:i');
 
             return [
-                'name' => $student->name ?? 'Siswa ' . $log->device_user_id,
+                'name' => $student->name ?? 'Siswa '.$log->device_user_id,
                 'cls' => $student->schoolClass->name ?? '-',
                 'time' => $timeStr,
                 'timestamp' => $log->timestamp,
                 'ini' => strtoupper(substr($student->name ?? 'S', 0, 1)),
-                'photo' => ($student && $student->photo) ? asset('storage/' . $student->photo) : null,
+                'photo' => ($student && $student->photo) ? asset('storage/'.$student->photo) : null,
             ];
         })->values()->take(10)->toArray();
 
         // 3. Hitung Statistik Hari Ini (Hanya Siswa & Hanya Absen Masuk)
         $totalStudents = Student::where($isStudentScope)->count();
         $presentCount = $dailyUnique->count();
-        $ontimeCount = $dailyUnique->filter(fn($l) => Carbon::parse($l->timestamp)->format('H:i') <= $checkinEnd)->count();
+        $ontimeCount = $dailyUnique->filter(fn ($l) => Carbon::parse($l->timestamp)->format('H:i') <= $checkinEnd)->count();
         $lateCount = $presentCount - $ontimeCount;
         $attendancePercentage = $totalStudents > 0 ? round(($presentCount / $totalStudents) * 100, 1) : 0;
 
@@ -120,7 +118,7 @@ class TvController extends Controller
 
         $weeklyLogs = AttendanceLog::with('student.schoolClass')
             ->whereHas('student', $isStudentScope)
-            ->whereBetween('timestamp', [$startOfWeek . ' 00:00:00', $endOfWeek . ' 23:59:59'])
+            ->whereBetween('timestamp', [$startOfWeek.' 00:00:00', $endOfWeek.' 23:59:59'])
             ->whereNotNull('student_id')
             ->where('status_code', 0)
             ->orderBy('timestamp', 'asc')
@@ -134,7 +132,7 @@ class TvController extends Controller
 
         $monthlyLogs = AttendanceLog::with('student.schoolClass')
             ->whereHas('student', $isStudentScope)
-            ->whereBetween('timestamp', [$startOfMonth . ' 00:00:00', $endOfMonth . ' 23:59:59'])
+            ->whereBetween('timestamp', [$startOfMonth.' 00:00:00', $endOfMonth.' 23:59:59'])
             ->whereNotNull('student_id')
             ->where('status_code', 0)
             ->orderBy('timestamp', 'asc')
@@ -156,17 +154,17 @@ class TvController extends Controller
 
         // Jika data mingguan / bulanan / HoF kosong karena sistem baru atau belum ada akumulasi, gunakan fallback
         if (empty($weeklyData)) {
-            $weeklyData = !empty($dailyData) 
+            $weeklyData = ! empty($dailyData)
                 ? $this->generateFallbackBoard($dailyData, 1)
                 : $this->generateFallbackFromStudents($allStudents, 1);
         }
         if (empty($monthlyData)) {
-            $monthlyData = !empty($dailyData) 
+            $monthlyData = ! empty($dailyData)
                 ? $this->generateFallbackBoard($dailyData, 4)
                 : $this->generateFallbackFromStudents($allStudents, 4);
         }
         if (empty($hofData)) {
-            $hofData = !empty($dailyData) 
+            $hofData = ! empty($dailyData)
                 ? $this->generateFallbackBoard($dailyData, 10)
                 : $this->generateFallbackFromStudents($allStudents, 10);
         }
@@ -189,8 +187,8 @@ class TvController extends Controller
             ->get();
 
         if ($activeAnnouncements->isNotEmpty()) {
-            $announcementHeadlines = $activeAnnouncements->map(fn($a) => "📢 [{$a->type_label}] {$a->title}: {$a->content}")->implode('  ✦  ');
-            $tvSettings['tv_running_text'] = $announcementHeadlines . '  ✦  ' . $tvSettings['tv_running_text'];
+            $announcementHeadlines = $activeAnnouncements->map(fn ($a) => "📢 [{$a->type_label}] {$a->title}: {$a->content}")->implode('  ✦  ');
+            $tvSettings['tv_running_text'] = $announcementHeadlines.'  ✦  '.$tvSettings['tv_running_text'];
         }
 
         $maxLogId = AttendanceLog::max('id') ?? 0;
@@ -243,7 +241,9 @@ class TvController extends Controller
         foreach ($allStudentIds as $studentId) {
             $studentLogs = $grouped->get($studentId, collect());
             $student = $studentLogs->first()?->student ?? $manualStreakStudents->get($studentId);
-            if (!$student) continue;
+            if (! $student) {
+                continue;
+            }
 
             // Kelompokkan log per tanggal unik (hanya 1 tap masuk pertama per hari yang dihitung)
             $byDate = $studentLogs->groupBy(function ($item) {
@@ -277,7 +277,7 @@ class TvController extends Controller
                 'streak' => $effectiveStreak,
                 'tap' => $latestTap ?: '06:45',
                 'days' => $effectiveStreak,
-                'photo' => $student->photo ? asset('storage/' . $student->photo) : null,
+                'photo' => $student->photo ? asset('storage/'.$student->photo) : null,
             ];
         }
 
@@ -286,15 +286,17 @@ class TvController extends Controller
             if ($a['pts'] === $b['pts']) {
                 return $b['streak'] <=> $a['streak'];
             }
+
             return $b['pts'] <=> $a['pts'];
         });
 
         // Tentukan nilai max points untuk progress bar
-        $topPts = !empty($leaderboard) ? max($leaderboard[0]['pts'], 10) : 100;
+        $topPts = ! empty($leaderboard) ? max($leaderboard[0]['pts'], 10) : 100;
         $effectiveMax = $maxPoints ? max($maxPoints, $topPts) : $topPts;
 
         return array_map(function ($item) use ($effectiveMax) {
             $item['max'] = $effectiveMax;
+
             return $item;
         }, array_slice($leaderboard, 0, 10));
     }
@@ -318,9 +320,9 @@ class TvController extends Controller
         $endParts = explode(':', $checkinEnd);
         $tapParts = explode(':', $tapTime);
 
-        $startMinutes = ((int)$startParts[0] * 60) + (int)($startParts[1] ?? 0);
-        $endMinutes = ((int)$endParts[0] * 60) + (int)($endParts[1] ?? 0);
-        $tapMinutes = ((int)$tapParts[0] * 60) + (int)($tapParts[1] ?? 0);
+        $startMinutes = ((int) $startParts[0] * 60) + (int) ($startParts[1] ?? 0);
+        $endMinutes = ((int) $endParts[0] * 60) + (int) ($endParts[1] ?? 0);
+        $tapMinutes = ((int) $tapParts[0] * 60) + (int) ($tapParts[1] ?? 0);
 
         if ($endMinutes <= $startMinutes) {
             return $maxPoints;
@@ -349,6 +351,7 @@ class TvController extends Controller
     {
         return array_map(function ($d, $i) use ($multiplier) {
             $pts = (10 - $i) * 5 * $multiplier;
+
             return [
                 'name' => $d['name'],
                 'ini' => $d['ini'] ?? strtoupper(substr($d['name'], 0, 1)),
@@ -370,6 +373,7 @@ class TvController extends Controller
     {
         return $students->take(10)->values()->map(function ($s, $i) use ($multiplier) {
             $pts = (10 - $i) * 5 * $multiplier;
+
             return [
                 'name' => $s->name,
                 'ini' => strtoupper(substr($s->name, 0, 1)),
@@ -379,7 +383,7 @@ class TvController extends Controller
                 'streak' => max(1, 10 - $i),
                 'tap' => '06:30',
                 'days' => max(1, 5 - $i),
-                'photo' => $s->photo ? asset('storage/' . $s->photo) : null,
+                'photo' => $s->photo ? asset('storage/'.$s->photo) : null,
             ];
         })->toArray();
     }

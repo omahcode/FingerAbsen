@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -42,7 +40,7 @@ class AuthController extends Controller
 
             $targetRoute = $user->isGuru() ? route('guru.dashboard') : route('devices.index');
 
-            return redirect()->intended($targetRoute)->with('success', 'Selamat datang kembali, ' . $user->name . '!');
+            return redirect()->intended($targetRoute)->with('success', 'Selamat datang kembali, '.$user->name.'!');
         }
 
         return back()->withErrors([

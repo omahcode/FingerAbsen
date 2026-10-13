@@ -1,23 +1,24 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DeviceController;
-use App\Http\Controllers\MajorController;
-use App\Http\Controllers\SchoolClassController;
-use App\Http\Controllers\StudentController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\SyncController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\TvController;
 use App\Http\Controllers\IclockController;
-use App\Http\Controllers\TeacherDashboardController;
-use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\TeacherManagementController;
+use App\Http\Controllers\MajorController;
 use App\Http\Controllers\MajorMonitoringController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentDepartureMonitoringController;
+use App\Http\Controllers\SyncController;
+use App\Http\Controllers\TeacherDashboardController;
+use App\Http\Controllers\TeacherManagementController;
+use App\Http\Controllers\TvController;
 use App\Http\Controllers\WhatsAppWebhookController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 // Rute Autentikasi
 Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -37,6 +38,7 @@ Route::middleware('auth')->group(function () {
         if (Auth::user()->isGuru()) {
             return redirect()->route('guru.dashboard');
         }
+
         return redirect()->route('devices.index');
     });
 
@@ -53,6 +55,12 @@ Route::middleware('auth')->group(function () {
     Route::get('monitoring/jurusan', [MajorMonitoringController::class, 'index'])->name('monitoring.jurusan');
     Route::post('monitoring/jurusan/{major}/reminder-all', [MajorMonitoringController::class, 'sendMajorReminderAll'])->name('monitoring.jurusan.reminder_all');
     Route::post('monitoring/jurusan/{major}/class/{schoolClass}/reminder-all', [MajorMonitoringController::class, 'sendClassReminderAll'])->name('monitoring.jurusan.class_reminder_all');
+
+    // Fitur Monitoring Status Kepulangan Siswa (Realtime & Direct Page)
+    Route::get('monitoring/kepulangan', [StudentDepartureMonitoringController::class, 'index'])->name('monitoring.kepulangan');
+    Route::get('monitoring/kepulangan/data', [StudentDepartureMonitoringController::class, 'data'])->name('monitoring.kepulangan.data');
+    Route::post('monitoring/kepulangan/{student}/notify', [StudentDepartureMonitoringController::class, 'notifyParent'])->name('monitoring.kepulangan.notify');
+    Route::get('monitoring-pulang', fn () => redirect()->route('monitoring.kepulangan'))->name('monitoring.pulang');
 
     // Fitur 3: Pengajuan Pengumuman TV oleh Guru
     Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->dateTime('timestamp');
             $table->integer('status_code')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['device_id', 'device_user_id', 'timestamp'], 'unique_attendance');
         });
     }

@@ -2,55 +2,59 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Device;
-use App\Models\Student;
 use App\Models\AttendanceLog;
+use App\Models\Device;
 use App\Models\FingerprintTemplate;
+use App\Models\Student;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
 class SyncDevices extends Command
 {
     protected $signature = 'sync:devices';
+
     protected $description = 'Otomatis tarik absen dan sinkron template sidik jari antar mesin';
 
     public function handle()
     {
         $devices = Device::all();
         if ($devices->count() == 0) {
-            $this->info("Tidak ada mesin yang terdaftar.");
+            $this->info('Tidak ada mesin yang terdaftar.');
+
             return;
         }
 
         foreach ($devices as $device) {
-            $this->info("Memproses mesin: " . $device->name);
-            
+            $this->info('Memproses mesin: '.$device->name);
+
             // 1. Tarik Absensi
             try {
                 $resAbsen = Http::timeout(20)->post('http://127.0.0.1:5000/api/get_attendance', [
                     'ip_address' => $device->ip_address,
-                    'port' => $device->port
+                    'port' => $device->port,
                 ]);
-                
+
                 if ($resAbsen->successful() && $resAbsen->json('status') === 'success') {
                     $attendances = $resAbsen->json('attendance');
                     $newCount = 0;
                     foreach ($attendances as $att) {
-                        if (!$att['user_id']) continue;
+                        if (! $att['user_id']) {
+                            continue;
+                        }
                         $student = Student::where('device_user_id', (string) $att['user_id'])->first();
                         $existingLog = AttendanceLog::withTrashed()->where([
                             'device_id' => $device->id,
                             'device_user_id' => (string) $att['user_id'],
-                            'timestamp' => $att['timestamp']
+                            'timestamp' => $att['timestamp'],
                         ])->first();
 
-                        if (!$existingLog) {
+                        if (! $existingLog) {
                             AttendanceLog::create([
                                 'device_id' => $device->id,
                                 'device_user_id' => (string) $att['user_id'],
                                 'timestamp' => $att['timestamp'],
                                 'student_id' => $student ? $student->id : null,
-                                'status_code' => $att['status'] ?? 0
+                                'status_code' => $att['status'] ?? 0,
                             ]);
                             $newCount++;
                         }
@@ -65,7 +69,7 @@ class SyncDevices extends Command
             try {
                 $resTemp = Http::timeout(20)->post('http://127.0.0.1:5000/api/get_templates', [
                     'ip_address' => $device->ip_address,
-                    'port' => $device->port
+                    'port' => $device->port,
                 ]);
 
                 if ($resTemp->successful() && $resTemp->json('status') === 'success') {
@@ -73,19 +77,21 @@ class SyncDevices extends Command
                     $newTempCount = 0;
                     foreach ($templates as $t) {
                         $student = Student::where('device_user_id', (string) $t['uid'])->first();
-                        if (!$student) continue;
+                        if (! $student) {
+                            continue;
+                        }
 
                         $finger = FingerprintTemplate::where('device_user_id', (string) $t['uid'])
                             ->where('finger_index', $t['fid'])->first();
 
-                        if (!$finger) {
+                        if (! $finger) {
                             FingerprintTemplate::create([
                                 'student_id' => $student->id,
                                 'device_user_id' => (string) $t['uid'],
                                 'finger_index' => $t['fid'],
                                 'size' => $t['size'] ?? 0,
                                 'valid' => $t['valid'],
-                                'template_data' => $t['template']
+                                'template_data' => $t['template'],
                             ]);
                             $newTempCount++;
                         }
@@ -98,13 +104,15 @@ class SyncDevices extends Command
         }
 
         // 3. Broadcast ke Semua Mesin
-        $this->info("Menyebarkan sidik jari ke seluruh mesin...");
+        $this->info('Menyebarkan sidik jari ke seluruh mesin...');
         $allTemplates = FingerprintTemplate::with('student')->get();
-        
+
         foreach ($devices as $device) {
             $pushCount = 0;
             foreach ($allTemplates as $t) {
-                if (!$t->student) continue;
+                if (! $t->student) {
+                    continue;
+                }
                 try {
                     $resPush = Http::timeout(5)->post('http://127.0.0.1:5000/api/set_template', [
                         'ip_address' => $device->ip_address,
@@ -114,7 +122,7 @@ class SyncDevices extends Command
                         'privilege' => $t->student->privilege,
                         'fid' => $t->finger_index,
                         'valid' => $t->valid,
-                        'template' => $t->template_data
+                        'template' => $t->template_data,
                     ]);
                     if ($resPush->successful() && $resPush->json('status') === 'success') {
                         $pushCount++;
@@ -125,7 +133,7 @@ class SyncDevices extends Command
             }
             $this->info("- Selesai push $pushCount template ke {$device->name}.");
         }
-        
-        $this->info("Proses Sinkronisasi Otomatis Selesai!");
+
+        $this->info('Proses Sinkronisasi Otomatis Selesai!');
     }
 }
