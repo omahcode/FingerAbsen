@@ -230,7 +230,7 @@
                         <th class="py-3.5 px-4 text-center">Jam Pulang</th>
                         <th class="py-3.5 px-4 text-center">Status Kepulangan</th>
                         <th class="py-3.5 px-4 text-center">Durasi di Sekolah</th>
-                        <th class="py-3.5 px-4 text-right">Aksi Notifikasi</th>
+                        <th class="py-3.5 px-4 text-center">Aksi & Status Manual</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-xs" id="students-tbody">
@@ -310,18 +310,36 @@
                             {{ $item['duration'] ?? '-' }}
                         </td>
 
-                        <!-- WhatsApp Action -->
-                        <td class="py-3.5 px-4 text-right">
-                            @if(!empty($item['parent_phone']))
-                                <form action="{{ route('monitoring.kepulangan.notify', $item['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Kirim notifikasi status keberadaan {{ addslashes($item['name']) }} ke WhatsApp orang tua?')">
-                                    @csrf
-                                    <button type="submit" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition" title="Kirim Status WA ke Orang Tua ({{ $item['parent_phone'] }})">
-                                        <i class="fab fa-whatsapp text-sm"></i>
+                        <!-- Aksi & Status Manual -->
+                        <td class="py-3.5 px-4 text-center action-cell">
+                            <div class="flex items-center justify-center gap-1.5">
+                                @if($item['status_code'] === 'in_school')
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'departed', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang Sekarang">
+                                        <i class="fas fa-walking"></i> Pulang
                                     </button>
-                                </form>
-                            @else
-                                <span class="text-gray-300 text-[10px] italic">No WA Ortu</span>
-                            @endif
+                                @elseif($item['status_code'] === 'departed')
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan (Kembalikan ke Masuk)">
+                                        <i class="fas fa-undo"></i> Batal
+                                    </button>
+                                @else
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah">
+                                        <i class="fas fa-school"></i> Hadir
+                                    </button>
+                                @endif
+
+                                <button type="button" onclick='openStatusModal(@json($item))' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+
+                                @if(!empty($item['parent_phone']))
+                                    <form action="{{ route('monitoring.kepulangan.notify', $item['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Kirim notifikasi status keberadaan {{ addslashes($item['name']) }} ke WhatsApp orang tua?')">
+                                        @csrf
+                                        <button type="submit" class="p-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition border border-emerald-200/60" title="Kirim Status WA ke Orang Tua ({{ $item['parent_phone'] }})">
+                                            <i class="fab fa-whatsapp text-xs"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @empty
@@ -337,6 +355,141 @@
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- Modal Dialog: Ubah Status Kepulangan Secara Manual -->
+<div id="modal-status" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all border border-gray-100">
+        <!-- Modal Header -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                    <i class="fas fa-user-edit text-base"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm tracking-wide">Ubah Status Kepulangan Siswa</h3>
+                    <p class="text-[11px] text-slate-300">Perbarui status presensi kepulangan secara manual</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeStatusModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Student Summary Info -->
+        <div class="p-4 px-5 border-b border-gray-100 bg-slate-50/70 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-sm overflow-hidden" id="modal-avatar">
+                    <!-- Photo or initial -->
+                </div>
+                <div>
+                    <div class="font-extrabold text-sm text-gray-900" id="modal-student-name">-</div>
+                    <div class="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                        <span id="modal-class-name" class="font-semibold text-indigo-600">-</span>
+                        <span>•</span>
+                        <span id="modal-pin" class="font-mono text-gray-400">-</span>
+                    </div>
+                </div>
+            </div>
+            <div id="modal-current-badge">
+                <!-- Current status badge -->
+            </div>
+        </div>
+
+        <!-- Form Body -->
+        <form id="form-update-status" onsubmit="submitStatusForm(event)" class="p-5 space-y-4">
+            <input type="hidden" id="modal-student-id" name="student_id">
+
+            <!-- Pilih Tindakan Status -->
+            <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Status Baru:</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    <!-- Option 1: Pulang -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-indigo-400 border-indigo-500 bg-indigo-50/30" id="label-action-departed">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
+                                <i class="fas fa-walking"></i> Sudah Pulang
+                            </span>
+                            <input type="radio" name="action" value="departed" class="text-indigo-600 focus:ring-indigo-500" checked onchange="handleActionChange('departed')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Tandai telah pulang sekolah.</p>
+                    </label>
+
+                    <!-- Option 2: Masuk / Di Sekolah -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-emerald-400 border-gray-200 bg-white" id="label-action-in-school">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                                <i class="fas fa-school"></i> Di Sekolah
+                            </span>
+                            <input type="radio" name="action" value="in_school" class="text-emerald-600 focus:ring-emerald-500" onchange="handleActionChange('in_school')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Batalkan pulang / kembali aktif.</p>
+                    </label>
+
+                    <!-- Option 3: Reset -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-slate-400 border-gray-200 bg-white" id="label-action-reset">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fas fa-undo"></i> Reset
+                            </span>
+                            <input type="radio" name="action" value="reset" class="text-slate-600 focus:ring-slate-500" onchange="handleActionChange('reset')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Hapus presensi hari ini.</p>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bagian Opsi Waktu & Keterangan (Muncul saat status Pulang atau Di Sekolah) -->
+            <div id="section-departed-options" class="space-y-3 bg-indigo-50/40 p-3.5 rounded-2xl border border-indigo-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Waktu Presensi (WIB):</label>
+                        <div class="relative">
+                            <input type="time" name="time" id="modal-time-input" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <button type="button" onclick="setModalTimeToNow()" class="absolute right-2 top-2 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-lg" title="Gunakan Jam Sekarang">
+                                Sekarang
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Keterangan / Alasan:</label>
+                        <select name="preset_notes" id="modal-preset-notes" onchange="handlePresetNotes(this.value)" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 bg-white">
+                            <option value="Pulang Normal">Pulang Normal</option>
+                            <option value="Izin Pulang Lebih Cepat">Izin Pulang Cepat (Dispensasi)</option>
+                            <option value="Pulang Karena Sakit">Pulang Sakit (Dijemput/UKS)</option>
+                            <option value="Lupa Tap Fingerprint">Lupa Fingerprint Pulang</option>
+                            <option value="custom">Catatan Lainnya (Kustom)...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Note Input (hidden by default) -->
+                <div id="custom-note-container" class="hidden">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">Tulis Keterangan Khusus:</label>
+                    <input type="text" name="notes" id="modal-custom-notes" placeholder="Contoh: Dijemput orang tua pukul 13:00" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <!-- Checkbox WhatsApp -->
+                <div class="pt-1" id="container-notify-parent">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
+                        <input type="checkbox" name="notify_parent" id="modal-notify-parent" value="1" class="rounded text-emerald-600 focus:ring-emerald-500" checked>
+                        <span>Kirim notifikasi otomatis ke WhatsApp Orang Tua (<span id="modal-phone-text" class="font-mono text-emerald-700 font-bold">-</span>)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button type="button" onclick="closeStatusModal()" class="px-4 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition">
+                    Batal
+                </button>
+                <button type="submit" id="btn-submit-status" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
+                    <i class="fas fa-check"></i> Simpan Perubahan
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -483,7 +636,7 @@
     }
 
     function updateStudentRowHtml(row, student) {
-        // Update jam masuk
+        // Update cells
         const cells = row.querySelectorAll('td');
         if (cells.length >= 7) {
             // Cell 3: Jam Masuk
@@ -511,6 +664,256 @@
 
             // Cell 6: Duration
             cells[6].textContent = student.duration || '-';
+
+            // Cell 7: Action & Manual Status Buttons
+            if (cells.length >= 8) {
+                let quickBtnHtml = '';
+                const safeName = (student.name || '').replace(/'/g, "\\'");
+                if (student.status_code === 'in_school') {
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'departed', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang Sekarang"><i class="fas fa-walking"></i> Pulang</button>`;
+                } else if (student.status_code === 'departed') {
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan (Kembalikan ke Masuk)"><i class="fas fa-undo"></i> Batal</button>`;
+                } else {
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah"><i class="fas fa-school"></i> Hadir</button>`;
+                }
+
+                const studentJsonStr = JSON.stringify(student).replace(/'/g, "&#39;");
+                const editBtnHtml = `<button type="button" onclick='openStatusModal(${studentJsonStr})' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)"><i class="fas fa-edit text-xs"></i></button>`;
+
+                let waBtnHtml = '';
+                if (student.parent_phone) {
+                    waBtnHtml = `<form action="/monitoring/kepulangan/${student.id}/notify" method="POST" class="inline-block" onsubmit="return confirm('Kirim notifikasi status keberadaan ${safeName} ke WhatsApp orang tua?')"><input type="hidden" name="_token" value="${csrfToken}"><button type="submit" class="p-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition border border-emerald-200/60" title="Kirim Status WA ke Orang Tua (${student.parent_phone})"><i class="fab fa-whatsapp text-xs"></i></button></form>`;
+                }
+
+                cells[7].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}${waBtnHtml}</div>`;
+            }
+        }
+    }
+
+    // Modal Helpers
+    let activeModalStudent = null;
+
+    function openStatusModal(student) {
+        activeModalStudent = student;
+        document.getElementById('modal-student-id').value = student.id;
+        document.getElementById('modal-student-name').textContent = student.name;
+        document.getElementById('modal-class-name').textContent = `${student.class_name} • ${student.major_name}`;
+        document.getElementById('modal-pin').textContent = `PIN: ${student.device_user_id}`;
+
+        // Avatar
+        const avatarEl = document.getElementById('modal-avatar');
+        if (student.photo) {
+            avatarEl.innerHTML = `<img src="${student.photo}" alt="${student.name}" class="w-full h-full object-cover">`;
+        } else {
+            avatarEl.innerHTML = (student.name || 'S').charAt(0).toUpperCase();
+        }
+
+        // Current status badge
+        const badgeEl = document.getElementById('modal-current-badge');
+        if (student.status_code === 'in_school') {
+            badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Di Sekolah</span>`;
+        } else if (student.status_code === 'departed') {
+            badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px] border border-indigo-300"><i class="fas fa-check-circle text-indigo-600"></i> Sudah Pulang</span>`;
+        } else {
+            badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[10px]">Belum Hadir</span>`;
+        }
+
+        // Parent phone WhatsApp
+        const waContainer = document.getElementById('container-notify-parent');
+        const phoneEl = document.getElementById('modal-phone-text');
+        const notifyCheckbox = document.getElementById('modal-notify-parent');
+        if (student.parent_phone) {
+            waContainer.classList.remove('hidden');
+            phoneEl.textContent = student.parent_phone;
+            notifyCheckbox.checked = true;
+        } else {
+            waContainer.classList.add('hidden');
+            notifyCheckbox.checked = false;
+        }
+
+        // Set action radio default
+        let defaultAction = 'departed';
+        if (student.status_code === 'departed') {
+            defaultAction = 'in_school';
+        } else if (student.status_code === 'not_present') {
+            defaultAction = 'in_school';
+        }
+
+        const radios = document.querySelectorAll('input[name="action"]');
+        radios.forEach(r => {
+            r.checked = (r.value === defaultAction);
+        });
+        handleActionChange(defaultAction);
+
+        // Set default time to now
+        setModalTimeToNow();
+
+        // Reset preset & custom note
+        const selectNotes = document.getElementById('modal-preset-notes');
+        if (selectNotes) selectNotes.value = 'Pulang Normal';
+        const customNoteContainer = document.getElementById('custom-note-container');
+        if (customNoteContainer) customNoteContainer.classList.add('hidden');
+        const customNoteInput = document.getElementById('modal-custom-notes');
+        if (customNoteInput) customNoteInput.value = '';
+
+        // Show modal
+        const modal = document.getElementById('modal-status');
+        modal.classList.remove('hidden');
+    }
+
+    function closeStatusModal() {
+        const modal = document.getElementById('modal-status');
+        modal.classList.add('hidden');
+        activeModalStudent = null;
+    }
+
+    function setModalTimeToNow() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const input = document.getElementById('modal-time-input');
+        if (input) input.value = `${hh}:${mm}`;
+    }
+
+    function handleActionChange(action) {
+        ['departed', 'in_school', 'reset'].forEach(act => {
+            const label = document.getElementById(`label-action-${act}`);
+            if (!label) return;
+            if (act === action) {
+                if (act === 'departed') {
+                    label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-indigo-500 bg-indigo-50/40 shadow-sm';
+                } else if (act === 'in_school') {
+                    label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-emerald-500 bg-emerald-50/40 shadow-sm';
+                } else {
+                    label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-slate-500 bg-slate-50 shadow-sm';
+                }
+            } else {
+                label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-gray-200 bg-white hover:bg-gray-50';
+            }
+        });
+
+        const optionsSection = document.getElementById('section-departed-options');
+        if (action === 'reset') {
+            optionsSection.classList.add('hidden');
+        } else {
+            optionsSection.classList.remove('hidden');
+        }
+    }
+
+    function handlePresetNotes(val) {
+        const customContainer = document.getElementById('custom-note-container');
+        if (val === 'custom') {
+            customContainer.classList.remove('hidden');
+            document.getElementById('modal-custom-notes')?.focus();
+        } else {
+            customContainer.classList.add('hidden');
+        }
+    }
+
+    async function submitStatusForm(e) {
+        e.preventDefault();
+        const studentId = document.getElementById('modal-student-id').value;
+        if (!studentId) return;
+
+        const action = document.querySelector('input[name="action"]:checked')?.value || 'departed';
+        const timeVal = document.getElementById('modal-time-input')?.value || '';
+        const presetVal = document.getElementById('modal-preset-notes')?.value || '';
+        const customVal = document.getElementById('modal-custom-notes')?.value || '';
+        const notes = (presetVal === 'custom' ? customVal : presetVal);
+        const notifyParent = document.getElementById('modal-notify-parent')?.checked ? 1 : 0;
+
+        const submitBtn = document.getElementById('btn-submit-status');
+        const origText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+        try {
+            const resp = await fetch(`/monitoring/kepulangan/${studentId}/update-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    action: action,
+                    time: timeVal,
+                    notes: notes,
+                    notify_parent: notifyParent
+                })
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                closeStatusModal();
+                showToast(data.message, 'success');
+                if (action === 'departed') playMonitoringTone('pulang');
+                else playMonitoringTone('masuk');
+                await fetchDepartureData();
+            } else {
+                alert(data.message || 'Gagal memperbarui status');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origText;
+        }
+    }
+
+    async function quickChangeStatus(studentId, action, studentName) {
+        let confirmText = '';
+        if (action === 'departed') {
+            confirmText = `Tandai siswa ${studentName} SUDAH PULANG sekarang?`;
+        } else if (action === 'in_school') {
+            confirmText = `Kembalikan status ${studentName} ke MASUK (DI SEKOLAH)?`;
+        } else {
+            confirmText = `Ubah status presensi ${studentName}?`;
+        }
+
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: 'Konfirmasi Ubah Status',
+                text: confirmText,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: action === 'departed' ? '#4f46e5' : '#059669',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal'
+            });
+            if (!res.isConfirmed) return;
+        } else {
+            if (!confirm(confirmText)) return;
+        }
+
+        try {
+            const resp = await fetch(`/monitoring/kepulangan/${studentId}/update-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    action: action,
+                    notify_parent: true
+                })
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                showToast(data.message, 'success');
+                if (action === 'departed') playMonitoringTone('pulang');
+                else playMonitoringTone('masuk');
+                await fetchDepartureData();
+            } else {
+                alert(data.message || 'Gagal mengubah status.');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
         }
     }
 

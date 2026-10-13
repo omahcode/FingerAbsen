@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
     // Fitur Monitoring Status Kepulangan Siswa (Realtime & Direct Page)
     Route::get('monitoring/kepulangan', [StudentDepartureMonitoringController::class, 'index'])->name('monitoring.kepulangan');
     Route::get('monitoring/kepulangan/data', [StudentDepartureMonitoringController::class, 'data'])->name('monitoring.kepulangan.data');
+    Route::post('monitoring/kepulangan/{student}/update-status', [StudentDepartureMonitoringController::class, 'updateStatus'])->name('monitoring.kepulangan.update_status');
     Route::post('monitoring/kepulangan/{student}/notify', [StudentDepartureMonitoringController::class, 'notifyParent'])->name('monitoring.kepulangan.notify');
     Route::get('monitoring-pulang', fn () => redirect()->route('monitoring.kepulangan'))->name('monitoring.pulang');
 

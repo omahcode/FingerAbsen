@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\AttendanceCreated;
 use App\Models\AttendanceLog;
+use App\Models\Device;
 use App\Models\Major;
 use App\Models\SchoolClass;
 use App\Models\Setting;
@@ -358,5 +360,154 @@ class StudentDepartureMonitoringController extends Controller
         }
 
         return back()->with('error', 'Gagal mengirim notifikasi via WhatsApp Gateway. Pastikan OpenWA sedang aktif.');
+    }
+
+    /**
+     * Ubah status kepulangan / presensi siswa secara manual
+     */
+    public function updateStatus(Request $request, Student $student)
+    {
+        $request->validate([
+            'action' => 'required|in:departed,in_school,reset',
+            'time' => 'nullable|string',
+            'notes' => 'nullable|string|max:255',
+            'notify_parent' => 'nullable',
+        ]);
+
+        $action = $request->input('action');
+        $timeInput = $request->input('time'); // format H:i misal "14:15"
+        $notes = $request->input('notes');
+        $notifyParent = $request->boolean('notify_parent', false);
+
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+        $nowWib = Carbon::now('Asia/Jakarta');
+
+        // Validasi dan parse target timestamp
+        if (! empty($timeInput) && preg_match('/^\d{2}:\d{2}$/', $timeInput)) {
+            $timestamp = "{$today} {$timeInput}:00";
+            $timeStr = $timeInput;
+        } else {
+            $timestamp = $nowWib->format('Y-m-d H:i:s');
+            $timeStr = $nowWib->format('H:i');
+        }
+
+        $device = Device::first();
+        if (! $device) {
+            $device = Device::create([
+                'name' => 'Mesin Fingerprint Utama',
+                'ip_address' => '127.0.0.1',
+                'port' => 4370,
+            ]);
+        }
+        $deviceId = $device->id;
+
+        $todayLogs = AttendanceLog::where('student_id', $student->id)
+            ->whereDate('timestamp', $today)
+            ->get();
+
+        $masukLog = $todayLogs->where('status_code', 0)->first();
+        $pulangLogs = $todayLogs->where('status_code', 1);
+
+        if ($action === 'departed') {
+            // 1. Jika belum ada log masuk pagi sama sekali, buatkan log masuk default
+            if (! $masukLog) {
+                $checkinStart = Setting::get('checkin_start', '06:30');
+                AttendanceLog::create([
+                    'device_id' => $deviceId,
+                    'device_user_id' => $student->device_user_id,
+                    'student_id' => $student->id,
+                    'timestamp' => "{$today} {$checkinStart}:00",
+                    'status_code' => 0,
+                ]);
+            }
+
+            // 2. Buat atau perbarui log pulang (status_code = 1)
+            $pulangLog = $pulangLogs->last();
+            if ($pulangLog) {
+                $pulangLog->update([
+                    'timestamp' => $timestamp,
+                ]);
+            } else {
+                $pulangLog = AttendanceLog::create([
+                    'device_id' => $deviceId,
+                    'device_user_id' => $student->device_user_id,
+                    'student_id' => $student->id,
+                    'timestamp' => $timestamp,
+                    'status_code' => 1,
+                ]);
+            }
+
+            // Siarkan realtime WebSocket event
+            try {
+                broadcast(new AttendanceCreated($pulangLog));
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast AttendanceCreated failed in updateStatus: '.$e->getMessage());
+            }
+
+            // Kirim notifikasi WhatsApp ke orang tua jika diminta
+            if ($notifyParent && ! empty($student->parent_phone)) {
+                $reasonText = $notes ? " (Keterangan: {$notes})" : '';
+                $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
+                $message = "📢 *INFORMASI KEPULANGAN SISWA (MANUAL)*\n\n"
+                    ."Yth. Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
+                    ."Menginformasikan bahwa status kepulangan ananda telah dicatat secara resmi oleh pihak sekolah:\n"
+                    ."• Status: *SUDAH PULANG*\n"
+                    ."• Waktu Pulang: *{$timeStr} WIB*{$reasonText}\n\n"
+                    ."Ananda diperkenankan meninggalkan area sekolah. Mohon pantau kepulangan ananda dengan aman.\n\n"
+                    ."🏢 *{$schoolName}*";
+
+                WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name);
+            }
+
+            $message = "Status {$student->name} berhasil diubah menjadi SUDAH PULANG ({$timeStr} WIB).";
+
+        } elseif ($action === 'in_school') {
+            // Batalkan status pulang: Hapus log pulang hari ini
+            if ($pulangLogs->isNotEmpty()) {
+                AttendanceLog::where('student_id', $student->id)
+                    ->whereDate('timestamp', $today)
+                    ->where('status_code', 1)
+                    ->forceDelete();
+            }
+
+            // Jika belum ada log masuk pagi, buatkan log masuk
+            if (! $masukLog) {
+                $logMasuk = AttendanceLog::create([
+                    'device_id' => $deviceId,
+                    'device_user_id' => $student->device_user_id,
+                    'student_id' => $student->id,
+                    'timestamp' => $timestamp,
+                    'status_code' => 0,
+                ]);
+
+                try {
+                    broadcast(new AttendanceCreated($logMasuk));
+                } catch (\Throwable $e) {
+                    Log::warning('Broadcast AttendanceCreated failed in updateStatus: '.$e->getMessage());
+                }
+            }
+
+            $message = "Status {$student->name} berhasil diubah menjadi MASUK (DI SEKOLAH).";
+
+        } elseif ($action === 'reset') {
+            // Hapus semua log kehadiran hari ini untuk siswa ini
+            AttendanceLog::where('student_id', $student->id)
+                ->whereDate('timestamp', $today)
+                ->forceDelete();
+
+            $message = "Status presensi hari ini untuk {$student->name} berhasil direset ke Belum Hadir.";
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'action' => $action,
+                'time' => $timeStr,
+                'student_id' => $student->id,
+            ]);
+        }
+
+        return back()->with('success', $message);
     }
 }

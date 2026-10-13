@@ -161,4 +161,97 @@ class StudentDepartureMonitoringTest extends TestCase
         $response = $this->actingAs($this->admin)->get('/monitoring-pulang');
         $response->assertRedirect(route('monitoring.kepulangan'));
     }
+
+    public function test_user_can_manually_mark_student_as_departed(): void
+    {
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'departed',
+            'time' => '14:35',
+            'notes' => 'Izin Pulang Cepat',
+            'notify_parent' => 0,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'departed',
+            'time' => '14:35',
+        ]);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'student_id' => $this->student->id,
+            'status_code' => 1,
+        ]);
+
+        $jsonCheck = $this->actingAs($this->admin)->getJson(route('monitoring.kepulangan.data'));
+        $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
+        $this->assertEquals('departed', $target['status_code']);
+        $this->assertEquals('14:35', $target['jam_pulang']);
+    }
+
+    public function test_user_can_manually_revert_departure_back_to_in_school(): void
+    {
+        $today = Carbon::today('Asia/Jakarta')->format('Y-m-d');
+
+        // Siswa sudah tap masuk dan pulang
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => "{$today} 06:20:00",
+            'status_code' => 0,
+        ]);
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => "{$today} 14:15:00",
+            'status_code' => 1,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'in_school',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'in_school',
+        ]);
+
+        // Log pulang (status_code = 1) harus terhapus/hilang
+        $this->assertDatabaseMissing('attendance_logs', [
+            'student_id' => $this->student->id,
+            'status_code' => 1,
+            'deleted_at' => null,
+        ]);
+
+        $jsonCheck = $this->actingAs($this->admin)->getJson(route('monitoring.kepulangan.data'));
+        $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
+        $this->assertEquals('in_school', $target['status_code']);
+        $this->assertNull($target['jam_pulang']);
+    }
+
+    public function test_user_can_manually_reset_attendance_to_not_present(): void
+    {
+        $today = Carbon::today('Asia/Jakarta')->format('Y-m-d');
+
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => "{$today} 06:20:00",
+            'status_code' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'reset',
+        ]);
+
+        $response->assertOk();
+
+        $jsonCheck = $this->actingAs($this->admin)->getJson(route('monitoring.kepulangan.data'));
+        $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
+        $this->assertEquals('not_present', $target['status_code']);
+    }
 }
