@@ -38,28 +38,48 @@
         </div>
 
         <!-- Login Card -->
-        <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-2xl p-8">
-            <form action="{{ route('login.post') }}" method="POST" class="space-y-5">
+        <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-2xl p-8 relative overflow-hidden">
+            <!-- Glow Accent -->
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <!-- Lockout Countdown Alert (Jika terkena throttle) -->
+            @if(session('lockout_seconds'))
+                <div id="lockout-banner" class="mb-5 p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-3 animate-pulse">
+                    <i class="fas fa-shield-virus text-lg text-rose-400 mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <div class="font-bold text-rose-200">Akses Terkunci Sementara</div>
+                        <p class="mt-0.5">Terlalu banyak percobaan login gagal. Anda dapat mencoba kembali dalam <span id="countdown-timer" class="font-mono font-bold text-white text-sm bg-rose-950/70 px-2 py-0.5 rounded border border-rose-800/60">{{ session('lockout_seconds') }}</span> detik.</p>
+                    </div>
+                </div>
+            @endif
+
+            <form id="login-form" action="{{ route('login.post') }}" method="POST" class="space-y-5">
                 @csrf
 
                 <!-- Input Email / Username -->
                 <div>
-                    <label for="email" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Email Administrator</label>
+                    <label for="email" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Email Administrator / Guru</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                             <i class="fas fa-envelope text-sm"></i>
                         </div>
                         <input 
-                            type="text" 
+                            type="email" 
                             id="email" 
                             name="email" 
                             value="{{ old('email') }}" 
                             required 
                             autofocus
-                            placeholder="admin@sekolah.sch.id"
-                            class="w-full pl-10 pr-4 py-3 bg-slate-800/60 border border-slate-700/70 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
+                            autocomplete="username"
+                            placeholder="nama@sekolah.sch.id"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-800/60 border @error('email') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
                         >
                     </div>
+                    @error('email')
+                        <p class="mt-1.5 text-xs text-rose-400 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
+                        </p>
+                    @enderror
                 </div>
 
                 <!-- Input Password -->
@@ -76,20 +96,61 @@
                             id="password" 
                             name="password" 
                             required
+                            autocomplete="current-password"
                             placeholder="••••••••"
-                            class="w-full pl-10 pr-11 py-3 bg-slate-800/60 border border-slate-700/70 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
+                            class="w-full pl-10 pr-11 py-3 bg-slate-800/60 border @error('password') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
                         >
                         <button 
                             type="button" 
                             onclick="togglePasswordVisibility()" 
                             class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                            title="Tampilkan / Sembunyikan Kata Sandi"
                         >
                             <i id="toggle-icon" class="fas fa-eye text-sm"></i>
                         </button>
                     </div>
+                    @error('password')
+                        <p class="mt-1.5 text-xs text-rose-400 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
+                        </p>
+                    @enderror
                 </div>
 
-                <!-- Remember Me -->
+                <!-- Anti-Bot Math Security Challenge (Aktif setelah percobaan gagal berulang) -->
+                @if(!empty($requireCaptcha))
+                    <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                        <div class="flex items-center justify-between text-xs font-semibold text-amber-300">
+                            <span class="flex items-center">
+                                <i class="fas fa-shield-alt mr-1.5 text-amber-400"></i> Verifikasi Anti-Bot Keamanan
+                            </span>
+                            <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Wajib Diisi</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">
+                            Sistem mendeteksi beberapa percobaan login. Silakan selesaikan hitungan berikut:
+                        </p>
+                        <div class="flex items-center space-x-3">
+                            <div class="px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm font-mono font-bold text-amber-300 tracking-wider select-none shadow-inner">
+                                {{ $captchaQuestion ?? 'Berapa 5 + 3?' }}
+                            </div>
+                            <div class="flex-1">
+                                <input 
+                                    type="number" 
+                                    name="security_answer" 
+                                    required 
+                                    placeholder="Hasil angka..."
+                                    class="w-full px-3.5 py-2.5 bg-slate-800/80 border @error('security_answer') border-rose-500 @else border-slate-700 @enderror rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 font-mono"
+                                >
+                            </div>
+                        </div>
+                        @error('security_answer')
+                            <p class="text-xs text-rose-400 flex items-center mt-1">
+                                <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                @endif
+
+                <!-- Remember Me & Link TV -->
                 <div class="flex items-center justify-between text-xs text-slate-400">
                     <label class="flex items-center space-x-2 cursor-pointer select-none">
                         <input type="checkbox" name="remember" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-0">
@@ -100,14 +161,21 @@
                     </a>
                 </div>
 
-                <!-- Submit Button -->
+                <!-- Submit Button with Anti-Double Submission -->
                 <button 
                     type="submit" 
-                    class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transform active:scale-[0.99] transition duration-200 text-sm flex items-center justify-center space-x-2"
+                    id="btn-submit"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transform active:scale-[0.99] transition duration-200 text-sm flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    <span>Masuk ke Dashboard</span>
-                    <i class="fas fa-arrow-right text-xs"></i>
+                    <span id="btn-text">Masuk ke Dashboard</span>
+                    <i id="btn-icon" class="fas fa-arrow-right text-xs"></i>
                 </button>
+
+                <!-- Security Trust Badge -->
+                <div class="pt-2 border-t border-slate-800/60 flex items-center justify-center space-x-2 text-[11px] text-slate-500">
+                    <i class="fas fa-lock text-emerald-400 text-xs"></i>
+                    <span>Proteksi Anti-Brute Force & Verifikasi Sesi Aktif</span>
+                </div>
             </form>
         </div>
 
@@ -133,11 +201,62 @@
             }
         }
 
+        // Anti-Double Submit Handler
+        const loginForm = document.getElementById('login-form');
+        const submitBtn = document.getElementById('btn-submit');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+
+        if (loginForm && submitBtn) {
+            loginForm.addEventListener('submit', function() {
+                submitBtn.disabled = true;
+                btnText.innerText = 'Memverifikasi Kredensial...';
+                btnIcon.className = 'fas fa-circle-notch fa-spin text-xs';
+            });
+        }
+
+        // Lockout countdown timer jika sedang dibatasi
+        @if(session('lockout_seconds'))
+            let countdown = {{ (int) session('lockout_seconds') }};
+            const timerEl = document.getElementById('countdown-timer');
+            const bannerEl = document.getElementById('lockout-banner');
+
+            if (timerEl && countdown > 0) {
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    btnText.innerText = 'Diblokir Sementara (' + countdown + 's)';
+                }
+
+                const interval = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(interval);
+                        timerEl.innerText = '0';
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            btnText.innerText = 'Coba Masuk Lagi';
+                            btnIcon.className = 'fas fa-arrow-right text-xs';
+                        }
+                        if (bannerEl) {
+                            bannerEl.classList.remove('animate-pulse');
+                            bannerEl.classList.add('bg-emerald-500/15', 'border-emerald-500/30', 'text-emerald-300');
+                            bannerEl.innerHTML = '<i class="fas fa-check-circle text-lg text-emerald-400 mt-0.5"></i><div><div class="font-bold text-emerald-200">Blokir Sementara Telah Berakhir</div><p class="mt-0.5">Silakan kirim form kembali dengan kredensial yang valid.</p></div>';
+                        }
+                    } else {
+                        timerEl.innerText = countdown;
+                        if (submitBtn) {
+                            btnText.innerText = 'Diblokir Sementara (' + countdown + 's)';
+                        }
+                    }
+                }, 1000);
+            }
+        @endif
+
         // SweetAlert untuk notifikasi error atau status
         @if($errors->any())
             Swal.fire({
                 icon: 'error',
-                title: 'Gagal Masuk',
+                title: 'Akses Ditolak',
                 text: {!! json_encode($errors->first()) !!},
                 confirmButtonColor: '#4f46e5',
                 background: '#1e293b',

@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 
 // Rute Autentikasi
 Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('login', [AuthController::class, 'login'])->name('login.post');
+Route::post('login', [AuthController::class, 'login'])->middleware('throttle:15,1')->name('login.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 // Halaman Publik (Mode TV, Simulasi Uji Coba & API Realtime Polling)
