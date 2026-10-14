@@ -11,6 +11,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -186,6 +187,11 @@ class AttendanceController extends Controller
      */
     public function simulate(Request $request)
     {
+        if (! Auth::check() || ! Auth::user()->isAdmin()) {
+            Log::warning('Percobaan akses ilegal ke simulate absensi dari IP: '.$request->ip());
+            abort(403, 'Akses simulasi ditolak. Hanya Administrator yang memiliki izin ini.');
+        }
+
         if ($request->isMethod('get')) {
             $students = Student::with('schoolClass')->orderBy('name')->get();
             $devices = Device::all();
@@ -309,6 +315,11 @@ class AttendanceController extends Controller
      */
     public function seedDemoStudents(Request $request)
     {
+        if (! Auth::check() || ! Auth::user()->isAdmin()) {
+            Log::warning('Percobaan akses ilegal ke seedDemoStudents dari IP: '.$request->ip());
+            abort(403, 'Akses ditolak.');
+        }
+
         $count = $this->createDemoStudentsInternal();
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['status' => 'success', 'message' => "$count data siswa demo berhasil dibuat!"]);
@@ -322,6 +333,11 @@ class AttendanceController extends Controller
      */
     public function resetTodayAttendance(Request $request)
     {
+        if (! Auth::check() || ! Auth::user()->isAdmin()) {
+            Log::warning('Percobaan akses ilegal ke resetTodayAttendance dari IP: '.$request->ip());
+            abort(403, 'Akses ditolak.');
+        }
+
         $today = Carbon::today()->toDateString();
         $count = AttendanceLog::whereDate('timestamp', $today)->forceDelete();
         if ($request->wantsJson() || $request->ajax()) {

@@ -20,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/*',
             'webhook/*',
             'webhook',
-            'attendance/simulate*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

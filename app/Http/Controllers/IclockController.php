@@ -76,8 +76,13 @@ class IclockController extends Controller
 
         Log::info("ADMS cdata request from IP: {$ip}, SN: {$sn}, Method: ".$request->method());
 
-        // Cari atau update status mesin
-        $this->updateDeviceStatus($sn, $ip);
+        // Cari atau update status mesin terdaftar
+        $device = $this->updateDeviceStatus($sn, $ip);
+        if (! $device) {
+            self::recordAdmsLog('/iclock/cdata', $request->method(), $sn, 'Ditolak: Perangkat tidak terdaftar');
+
+            return response("ERROR: UNREGISTERED DEVICE\n", 403)->header('Content-Type', 'text/plain');
+        }
 
         // Jika request GET: Mesin meminta parameter inisialisasi / handshake
         if ($request->isMethod('get')) {
@@ -135,7 +140,12 @@ class IclockController extends Controller
     {
         $sn = $request->query('SN', 'UNKNOWN');
         $ip = $request->ip();
-        $this->updateDeviceStatus($sn, $ip);
+        $device = $this->updateDeviceStatus($sn, $ip);
+        if (! $device) {
+            self::recordAdmsLog('/iclock/fdata', 'POST', $sn, 'Ditolak: Perangkat tidak terdaftar');
+
+            return response("ERROR: UNREGISTERED DEVICE\n", 403)->header('Content-Type', 'text/plain');
+        }
 
         $table = strtoupper($request->query('table', 'FINGERTMP'));
         $body = $this->extractRequestBody($request);
@@ -340,8 +350,13 @@ class IclockController extends Controller
      */
     private function processAttendanceLogs(string $rawBody, string $sn, string $ip): int
     {
-        $device = $this->updateDeviceStatus($sn, $ip) ?: Device::first();
-        $deviceId = $device ? $device->id : null;
+        $device = $this->updateDeviceStatus($sn, $ip);
+        if (! $device) {
+            Log::warning("ADMS SECURITY: ATTLOG dari SN: {$sn} (IP: {$ip}) diabaikan karena mesin tidak terdaftar!");
+
+            return 0;
+        }
+        $deviceId = $device->id;
 
         $lines = preg_split('/\r\n|\r|\n/', trim($rawBody));
         $savedCount = 0;
@@ -630,8 +645,8 @@ class IclockController extends Controller
                 }
             }
 
-            // 3. Jika tetap belum ada device sama sekali di DB, buatkan otomatis
-            if (! $device && $sn !== 'UNKNOWN') {
+            // 3. Jika tetap belum ada device sama sekali di DB (hanya saat inisialisasi awal sistem)
+            if (! $device && Device::count() === 0 && $sn !== 'UNKNOWN' && ! empty($sn)) {
                 $device = Device::create([
                     'name' => 'Mesin '.substr($sn, -4),
                     'serial_number' => $sn,
@@ -644,12 +659,17 @@ class IclockController extends Controller
                 return $device;
             }
 
-            if ($device) {
-                $device->update([
-                    'status' => 'online',
-                    'last_seen_at' => now(),
-                ]);
+            // 4. Jika device tidak terdaftar / SN asing di database, TOLAK!
+            if (! $device) {
+                Log::warning("ADMS SECURITY WARNING: Akses dari mesin tidak dikenal ditolak! SN: {$sn}, IP: {$ip}");
+
+                return null;
             }
+
+            $device->update([
+                'status' => 'online',
+                'last_seen_at' => now(),
+            ]);
 
             return $device;
         } catch (\Exception $e) {

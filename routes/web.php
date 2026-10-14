@@ -25,12 +25,9 @@ Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:15,1')->name('login.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
-// Halaman Publik (Mode TV, Simulasi Uji Coba & API Realtime Polling)
+// Halaman Publik (Mode TV & API Realtime Polling Terproteksi)
 Route::get('tv', [TvController::class, 'index'])->name('tv.index');
-Route::get('attendance/latest', [AttendanceController::class, 'latest'])->name('attendance.latest');
-Route::match(['get', 'post'], 'attendance/simulate', [AttendanceController::class, 'simulate'])->name('attendance.simulate');
-Route::post('attendance/simulate/seed-demo', [AttendanceController::class, 'seedDemoStudents'])->name('attendance.simulate.seed_demo');
-Route::post('attendance/simulate/reset-today', [AttendanceController::class, 'resetTodayAttendance'])->name('attendance.simulate.reset_today');
+Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:60,1')->name('attendance.latest');
 
 // Halaman Portal Manajemen (Dilindungi Autentikasi Login)
 Route::middleware('auth')->group(function () {
@@ -117,19 +114,26 @@ Route::middleware('auth')->group(function () {
     Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
     Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
     Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
+
+    // Rute Simulasi Absensi (Hanya dapat diakses setelah login)
+    Route::match(['get', 'post'], 'attendance/simulate', [AttendanceController::class, 'simulate'])->name('attendance.simulate');
+    Route::post('attendance/simulate/seed-demo', [AttendanceController::class, 'seedDemoStudents'])->name('attendance.simulate.seed_demo');
+    Route::post('attendance/simulate/reset-today', [AttendanceController::class, 'resetTodayAttendance'])->name('attendance.simulate.reset_today');
 });
 
-// Route Webhook OpenWA (Public & Bebas CSRF)
-Route::match(['get', 'post'], 'webhook/openwa', [WhatsAppWebhookController::class, 'handleWebhook'])->name('webhook.openwa');
+// Route Webhook OpenWA (Public & Bebas CSRF, dilindungi throttle)
+Route::match(['get', 'post'], 'webhook/openwa', [WhatsAppWebhookController::class, 'handleWebhook'])->middleware('throttle:60,1')->name('webhook.openwa');
 
-// Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco) - Public & Unrestricted
-Route::match(['get', 'post'], 'iclock/cdata', [IclockController::class, 'cdata']);
-Route::match(['get', 'post'], 'iclock/cdata.aspx', [IclockController::class, 'cdata']);
-Route::match(['get', 'post'], 'iclock/cdata.php', [IclockController::class, 'cdata']);
-Route::match(['get', 'post'], 'iclock/fdata', [IclockController::class, 'fdata']);
-Route::match(['get', 'post'], 'iclock/fdata.aspx', [IclockController::class, 'fdata']);
-Route::match(['get', 'post'], 'iclock/fdata.php', [IclockController::class, 'fdata']);
-Route::match(['get', 'post'], 'iclock/ping', [IclockController::class, 'ping']);
-Route::match(['get', 'post'], 'iclock/getrequest', [IclockController::class, 'getRequest']);
-Route::match(['get', 'post'], 'iclock/devicecmd', [IclockController::class, 'deviceCmd']);
-Route::match(['get', 'post'], 'iclock/registry', [IclockController::class, 'registry']);
+// Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco) - Dilindungi Throttle
+Route::middleware('throttle:120,1')->group(function () {
+    Route::match(['get', 'post'], 'iclock/cdata', [IclockController::class, 'cdata']);
+    Route::match(['get', 'post'], 'iclock/cdata.aspx', [IclockController::class, 'cdata']);
+    Route::match(['get', 'post'], 'iclock/cdata.php', [IclockController::class, 'cdata']);
+    Route::match(['get', 'post'], 'iclock/fdata', [IclockController::class, 'fdata']);
+    Route::match(['get', 'post'], 'iclock/fdata.aspx', [IclockController::class, 'fdata']);
+    Route::match(['get', 'post'], 'iclock/fdata.php', [IclockController::class, 'fdata']);
+    Route::match(['get', 'post'], 'iclock/ping', [IclockController::class, 'ping']);
+    Route::match(['get', 'post'], 'iclock/getrequest', [IclockController::class, 'getRequest']);
+    Route::match(['get', 'post'], 'iclock/devicecmd', [IclockController::class, 'deviceCmd']);
+    Route::match(['get', 'post'], 'iclock/registry', [IclockController::class, 'registry']);
+});
