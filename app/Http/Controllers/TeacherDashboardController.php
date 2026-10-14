@@ -32,7 +32,16 @@ class TeacherDashboardController extends Controller
             $currentClass = $currentClassId ? SchoolClass::find($currentClassId) : null;
         }
 
-        $today = Carbon::today('Asia/Jakarta')->toDateString();
+        // Tanggal yang dimonitor (bisa pilih tanggal lewat date picker)
+        $selectedDate = $request->input('date', Carbon::today('Asia/Jakarta')->toDateString());
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+            $selectedDate = Carbon::today('Asia/Jakarta')->toDateString();
+        }
+
+        $isToday = ($selectedDate === Carbon::today('Asia/Jakarta')->toDateString());
+        $isSchoolDay = Setting::isSchoolDay($selectedDate);
+        $isHolidayOrWeekend = Setting::isHolidayOrWeekend($selectedDate);
+
         $currentTimeWib = Carbon::now('Asia/Jakarta')->format('H:i');
         $checkinEnd = Setting::get('checkin_end', '06:30');
         $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
@@ -43,8 +52,14 @@ class TeacherDashboardController extends Controller
             'ontime' => 0,
             'late' => 0,
             'absent' => 0,
+            'holiday' => 0,
             'percentage' => 0,
+            'date' => $selectedDate,
+            'date_formatted' => Carbon::parse($selectedDate)->translatedFormat('l, d F Y'),
             'today_formatted' => Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
+            'is_today' => $isToday,
+            'is_school_day' => $isSchoolDay,
+            'is_holiday' => $isHolidayOrWeekend,
             'current_time' => $currentTimeWib,
             'checkin_end' => $checkinEnd,
         ];
@@ -59,9 +74,9 @@ class TeacherDashboardController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            // Ambil semua log kehadiran hari ini untuk kelas ini (absen masuk)
-            $todayLogs = AttendanceLog::whereIn('student_id', $students->pluck('id'))
-                ->whereDate('timestamp', $today)
+            // Ambil semua log kehadiran pada tanggal terpilih untuk kelas ini (absen masuk)
+            $dateLogs = AttendanceLog::whereIn('student_id', $students->pluck('id'))
+                ->whereDate('timestamp', $selectedDate)
                 ->where('status_code', 0)
                 ->orderBy('timestamp', 'asc')
                 ->get()
@@ -70,9 +85,10 @@ class TeacherDashboardController extends Controller
             $ontimeCount = 0;
             $lateCount = 0;
             $absentCount = 0;
+            $holidayCount = 0;
 
-            $studentsData = $students->map(function ($student) use ($todayLogs, $checkinEnd, &$ontimeCount, &$lateCount, &$absentCount) {
-                $logs = $todayLogs->get($student->id);
+            $studentsData = $students->map(function ($student) use ($dateLogs, $checkinEnd, $isHolidayOrWeekend, &$ontimeCount, &$lateCount, &$absentCount, &$holidayCount) {
+                $logs = $dateLogs->get($student->id);
                 $earliestLog = $logs ? $logs->first() : null;
 
                 if ($earliestLog) {
@@ -89,10 +105,17 @@ class TeacherDashboardController extends Controller
                     }
                     $tapTime = $timeStr.' WIB';
                 } else {
-                    $status = 'absent';
-                    $statusLabel = 'Belum Hadir / Alpha';
-                    $tapTime = '-';
-                    $absentCount++;
+                    if ($isHolidayOrWeekend) {
+                        $status = 'holiday';
+                        $statusLabel = 'Libur Akhir Pekan';
+                        $tapTime = '-';
+                        $holidayCount++;
+                    } else {
+                        $status = 'absent';
+                        $statusLabel = 'Belum Hadir / Alpha';
+                        $tapTime = '-';
+                        $absentCount++;
+                    }
                 }
 
                 return [
@@ -115,6 +138,7 @@ class TeacherDashboardController extends Controller
             $stats['ontime'] = $ontimeCount;
             $stats['late'] = $lateCount;
             $stats['absent'] = $absentCount;
+            $stats['holiday'] = $holidayCount;
             $stats['percentage'] = $percentage;
         }
 
@@ -132,6 +156,11 @@ class TeacherDashboardController extends Controller
      */
     public function sendParentReminder(Request $request, Student $student)
     {
+        // Proteksi jika hari ini akhir pekan / libur
+        if (Setting::isHolidayOrWeekend()) {
+            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
+        }
+
         $user = Auth::user();
 
         // Otorisasi: hanya wali kelas bersangkutan atau admin yang boleh mengirim
@@ -184,6 +213,11 @@ class TeacherDashboardController extends Controller
      */
     public function sendParentReminderAll(Request $request)
     {
+        // Proteksi jika hari ini akhir pekan / libur
+        if (Setting::isHolidayOrWeekend()) {
+            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
+        }
+
         $user = Auth::user();
         $classId = $user->isGuru() ? $user->school_class_id : $request->input('school_class_id');
 

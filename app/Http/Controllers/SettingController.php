@@ -46,6 +46,10 @@ class SettingController extends Controller
             'tv_points_ontime' => Setting::get('tv_points_ontime', '11'),
             'tv_points_late' => Setting::get('tv_points_late', '0'),
             'tv_theme' => Setting::get('tv_theme', 'aurora'),
+            'tv_weekend_text' => Setting::get('tv_weekend_text', 'Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga dan tetap jaga kesehatan untuk menyambut hari Senin dengan semangat baru.'),
+
+            // Hari Sekolah Aktif (1=Senin ... 6=Sabtu, 0=Minggu)
+            'school_days' => Setting::getSchoolDays(),
         ];
 
         // Daftar siswa untuk simulasi / uji coba streak
@@ -92,6 +96,13 @@ class SettingController extends Controller
         Setting::set('checkout_end', $request->checkout_end, 'Batas Akhir Absen Pulang');
         Setting::set('wa_notification', $request->has('wa_notification') ? '1' : '0', 'Status Notifikasi WhatsApp');
 
+        // Hari Efektif Masuk Sekolah
+        $schoolDays = $request->input('school_days', []);
+        if (empty($schoolDays)) {
+            $schoolDays = [1, 2, 3, 4, 5]; // fallback default Senin-Jumat
+        }
+        Setting::set('school_days', json_encode(array_values(array_map('intval', $schoolDays))), 'Hari Efektif Masuk Sekolah');
+
         // Pengaturan OpenWA
         Setting::set('openwa_url', $request->openwa_url ?: 'http://localhost:2785', 'OpenWA Server URL');
         Setting::set('openwa_session', $request->openwa_session ?: 'default', 'OpenWA Session Name');
@@ -101,6 +112,7 @@ class SettingController extends Controller
         Setting::set('tv_title', $request->tv_title ?: 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM', 'Judul Utama TV');
         Setting::set('tv_subtitle', $request->tv_subtitle ?: 'Sistem Informasi Presensi Biometrik Fingerprint', 'Subjudul TV');
         Setting::set('tv_running_text', $request->tv_running_text ?: '', 'Teks Berjalan Pengumuman TV');
+        Setting::set('tv_weekend_text', $request->tv_weekend_text ?: 'Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga dan tetap jaga kesehatan untuk menyambut hari Senin dengan semangat baru.', 'Teks Berjalan Akhir Pekan TV');
         Setting::set('tv_slide_interval', (string) $request->tv_slide_interval, 'Durasi Slide TV (Detik)');
         Setting::set('tv_auto_fullscreen', $request->has('tv_auto_fullscreen') ? '1' : '0', 'Otomatis Layar Penuh Saat Buka TV');
         Setting::set('tv_point_mode', $request->tv_point_mode ?: 'tiered', 'Skema Perhitungan Poin TV');

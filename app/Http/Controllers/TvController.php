@@ -39,6 +39,14 @@ class TvController extends Controller
 
         // 2. Data Harian (Daily) - HANYA Siswa (Bukan Admin) & HANYA Absen Masuk (WIB)
         $today = Carbon::today('Asia/Jakarta')->toDateString();
+        $isSchoolDay = Setting::isSchoolDay($today);
+        $tvSettings['is_weekend_mode'] = !$isSchoolDay;
+
+        // Jika hari ini libur / akhir pekan, ganti running text otomatis menjadi ucapan santai akhir pekan
+        if (!$isSchoolDay) {
+            $weekendText = Setting::get('tv_weekend_text', 'Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga dan tetap jaga kesehatan untuk menyambut hari Senin dengan semangat baru.');
+            $tvSettings['tv_running_text'] = $weekendText;
+        }
 
         // Scope filter agar admin tidak pernah masuk ke data mode TV
         $isStudentScope = function ($query) {
@@ -55,9 +63,9 @@ class TvController extends Controller
             ->exists();
 
         // Jika hari ini sudah ada presensi, gunakan hari ini ($today).
-        // Jika belum ada siswa yang absen hari ini (misal pagi hari sebelum siswa datang atau saat libur/uji coba),
-        // gunakan tanggal log terakhir yang ada di sistem agar TV tetap menampilkan data Top 10 dan tidak kosong melompong.
-        if ($hasTodayLogs) {
+        // Jika belum ada presensi hari ini (karena akhir pekan/libur atau pagi hari),
+        // gunakan tanggal log hari efektif terakhir yang ada di sistem agar TV tetap menampilkan Top 10 dan tidak kosong.
+        if ($hasTodayLogs && $isSchoolDay) {
             $activeDate = $today;
         } else {
             $latestLog = AttendanceLog::whereHas('student', $isStudentScope)
@@ -108,7 +116,9 @@ class TvController extends Controller
             'ontime_count' => $ontimeCount,
             'late_count' => $lateCount,
             'percentage' => $attendancePercentage,
-            'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y'),
+            'active_date' => $activeDate,
+            'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y') . (!$isSchoolDay ? ' (Rekap Hari Terakhir)' : ''),
+            'is_weekend' => !$isSchoolDay,
         ];
 
         // 4. Hitung Peringkat Mingguan (Weekly) - Sinkron dengan activeDate agar tidak kosong jika baru pergantian minggu
@@ -264,9 +274,12 @@ class TvController extends Controller
                 $totalPoints += $tapPoint;
             }
 
-            // Tambahkan manual streak (jika diatur di setting untuk simulasi/testing)
+            // Hitung streak kehadiran dengan melewati hari libur / akhir pekan (Sabtu & Minggu di-skip sehingga streak Senin-Jumat tetap bersambung)
             $manualStreak = (int) ($student->manual_streak ?? 0);
-            $effectiveStreak = $daysCount + $manualStreak;
+            $consecutiveStreak = method_exists($student, 'calculateConsecutiveStreak')
+                ? $student->calculateConsecutiveStreak($byDate->keys()->max() ?? null)
+                : $daysCount;
+            $effectiveStreak = max($consecutiveStreak, $daysCount + $manualStreak);
             $totalPoints += ($manualStreak * $pointsOntime);
 
             $leaderboard[] = [

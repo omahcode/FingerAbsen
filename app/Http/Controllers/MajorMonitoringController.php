@@ -36,20 +36,35 @@ class MajorMonitoringController extends Controller
             $currentMajor = $allMajors->first();
         }
 
-        $today = Carbon::today('Asia/Jakarta')->toDateString();
+        // Tanggal yang dimonitor (bisa pilih tanggal lewat date picker)
+        $selectedDate = $request->input('date', Carbon::today('Asia/Jakarta')->toDateString());
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+            $selectedDate = Carbon::today('Asia/Jakarta')->toDateString();
+        }
+
+        $isToday = ($selectedDate === Carbon::today('Asia/Jakarta')->toDateString());
+        $isSchoolDay = Setting::isSchoolDay($selectedDate);
+        $isHolidayOrWeekend = Setting::isHolidayOrWeekend($selectedDate);
+
         $currentTimeWib = Carbon::now('Asia/Jakarta')->format('H:i');
         $checkinEnd = Setting::get('checkin_end', '06:30');
         $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
 
         $majorStats = [
             'total_students' => 0,
-            'ontime_count' => 0,
-            'late_count' => 0,
-            'absent_count' => 0,
-            'percentage' => 0,
-            'today_formatted' => Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
-            'current_time' => $currentTimeWib,
-            'checkin_end' => $checkinEnd,
+            'ontime_count'   => 0,
+            'late_count'     => 0,
+            'absent_count'   => 0,
+            'holiday_count'  => 0,
+            'percentage'     => 0,
+            'date'           => $selectedDate,
+            'date_formatted' => Carbon::parse($selectedDate)->translatedFormat('l, d F Y'),
+            'today_formatted'=> Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
+            'is_today'       => $isToday,
+            'is_school_day'  => $isSchoolDay,
+            'is_holiday'     => $isHolidayOrWeekend,
+            'current_time'   => $currentTimeWib,
+            'checkin_end'    => $checkinEnd,
         ];
 
         $classBreakdown = collect();
@@ -69,9 +84,9 @@ class MajorMonitoringController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            // Ambil semua log tap masuk hari ini untuk siswa di jurusan ini
-            $todayLogs = AttendanceLog::whereIn('student_id', $students->pluck('id'))
-                ->whereDate('timestamp', $today)
+            // Ambil semua log tap masuk pada tanggal terpilih untuk siswa di jurusan ini
+            $dateLogs = AttendanceLog::whereIn('student_id', $students->pluck('id'))
+                ->whereDate('timestamp', $selectedDate)
                 ->where('status_code', 0)
                 ->orderBy('timestamp', 'asc')
                 ->get()
@@ -86,10 +101,11 @@ class MajorMonitoringController extends Controller
             $ontimeTotal = 0;
             $lateTotal = 0;
             $absentTotal = 0;
+            $holidayTotal = 0;
 
             // 1. Data Siswa
-            $studentsList = $students->map(function ($student) use ($todayLogs, $checkinEnd, &$ontimeTotal, &$lateTotal, &$absentTotal) {
-                $logs = $todayLogs->get($student->id);
+            $studentsList = $students->map(function ($student) use ($dateLogs, $checkinEnd, $isHolidayOrWeekend, &$ontimeTotal, &$lateTotal, &$absentTotal, &$holidayTotal) {
+                $logs = $dateLogs->get($student->id);
                 $earliestLog = $logs ? $logs->first() : null;
 
                 if ($earliestLog) {
@@ -106,10 +122,17 @@ class MajorMonitoringController extends Controller
                     }
                     $tapTime = $timeStr.' WIB';
                 } else {
-                    $status = 'absent';
-                    $statusLabel = 'Belum Hadir / Alpha';
-                    $tapTime = '-';
-                    $absentTotal++;
+                    if ($isHolidayOrWeekend) {
+                        $status = 'holiday';
+                        $statusLabel = 'Libur Akhir Pekan';
+                        $tapTime = '-';
+                        $holidayTotal++;
+                    } else {
+                        $status = 'absent';
+                        $statusLabel = 'Belum Hadir / Alpha';
+                        $tapTime = '-';
+                        $absentTotal++;
+                    }
                 }
 
                 return [
@@ -132,10 +155,11 @@ class MajorMonitoringController extends Controller
             $majorPercentage = $totalStudents > 0 ? round(($presentTotal / $totalStudents) * 100, 1) : 0;
 
             $majorStats['total_students'] = $totalStudents;
-            $majorStats['ontime_count'] = $ontimeTotal;
-            $majorStats['late_count'] = $lateTotal;
-            $majorStats['absent_count'] = $absentTotal;
-            $majorStats['percentage'] = $majorPercentage;
+            $majorStats['ontime_count']   = $ontimeTotal;
+            $majorStats['late_count']     = $lateTotal;
+            $majorStats['absent_count']   = $absentTotal;
+            $majorStats['holiday_count']  = $holidayTotal;
+            $majorStats['percentage']     = $majorPercentage;
 
             // 3. Breakdown per Kelas dalam Jurusan
             $classBreakdown = $classes->map(function ($cls) use ($studentsList, $homeroomTeachers) {
@@ -144,19 +168,21 @@ class MajorMonitoringController extends Controller
                 $ontime = $classStudents->where('status', 'ontime')->count();
                 $late = $classStudents->where('status', 'late')->count();
                 $absent = $classStudents->where('status', 'absent')->count();
+                $holiday = $classStudents->where('status', 'holiday')->count();
                 $present = $ontime + $late;
                 $pct = $total > 0 ? round(($present / $total) * 100, 1) : 0;
                 $wali = $homeroomTeachers->get($cls->id);
 
                 return [
-                    'id' => $cls->id,
-                    'name' => $cls->name,
-                    'wali_name' => $wali ? $wali->name : 'Belum Ditugaskan',
-                    'total' => $total,
-                    'ontime' => $ontime,
-                    'late' => $late,
-                    'absent' => $absent,
-                    'present' => $present,
+                    'id'         => $cls->id,
+                    'name'       => $cls->name,
+                    'wali_name'  => $wali ? $wali->name : 'Belum Ditugaskan',
+                    'total'      => $total,
+                    'ontime'     => $ontime,
+                    'late'       => $late,
+                    'absent'     => $absent,
+                    'holiday'    => $holiday,
+                    'present'    => $present,
                     'percentage' => $pct,
                 ];
             })->sortByDesc('percentage')->values();
@@ -177,6 +203,11 @@ class MajorMonitoringController extends Controller
      */
     public function sendMajorReminderAll(Major $major)
     {
+        // Proteksi jika hari ini akhir pekan / libur
+        if (Setting::isHolidayOrWeekend()) {
+            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
+        }
+
         $user = Auth::user();
         $classIds = $major->schoolClasses->pluck('id');
 
@@ -233,6 +264,11 @@ class MajorMonitoringController extends Controller
      */
     public function sendClassReminderAll(Major $major, SchoolClass $schoolClass)
     {
+        // Proteksi jika hari ini akhir pekan / libur
+        if (Setting::isHolidayOrWeekend()) {
+            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
+        }
+
         $user = Auth::user();
         $today = Carbon::today('Asia/Jakarta')->toDateString();
         $nowWib = Carbon::now('Asia/Jakarta');

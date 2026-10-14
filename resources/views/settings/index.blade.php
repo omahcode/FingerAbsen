@@ -35,7 +35,63 @@
                 </div>
             </div>
 
-            <!-- Card 2: Pengaturan Jam Masuk -->
+            <!-- Card 2: Hari Efektif Masuk Sekolah & Libur Akhir Pekan -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-blue-600">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-calendar-check text-blue-600 mr-2"></i> Hari Efektif Masuk Sekolah
+                        </h3>
+                        <p class="text-xs text-gray-500">Centang hari-hari kegiatan belajar mengajar aktif. Hari yang <strong>tidak dicentang</strong> otomatis dianggap <strong>Hari Libur / Akhir Pekan</strong> (siswa tidak dianggap alpha, tombol WA diproteksi, dan streak tetap terjaga).</p>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="setPresetDays([1,2,3,4,5])" class="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded border border-blue-200 transition">
+                            5 Hari (Sen-Jum)
+                        </button>
+                        <button type="button" onclick="setPresetDays([1,2,3,4,5,6])" class="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded border border-indigo-200 transition">
+                            6 Hari (Sen-Sab)
+                        </button>
+                    </div>
+                </div>
+
+                @php
+                    $activeDays = $settings['school_days'] ?? [1, 2, 3, 4, 5];
+                    $dayList = [
+                        1 => ['name' => 'Senin', 'desc' => 'Hari Sekolah'],
+                        2 => ['name' => 'Selasa', 'desc' => 'Hari Sekolah'],
+                        3 => ['name' => 'Rabu', 'desc' => 'Hari Sekolah'],
+                        4 => ['name' => 'Kamis', 'desc' => 'Hari Sekolah'],
+                        5 => ['name' => 'Jumat', 'desc' => 'Hari Sekolah'],
+                        6 => ['name' => 'Sabtu', 'desc' => 'Akhir Pekan'],
+                        0 => ['name' => 'Minggu', 'desc' => 'Akhir Pekan'],
+                    ];
+                @endphp
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 pt-1">
+                    @foreach($dayList as $dayKey => $dayInfo)
+                    @php $isChecked = in_array($dayKey, $activeDays, false); @endphp
+                    <label class="relative flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition select-none text-center {{ $isChecked ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 bg-gray-50 opacity-75' }} hover:border-blue-400">
+                        <input 
+                            type="checkbox" 
+                            name="school_days[]" 
+                            value="{{ $dayKey }}" 
+                            class="day-checkbox sr-only"
+                            {{ $isChecked ? 'checked' : '' }}
+                            onchange="updateDayCardStyle(this)"
+                        >
+                        <div class="day-check-icon w-6 h-6 rounded-full flex items-center justify-center text-xs mb-1.5 {{ $isChecked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400' }}">
+                            <i class="fas {{ $isChecked ? 'fa-check' : 'fa-times' }}"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-800">{{ $dayInfo['name'] }}</span>
+                        <span class="day-status-text text-[10px] font-semibold mt-0.5 {{ $isChecked ? 'text-blue-600' : 'text-gray-400' }}">
+                            {{ $isChecked ? 'Masuk' : 'Libur' }}
+                        </span>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Card 3: Pengaturan Jam Masuk -->
             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-emerald-500">
                 <div class="flex justify-between items-start mb-4">
                     <div>
@@ -286,18 +342,35 @@
                     </div>
 
                     <!-- 2. Running Text Pengumuman -->
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fas fa-bullhorn text-amber-500 mr-1"></i> Teks Berjalan Pengumuman (Running Text / Ticker Bawah)
-                        </label>
-                        <input 
-                            type="text" 
-                            name="tv_running_text" 
-                            value="{{ old('tv_running_text', $settings['tv_running_text']) }}" 
-                            placeholder="Contoh: Selamat Datang! Batas absensi masuk tepat waktu adalah pukul 06:30 WIB. Tingkatkan kedisiplinan!"
-                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                        >
-                        <p class="text-[11px] text-gray-400 mt-1">Pesan teks ini akan terus berjalan di bagian bawah layar mode TV sebagai pengumuman dinamis.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">
+                                <i class="fas fa-bullhorn text-amber-500 mr-1"></i> Teks Berjalan Pengumuman (Running Text Hari Efektif)
+                            </label>
+                            <input 
+                                type="text" 
+                                name="tv_running_text" 
+                                value="{{ old('tv_running_text', $settings['tv_running_text']) }}" 
+                                placeholder="Contoh: Selamat Datang! Batas absensi masuk tepat waktu adalah pukul 06:30 WIB. Tingkatkan kedisiplinan!"
+                                class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                            >
+                            <p class="text-[11px] text-gray-400 mt-1">Pesan teks ini akan terus berjalan di bagian bawah layar mode TV pada hari efektif sekolah.</p>
+                        </div>
+
+                        <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-200">
+                            <label class="block text-xs font-bold text-indigo-900 mb-1 flex items-center justify-between">
+                                <span><i class="fas fa-umbrella-beach text-indigo-600 mr-1"></i> Running Text Khusus Akhir Pekan / Hari Libur</span>
+                                <span class="bg-indigo-200 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded">Otomatis Muncul Saat Libur</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                name="tv_weekend_text" 
+                                value="{{ old('tv_weekend_text', $settings['tv_weekend_text'] ?? 'Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga dan tetap jaga kesehatan untuk menyambut hari Senin dengan semangat baru.') }}" 
+                                placeholder="Contoh: Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga..."
+                                class="w-full p-2.5 bg-white border border-indigo-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            >
+                            <p class="text-[11px] text-indigo-700/80 mt-1">Ketika hari ini terdeteksi sebagai hari libur/akhir pekan, running text di TV otomatis berganti ke ucapan santai ini.</p>
+                        </div>
                     </div>
 
                     <!-- 3. Tampilan & Carousel Layar -->
@@ -690,6 +763,56 @@
 </div>
 
 <script>
+    function updateDayCardStyle(checkbox) {
+        const label = checkbox.closest('label');
+        if (!label) return;
+        const iconDiv = label.querySelector('.day-check-icon');
+        const icon = iconDiv ? iconDiv.querySelector('i') : null;
+        const textSpan = label.querySelector('.day-status-text');
+
+        if (checkbox.checked) {
+            label.classList.remove('border-gray-200', 'bg-gray-50', 'opacity-75');
+            label.classList.add('border-blue-500', 'bg-blue-50/50');
+            if (iconDiv) {
+                iconDiv.classList.remove('bg-gray-200', 'text-gray-400');
+                iconDiv.classList.add('bg-blue-600', 'text-white');
+            }
+            if (icon) {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-check');
+            }
+            if (textSpan) {
+                textSpan.classList.remove('text-gray-400');
+                textSpan.classList.add('text-blue-600');
+                textSpan.textContent = 'Masuk';
+            }
+        } else {
+            label.classList.remove('border-blue-500', 'bg-blue-50/50');
+            label.classList.add('border-gray-200', 'bg-gray-50', 'opacity-75');
+            if (iconDiv) {
+                iconDiv.classList.remove('bg-blue-600', 'text-white');
+                iconDiv.classList.add('bg-gray-200', 'text-gray-400');
+            }
+            if (icon) {
+                icon.classList.remove('fa-check');
+                icon.classList.add('fa-times');
+            }
+            if (textSpan) {
+                textSpan.classList.remove('text-blue-600');
+                textSpan.classList.add('text-gray-400');
+                textSpan.textContent = 'Libur';
+            }
+        }
+    }
+
+    function setPresetDays(activeDays) {
+        document.querySelectorAll('.day-checkbox').forEach(cb => {
+            const val = parseInt(cb.value, 10);
+            cb.checked = activeDays.includes(val);
+            updateDayCardStyle(cb);
+        });
+    }
+
     function setSlideInterval(sec) {
         const input = document.getElementById('tv_slide_interval_input');
         if (input) {

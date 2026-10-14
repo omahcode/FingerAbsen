@@ -17,17 +17,22 @@
                 <p class="text-blue-100 mt-1 text-sm sm:text-base">
                     Pantau kehadiran siswa secara real-time dan kirim pengingat WhatsApp 1-klik ke orang tua murid yang belum hadir.
                 </p>
-                <div class="flex items-center gap-4 mt-3 text-xs sm:text-sm text-blue-200">
-                    <span><i class="far fa-calendar-alt mr-1"></i> {{ $stats['today_formatted'] }}</span>
+                <div class="flex flex-wrap items-center gap-3 mt-3 text-xs sm:text-sm text-blue-200">
+                    <span class="inline-flex items-center gap-1.5"><i class="far fa-calendar-alt text-yellow-300"></i> Tanggal: <strong>{{ $stats['date_formatted'] }}</strong></span>
                     <span>&bull;</span>
                     <span><i class="far fa-clock mr-1"></i> Batas Masuk: <strong>{{ $stats['checkin_end'] }} WIB</strong></span>
+                    @if($stats['is_holiday'])
+                    <span class="bg-amber-400/25 border border-amber-300/40 text-amber-200 font-bold px-2.5 py-0.5 rounded-full text-xs inline-flex items-center gap-1">
+                        <i class="fas fa-umbrella-beach"></i> Libur / Akhir Pekan
+                    </span>
+                    @endif
                 </div>
             </div>
 
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                @if($user->isAdmin() && $allClasses->isNotEmpty())
-                <!-- Dropdown Pilih Kelas untuk Admin -->
-                <form action="{{ route('guru.dashboard') }}" method="GET" class="flex items-center gap-2">
+                <!-- Filter Form: Kelas & Tanggal (Date Picker) -->
+                <form action="{{ route('guru.dashboard') }}" method="GET" class="flex flex-wrap items-center gap-2">
+                    @if($user->isAdmin() && $allClasses->isNotEmpty())
                     <select name="class_id" onchange="this.form.submit()" class="bg-white/20 hover:bg-white/30 text-white border border-white/30 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer">
                         @foreach($allClasses as $cls)
                             <option value="{{ $cls->id }}" class="text-gray-900" {{ ($currentClass && $currentClass->id === $cls->id) ? 'selected' : '' }}>
@@ -35,19 +40,46 @@
                             </option>
                         @endforeach
                     </select>
-                </form>
-                @endif
+                    @endif
 
-                @if($currentClass && $stats['absent'] > 0)
-                <!-- Tombol 1-Klik Ingatkan Semua Ortu -->
-                <form action="{{ route('guru.reminder_all') }}" method="POST" data-confirm="Kirim pesan WhatsApp pengingat otomatis ke SEMUA orang tua siswa kelas {{ $currentClass->name }} yang belum hadir hari ini?" data-title="Kirim Pengingat Massal WhatsApp" data-danger="false" data-icon="question">
-                    @csrf
-                    <input type="hidden" name="school_class_id" value="{{ $currentClass->id }}">
-                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition border border-emerald-400/40 text-sm">
-                        <i class="fab fa-whatsapp text-lg"></i>
-                        <span>Ingatkan Semua Ortu ({{ $stats['absent'] }})</span>
-                    </button>
+                    <!-- Date Picker (Bisa Pilih Tanggal) -->
+                    <div class="flex items-center bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl px-2.5 py-1.5 text-white transition">
+                        <i class="far fa-calendar-alt text-xs mr-2 text-blue-200"></i>
+                        <input 
+                            type="date" 
+                            name="date" 
+                            value="{{ $stats['date'] }}" 
+                            onchange="this.form.submit()" 
+                            title="Pilih tanggal presensi"
+                            class="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer [color-scheme:dark]"
+                        >
+                    </div>
+
+                    @if(!$stats['is_today'])
+                    <a href="{{ route('guru.dashboard', array_filter(['class_id' => $currentClass?->id])) }}" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-2 rounded-xl font-bold transition flex items-center gap-1 border border-white/30" title="Kembali ke Hari Ini">
+                        <i class="fas fa-undo-alt text-[10px]"></i> Hari Ini
+                    </a>
+                    @endif
                 </form>
+
+                @if($currentClass)
+                    @if($stats['is_holiday'])
+                    <!-- Tombol Disabled Jika Akhir Pekan / Libur -->
+                    <button type="button" disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 text-white/60 font-semibold px-4 py-2.5 rounded-xl border border-white/20 text-sm cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
+                        <i class="fab fa-whatsapp text-lg opacity-40"></i>
+                        <span>Pengingat WA Nonaktif (Libur)</span>
+                    </button>
+                    @elseif($stats['absent'] > 0)
+                    <!-- Tombol 1-Klik Ingatkan Semua Ortu -->
+                    <form action="{{ route('guru.reminder_all') }}" method="POST" data-confirm="Kirim pesan WhatsApp pengingat otomatis ke SEMUA orang tua siswa kelas {{ $currentClass->name }} yang belum hadir hari ini?" data-title="Kirim Pengingat Massal WhatsApp" data-danger="false" data-icon="question">
+                        @csrf
+                        <input type="hidden" name="school_class_id" value="{{ $currentClass->id }}">
+                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition border border-emerald-400/40 text-sm">
+                            <i class="fab fa-whatsapp text-lg"></i>
+                            <span>Ingatkan Semua Ortu ({{ $stats['absent'] }})</span>
+                        </button>
+                    </form>
+                    @endif
                 @endif
 
                 <a href="{{ route('announcements.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl backdrop-blur transition border border-white/30 text-sm">
@@ -57,6 +89,31 @@
             </div>
         </div>
     </div>
+
+    @if($stats['is_holiday'])
+    <!-- Banner Pemberitahuan Mode Libur / Akhir Pekan -->
+    <div class="bg-gradient-to-r from-slate-50 to-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start sm:items-center gap-3.5">
+            <div class="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shrink-0 shadow-sm border border-indigo-200">
+                <i class="fas fa-umbrella-beach"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900 text-sm flex items-center gap-2">
+                    Mode Akhir Pekan / Hari Libur
+                    <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Aktif</span>
+                </h4>
+                <p class="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                    Tanggal <strong>{{ $stats['date_formatted'] }}</strong> terdeteksi sebagai hari libur / akhir pekan. Siswa yang tidak hadir diberi status <span class="font-bold text-indigo-700">Libur Akhir Pekan</span> (bukan bolos/alpha). Tombol pengingat WhatsApp dinonaktifkan otomatis agar tidak mengganggu hari istirahat orang tua siswa.
+                </p>
+            </div>
+        </div>
+        <div class="shrink-0 flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 bg-white text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                <i class="fas fa-shield-alt text-indigo-500"></i> Proteksi WA Aktif
+            </span>
+        </div>
+    </div>
+    @endif
 
     @if(!$currentClass)
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center text-amber-800">
@@ -101,14 +158,14 @@
             </div>
         </div>
 
-        <!-- Belum Hadir / Alpha -->
+        <!-- Belum Hadir / Libur Akhir Pekan -->
         <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl shrink-0">
-                <i class="fas fa-user-times"></i>
+            <div class="w-12 h-12 rounded-xl {{ $stats['is_holiday'] ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600' }} flex items-center justify-center text-xl shrink-0">
+                <i class="fas {{ $stats['is_holiday'] ? 'fa-umbrella-beach' : 'fa-user-times' }}"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Belum Hadir</p>
-                <h3 class="text-2xl font-black text-rose-600">{{ $stats['absent'] }}</h3>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $stats['is_holiday'] ? 'Libur Akhir Pekan' : 'Belum Hadir' }}</p>
+                <h3 class="text-2xl font-black {{ $stats['is_holiday'] ? 'text-slate-700' : 'text-rose-600' }}">{{ $stats['is_holiday'] ? $stats['holiday'] : $stats['absent'] }}</h3>
             </div>
         </div>
 
@@ -135,9 +192,15 @@
             <button type="button" class="filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition" data-filter="all">
                 Semua ({{ $stats['total'] }})
             </button>
+            @if($stats['is_holiday'])
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition" data-filter="holiday">
+                <i class="fas fa-umbrella-beach text-indigo-500 mr-1"></i> Libur ({{ $stats['holiday'] }})
+            </button>
+            @else
             <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-filter="absent">
                 Belum Hadir ({{ $stats['absent'] }})
             </button>
+            @endif
             <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-filter="ontime">
                 Tepat Waktu ({{ $stats['ontime'] }})
             </button>
@@ -191,13 +254,17 @@
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
                                 <i class="fas fa-clock"></i> Terlambat
                             </span>
+                            @elseif($s['status'] === 'holiday')
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                <i class="fas fa-umbrella-beach text-indigo-500"></i> Libur Akhir Pekan
+                            </span>
                             @else
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
                                 <i class="fas fa-times-circle"></i> Belum Hadir
                             </span>
                             @endif
                         </td>
-                        <td class="py-3.5 px-4 text-center font-mono font-semibold {{ $s['status'] === 'absent' ? 'text-gray-400' : 'text-gray-700' }}">
+                        <td class="py-3.5 px-4 text-center font-mono font-semibold {{ in_array($s['status'], ['absent', 'holiday']) ? 'text-gray-400' : 'text-gray-700' }}">
                             {{ $s['tap_time'] }}
                         </td>
                         <td class="py-3.5 px-4">
@@ -211,7 +278,12 @@
                             @endif
                         </td>
                         <td class="py-3.5 px-4 text-right">
-                            @if($s['status'] === 'absent')
+                            @if($s['status'] === 'holiday')
+                                <button type="button" disabled class="inline-flex items-center gap-1.5 bg-gray-50 text-gray-400 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
+                                    <i class="fab fa-whatsapp opacity-40"></i>
+                                    <span>Libur Akhir Pekan</span>
+                                </button>
+                            @elseif($s['status'] === 'absent')
                                 @if($s['parent_phone'])
                                 <form action="{{ route('guru.reminder', $s['id']) }}" method="POST" class="inline-block" data-confirm="Kirim WhatsApp pengingat kehadiran sekarang ke orang tua {{ $s['name'] }} ({{ $s['parent_phone'] }})?" data-title="Kirim Pengingat WhatsApp" data-danger="false" data-icon="question">
                                     @csrf

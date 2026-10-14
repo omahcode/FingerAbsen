@@ -32,4 +32,46 @@ class Setting extends Model
         );
         Cache::forget("setting_{$key}");
     }
+
+    /**
+     * Ambil array hari sekolah aktif (1=Senin ... 6=Sabtu, 0=Minggu)
+     * Default: Senin sampai Jumat [1, 2, 3, 4, 5]
+     */
+    public static function getSchoolDays(): array
+    {
+        $raw = self::get('school_days', null);
+        if ($raw === null) {
+            return [1, 2, 3, 4, 5];
+        }
+
+        if (is_array($raw)) {
+            return array_map('intval', $raw);
+        }
+
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            return array_map('intval', $decoded);
+        }
+
+        // Jika string koma misal "1,2,3,4,5"
+        return array_map('intval', explode(',', $raw));
+    }
+
+    /**
+     * Cek apakah suatu tanggal adalah hari sekolah aktif (bukan hari libur mingguan)
+     */
+    public static function isSchoolDay($date = null): bool
+    {
+        $carbon = $date ? \Carbon\Carbon::parse($date, 'Asia/Jakarta') : \Carbon\Carbon::now('Asia/Jakarta');
+        $dayOfWeek = (int) $carbon->dayOfWeek; // 0=Sunday, 1=Monday, ..., 6=Saturday
+        return in_array($dayOfWeek, self::getSchoolDays(), true);
+    }
+
+    /**
+     * Cek apakah suatu tanggal adalah hari libur sekolah / akhir pekan
+     */
+    public static function isHolidayOrWeekend($date = null): bool
+    {
+        return !self::isSchoolDay($date);
+    }
 }

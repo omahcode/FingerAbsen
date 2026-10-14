@@ -1123,7 +1123,13 @@
             @if($tvSettings['tv_show_daily'])
             <div class="slide {{ !$tvSettings['tv_show_welcome'] ? 'active' : '' }}" data-slide-name="daily">
                 <div class="s-header s2-header">
-                    <h2><i class="fas fa-bolt"></i> Top 10 Kehadiran Hari Ini</h2>
+                    <h2>
+                        @if(!empty($tvSettings['is_weekend_mode']))
+                            <i class="fas fa-umbrella-beach text-amber-400"></i> Rekap Juara Kehadiran Terakhir
+                        @else
+                            <i class="fas fa-bolt"></i> Top 10 Kehadiran Hari Ini
+                        @endif
+                    </h2>
                     <p>Siswa yang melakukan tap fingerprint paling awal (<span id="daily-active-date">{{ $stats['active_date_label'] }}</span>)</p>
                 </div>
                 <div class="s2-grid">
@@ -1224,7 +1230,13 @@
     <!-- Running Announcement Ticker Bar -->
     @if(!empty($tvSettings['tv_running_text']))
     <div class="ticker-bar">
-        <div class="ticker-badge"><i class="fas fa-bullhorn"></i> Info</div>
+        <div class="ticker-badge" style="{{ !empty($tvSettings['is_weekend_mode']) ? 'background: linear-gradient(135deg, #f59e0b, #ec4899); color: #ffffff;' : '' }}">
+            @if(!empty($tvSettings['is_weekend_mode']))
+                <i class="fas fa-umbrella-beach"></i> Akhir Pekan
+            @else
+                <i class="fas fa-bullhorn"></i> Info
+            @endif
+        </div>
         <div class="ticker-content">
             <span class="ticker-text">{{ $tvSettings['tv_running_text'] }}</span>
         </div>
