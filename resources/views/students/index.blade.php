@@ -12,7 +12,7 @@
         <a href="{{ route('students.importForm') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow transition text-sm">
             <i class="fas fa-file-excel mr-1"></i> Import Excel
         </a>
-        <a href="{{ route('students.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow transition text-sm">
+        <a href="{{ route('students.create', request()->query()) }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow transition text-sm">
             <i class="fas fa-plus mr-1"></i> Tambah Siswa Baru
         </a>
     </div>
@@ -83,8 +83,11 @@
 </div>
 
 <div class="bg-white shadow rounded-lg overflow-x-auto p-4 border border-gray-100">
-    <form id="bulk-delete-form" action="{{ route('students.destroyMultiple') }}" method="POST" data-confirm="Hapus semua siswa yang dicentang dari database DAN SEMUA MESIN secara permanen?" data-title="Hapus Massal Siswa" data-danger="true" data-icon="warning">
+    <form id="bulk-delete-form" action="{{ route('students.destroyMultiple', request()->query()) }}" method="POST" data-confirm="Hapus semua siswa yang dicentang dari database DAN SEMUA MESIN secara permanen?" data-title="Hapus Massal Siswa" data-danger="true" data-icon="warning">
         @csrf
+        @if(request()->getQueryString())
+            <input type="hidden" name="return_query" value="{{ request()->getQueryString() }}">
+        @endif
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="border-b bg-gray-50 text-gray-700">
@@ -152,7 +155,7 @@
                         @endif
                     </td>
                     <td class="p-3 text-center flex justify-center space-x-2">
-                        <a href="{{ route('students.edit', $s->id) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1.5 px-3 rounded shadow-sm">
+                        <a href="{{ route('students.edit', array_merge(['student' => $s->id], request()->query())) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1.5 px-3 rounded shadow-sm">
                             <i class="fas fa-edit mr-0.5"></i> Edit
                         </a>
                         <button type="button" onclick="deleteSingle({{ $s->id }}, '{{ addslashes($s->name) }}')" class="bg-red-500 hover:bg-red-600 text-white text-xs py-1.5 px-3 rounded shadow-sm">
@@ -173,6 +176,9 @@
     <form id="single-delete-form" method="POST" style="display: none;">
         @csrf
         @method('DELETE')
+        @if(request()->getQueryString())
+            <input type="hidden" name="return_query" value="{{ request()->getQueryString() }}">
+        @endif
     </form>
 </div>
 
@@ -192,7 +198,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.getElementById('single-delete-form');
-                form.action = `/students/${id}`;
+                form.action = `/students/${id}${window.location.search}`;
                 form.submit();
             }
         });

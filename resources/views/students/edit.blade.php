@@ -1,5 +1,11 @@
 @extends('layouts.app')
 @section('content')
+<div class="max-w-xl mx-auto mb-3">
+    <a href="{{ route('students.index', request()->query()) }}" class="inline-flex items-center text-xs font-semibold text-gray-500 hover:text-indigo-600 transition">
+        <i class="fas fa-arrow-left mr-1.5"></i> Kembali ke Daftar Siswa
+    </a>
+</div>
+
 <div class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-md border border-gray-100">
     <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-gray-100">
         <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
@@ -11,9 +17,12 @@
         </div>
     </div>
 
-    <form action="{{ route('students.update', $student->id) }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+    <form action="{{ route('students.update', array_merge(['student' => $student->id], request()->query())) }}" method="POST" enctype="multipart/form-data" class="space-y-5">
         @csrf
         @method('PUT')
+        @if(request()->getQueryString())
+            <input type="hidden" name="return_query" value="{{ request()->getQueryString() }}">
+        @endif
 
         <!-- Bagian Foto Profil Siswa -->
         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -104,7 +113,7 @@
             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow w-full transition text-sm flex items-center justify-center gap-1.5">
                 <i class="fas fa-save"></i> Simpan Perubahan
             </button>
-            <a href="{{ route('students.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-lg border w-full text-center text-sm transition">
+            <a href="{{ route('students.index', request()->query()) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-lg border w-full text-center text-sm transition">
                 Batal
             </a>
         </div>

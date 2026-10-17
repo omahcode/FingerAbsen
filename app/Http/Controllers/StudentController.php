@@ -144,7 +144,15 @@ class StudentController extends Controller
             }
         }
 
-        return redirect()->route('students.index')->with('success', "Data siswa {$request->name} berhasil disimpan dan dikirim ke mesin.");
+        $redirectParams = [];
+        if ($request->filled('return_query')) {
+            parse_str($request->input('return_query'), $redirectParams);
+        }
+        $redirectParams = array_merge($redirectParams, $request->query());
+        unset($redirectParams['_token']);
+        $redirectParams = array_filter($redirectParams, fn ($val) => $val !== null && $val !== '');
+
+        return redirect()->route('students.index', $redirectParams)->with('success', "Data siswa {$request->name} berhasil disimpan dan dikirim ke mesin.");
     }
 
     public function edit(Student $student)
@@ -223,7 +231,15 @@ class StudentController extends Controller
             }
         }
 
-        return redirect()->route('students.index')->with('success', 'Data siswa dan foto profil berhasil diperbarui.');
+        $redirectParams = [];
+        if ($request->filled('return_query')) {
+            parse_str($request->input('return_query'), $redirectParams);
+        }
+        $redirectParams = array_merge($redirectParams, $request->query());
+        unset($redirectParams['student'], $redirectParams['_token'], $redirectParams['_method']);
+        $redirectParams = array_filter($redirectParams, fn ($val) => $val !== null && $val !== '');
+
+        return redirect()->route('students.index', $redirectParams)->with('success', 'Data siswa dan foto profil berhasil diperbarui.');
     }
 
     public function destroy(Request $request, Student $student)
@@ -251,7 +267,15 @@ class StudentController extends Controller
 
         $student->delete();
 
-        return redirect()->route('students.index')->with('success', 'Siswa berhasil dihapus dari sistem dan mesin.');
+        $redirectParams = [];
+        if ($request->filled('return_query')) {
+            parse_str($request->input('return_query'), $redirectParams);
+        }
+        $redirectParams = array_merge($redirectParams, $request->query());
+        unset($redirectParams['student'], $redirectParams['_token'], $redirectParams['_method']);
+        $redirectParams = array_filter($redirectParams, fn ($val) => $val !== null && $val !== '');
+
+        return redirect()->route('students.index', $redirectParams)->with('success', 'Siswa berhasil dihapus dari sistem dan mesin.');
     }
 
     public function destroyMultiple(Request $request)
@@ -287,7 +311,15 @@ class StudentController extends Controller
             $count++;
         }
 
-        return redirect()->route('students.index')->with('success', "$count Siswa berhasil dihapus secara massal dari web dan seluruh mesin.");
+        $redirectParams = [];
+        if ($request->filled('return_query')) {
+            parse_str($request->input('return_query'), $redirectParams);
+        }
+        $redirectParams = array_merge($redirectParams, $request->query());
+        unset($redirectParams['_token'], $redirectParams['ids']);
+        $redirectParams = array_filter($redirectParams, fn ($val) => $val !== null && $val !== '');
+
+        return redirect()->route('students.index', $redirectParams)->with('success', "$count Siswa berhasil dihapus secara massal dari web dan seluruh mesin.");
     }
 
     public function sync(Request $request)
