@@ -107,6 +107,7 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'nis' => 'nullable|string|max:30|unique:students,nis',
             'device_user_id' => 'required|numeric',
             'name' => 'required',
             'school_class_id' => 'required|exists:school_classes,id',
@@ -117,6 +118,7 @@ class StudentController extends Controller
         Student::updateOrCreate(
             ['device_user_id' => $request->device_user_id],
             [
+                'nis' => $request->nis,
                 'name' => $request->name,
                 'school_class_id' => $request->school_class_id,
                 'parent_phone' => $request->parent_phone,
@@ -167,6 +169,7 @@ class StudentController extends Controller
     public function update(Request $request, Student $student)
     {
         $request->validate([
+            'nis' => 'nullable|string|max:30|unique:students,nis,'.$student->id,
             'name' => 'required|string|max:255',
             'school_class_id' => 'required|exists:school_classes,id',
             'parent_phone' => 'nullable|string|max:25',
@@ -178,6 +181,7 @@ class StudentController extends Controller
         ]);
 
         $data = [
+            'nis' => $request->nis,
             'name' => $request->name,
             'school_class_id' => $request->school_class_id,
             'parent_phone' => $request->parent_phone,

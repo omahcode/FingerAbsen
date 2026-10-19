@@ -208,6 +208,14 @@
                             </div>
                             <i class="fas fa-external-link-alt text-[10px] opacity-75 sidebar-text shrink-0"></i>
                         </a>
+
+                        <a href="{{ route('parent.index') }}" target="_blank" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-sky-400 hover:bg-sky-500/15 hover:text-sky-300 transition border border-sky-500/20 bg-sky-500/5" title="Buka Portal Orang Tua">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-users w-5 text-center shrink-0"></i>
+                                <span class="sidebar-text truncate">Portal Orang Tua</span>
+                            </div>
+                            <i class="fas fa-external-link-alt text-[10px] opacity-75 sidebar-text shrink-0"></i>
+                        </a>
                     </nav>
                 </div>
 

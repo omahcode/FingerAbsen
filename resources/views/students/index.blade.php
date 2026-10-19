@@ -99,7 +99,7 @@
                     <th class="p-3 text-sm font-semibold">Kelas</th>
                     <th class="p-3 text-sm font-semibold">Jurusan</th>
                     <th class="p-3 text-sm font-semibold text-center">Sidik Jari</th>
-                    <th class="p-3 text-sm font-semibold">No. WA Ortu</th>
+                    <th class="p-3 text-sm font-semibold">No. Telepon Ortu</th>
                     <th class="p-3 text-sm text-center font-semibold">Aksi</th>
                 </tr>
             </thead>

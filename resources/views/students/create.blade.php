@@ -33,9 +33,15 @@
         </div>
 
         <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 mb-1">NIS / ID Mesin (Angka Saja)</label>
+            <label class="block text-sm font-bold text-gray-700 mb-1">Nomor Induk Siswa (NIS)</label>
+            <input type="text" name="nis" value="{{ old('nis') }}" class="border border-gray-300 w-full p-2.5 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Contoh: 20241011">
+            <p class="text-xs text-gray-500 mt-1">NIS resmi siswa untuk autentikasi di Portal Orang Tua.</p>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 mb-1">PIN / ID Mesin (Angka Saja)</label>
             <input type="number" name="device_user_id" class="border border-gray-300 w-full p-2.5 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Contoh: 10024" required>
-            <p class="text-xs text-gray-500 mt-1">NIS ini digunakan sebagai PIN/User ID di mesin fingerprint.</p>
+            <p class="text-xs text-gray-500 mt-1">Nomor ini digunakan sebagai PIN/User ID di mesin fingerprint.</p>
         </div>
         
         <div class="mb-4">

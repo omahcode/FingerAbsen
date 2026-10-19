@@ -7,6 +7,7 @@ use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\IclockController;
 use App\Http\Controllers\MajorController;
 use App\Http\Controllers\MajorMonitoringController;
+use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SettingController;
@@ -16,7 +17,6 @@ use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TeacherDashboardController;
 use App\Http\Controllers\TeacherManagementController;
 use App\Http\Controllers\TvController;
-use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +28,18 @@ Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 // Halaman Publik (Mode TV & API Realtime Polling Terproteksi)
 Route::get('tv', [TvController::class, 'index'])->name('tv.index');
 Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:60,1')->name('attendance.latest');
+
+// ====================================================
+// PORTAL ORANG TUA / WALI MURID
+// ====================================================
+Route::get('orang-tua', [ParentDashboardController::class, 'index'])->name('parent.index');
+Route::post('orang-tua/pilih', [ParentDashboardController::class, 'selectStudent'])->name('parent.select');
+Route::post('orang-tua/keluar', [ParentDashboardController::class, 'clear'])->name('parent.clear');
+Route::get('orang-tua/data', [ParentDashboardController::class, 'data'])->name('parent.data');
+Route::post('orang-tua/izin', [ParentDashboardController::class, 'storePermission'])->name('parent.permission.store');
+Route::post('orang-tua/push-subscribe', [ParentDashboardController::class, 'subscribePush'])->name('parent.push.subscribe');
+Route::post('orang-tua/push-unsubscribe', [ParentDashboardController::class, 'unsubscribePush'])->name('parent.push.unsubscribe');
+Route::post('orang-tua/push-test', [ParentDashboardController::class, 'testPush'])->name('parent.push.test');
 
 // Halaman Portal Manajemen (Dilindungi Autentikasi Login)
 Route::middleware('auth')->group(function () {
@@ -44,20 +56,14 @@ Route::middleware('auth')->group(function () {
     // ====================================================
     // Fitur 1: Monitoring Presensi Khusus Kelas Wali Kelas
     Route::get('guru/dashboard', [TeacherDashboardController::class, 'index'])->name('guru.dashboard');
-    // Fitur 2: Pengingat WhatsApp 1-Klik ke Orang Tua Murid
-    Route::post('guru/reminder/{student}', [TeacherDashboardController::class, 'sendParentReminder'])->name('guru.reminder');
-    Route::post('guru/reminder-all', [TeacherDashboardController::class, 'sendParentReminderAll'])->name('guru.reminder_all');
 
     // Fitur Monitoring Tingkat Jurusan (Guru & Admin)
     Route::get('monitoring/jurusan', [MajorMonitoringController::class, 'index'])->name('monitoring.jurusan');
-    Route::post('monitoring/jurusan/{major}/reminder-all', [MajorMonitoringController::class, 'sendMajorReminderAll'])->name('monitoring.jurusan.reminder_all');
-    Route::post('monitoring/jurusan/{major}/class/{schoolClass}/reminder-all', [MajorMonitoringController::class, 'sendClassReminderAll'])->name('monitoring.jurusan.class_reminder_all');
 
     // Fitur Monitoring Status Kepulangan Siswa (Realtime & Direct Page)
     Route::get('monitoring/kepulangan', [StudentDepartureMonitoringController::class, 'index'])->name('monitoring.kepulangan');
     Route::get('monitoring/kepulangan/data', [StudentDepartureMonitoringController::class, 'data'])->name('monitoring.kepulangan.data');
     Route::post('monitoring/kepulangan/{student}/update-status', [StudentDepartureMonitoringController::class, 'updateStatus'])->name('monitoring.kepulangan.update_status');
-    Route::post('monitoring/kepulangan/{student}/notify', [StudentDepartureMonitoringController::class, 'notifyParent'])->name('monitoring.kepulangan.notify');
     Route::get('monitoring-pulang', fn () => redirect()->route('monitoring.kepulangan'))->name('monitoring.pulang');
 
     // Fitur 3: Pengajuan Pengumuman TV oleh Guru
@@ -110,7 +116,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
-    Route::post('settings/test-whatsapp', [SettingController::class, 'testWhatsApp'])->name('settings.test_whatsapp');
     Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
     Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
     Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
@@ -120,9 +125,6 @@ Route::middleware('auth')->group(function () {
     Route::post('attendance/simulate/seed-demo', [AttendanceController::class, 'seedDemoStudents'])->name('attendance.simulate.seed_demo');
     Route::post('attendance/simulate/reset-today', [AttendanceController::class, 'resetTodayAttendance'])->name('attendance.simulate.reset_today');
 });
-
-// Route Webhook OpenWA (Public & Bebas CSRF, dilindungi throttle)
-Route::match(['get', 'post'], 'webhook/openwa', [WhatsAppWebhookController::class, 'handleWebhook'])->middleware('throttle:60,1')->name('webhook.openwa');
 
 // Route Protokol ADMS / Cloud Server Mesin Fingerprint (Solution / ZKTeco) - Dilindungi Throttle
 Route::middleware('throttle:120,1')->group(function () {

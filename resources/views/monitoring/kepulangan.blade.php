@@ -330,15 +330,6 @@
                                 <button type="button" onclick='openStatusModal(@json($item))' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)">
                                     <i class="fas fa-edit text-xs"></i>
                                 </button>
-
-                                @if(!empty($item['parent_phone']))
-                                    <form action="{{ route('monitoring.kepulangan.notify', $item['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Kirim notifikasi status keberadaan {{ addslashes($item['name']) }} ke WhatsApp orang tua?')">
-                                        @csrf
-                                        <button type="submit" class="p-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition border border-emerald-200/60" title="Kirim Status WA ke Orang Tua ({{ $item['parent_phone'] }})">
-                                            <i class="fab fa-whatsapp text-xs"></i>
-                                        </button>
-                                    </form>
-                                @endif
                             </div>
                         </td>
                     </tr>
@@ -469,14 +460,6 @@
                 <div id="custom-note-container" class="hidden">
                     <label class="block text-[11px] font-bold text-gray-700 mb-1">Tulis Keterangan Khusus:</label>
                     <input type="text" name="notes" id="modal-custom-notes" placeholder="Contoh: Dijemput orang tua pukul 13:00" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <!-- Checkbox WhatsApp -->
-                <div class="pt-1" id="container-notify-parent">
-                    <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
-                        <input type="checkbox" name="notify_parent" id="modal-notify-parent" value="1" class="rounded text-emerald-600 focus:ring-emerald-500" checked>
-                        <span>Kirim notifikasi otomatis ke WhatsApp Orang Tua (<span id="modal-phone-text" class="font-mono text-emerald-700 font-bold">-</span>)</span>
-                    </label>
                 </div>
             </div>
 
@@ -691,12 +674,7 @@
                 const studentJsonStr = JSON.stringify(student).replace(/'/g, "&#39;");
                 const editBtnHtml = `<button type="button" onclick='openStatusModal(${studentJsonStr})' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)"><i class="fas fa-edit text-xs"></i></button>`;
 
-                let waBtnHtml = '';
-                if (student.parent_phone) {
-                    waBtnHtml = `<form action="/monitoring/kepulangan/${student.id}/notify" method="POST" class="inline-block" onsubmit="return confirm('Kirim notifikasi status keberadaan ${safeName} ke WhatsApp orang tua?')"><input type="hidden" name="_token" value="${csrfToken}"><button type="submit" class="p-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 transition border border-emerald-200/60" title="Kirim Status WA ke Orang Tua (${student.parent_phone})"><i class="fab fa-whatsapp text-xs"></i></button></form>`;
-                }
-
-                cells[7].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}${waBtnHtml}</div>`;
+                cells[7].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}</div>`;
             }
         }
     }

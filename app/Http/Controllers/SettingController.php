@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use App\Models\Student;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -24,12 +23,6 @@ class SettingController extends Controller
             'checkin_late_end' => Setting::get('checkin_late_end', '08:30'),
             'checkout_start' => Setting::get('checkout_start', '14:00'),
             'checkout_end' => Setting::get('checkout_end', '18:00'),
-            'wa_notification' => Setting::get('wa_notification', '1'),
-
-            // OpenWA Settings
-            'openwa_url' => Setting::get('openwa_url', env('OPENWA_URL', env('WA_GATEWAY_URL', 'http://localhost:2785'))),
-            'openwa_session' => Setting::get('openwa_session', env('OPENWA_SESSION', 'default')),
-            'openwa_api_key' => Setting::get('openwa_api_key', env('OPENWA_API_KEY', env('WA_API_KEY', ''))),
 
             // TV Mode Settings
             'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM'),
@@ -82,9 +75,6 @@ class SettingController extends Controller
             'tv_points_ontime' => 'required|integer|min:1|max:100',
             'tv_points_late' => 'required|integer|min:0|max:100',
             'tv_theme' => 'nullable|string|in:aurora,dark,light,clean,ocean',
-            'openwa_url' => 'nullable|string',
-            'openwa_session' => 'nullable|string',
-            'openwa_api_key' => 'nullable|string',
         ]);
 
         // Pengaturan Utama & Jam
@@ -94,7 +84,6 @@ class SettingController extends Controller
         Setting::set('checkin_late_end', $request->checkin_late_end, 'Batas Maksimal Masuk Terlambat');
         Setting::set('checkout_start', $request->checkout_start, 'Jam Mulai Absen Pulang');
         Setting::set('checkout_end', $request->checkout_end, 'Batas Akhir Absen Pulang');
-        Setting::set('wa_notification', $request->has('wa_notification') ? '1' : '0', 'Status Notifikasi WhatsApp');
 
         // Hari Efektif Masuk Sekolah
         $schoolDays = $request->input('school_days', []);
@@ -102,11 +91,6 @@ class SettingController extends Controller
             $schoolDays = [1, 2, 3, 4, 5]; // fallback default Senin-Jumat
         }
         Setting::set('school_days', json_encode(array_values(array_map('intval', $schoolDays))), 'Hari Efektif Masuk Sekolah');
-
-        // Pengaturan OpenWA
-        Setting::set('openwa_url', $request->openwa_url ?: 'http://localhost:2785', 'OpenWA Server URL');
-        Setting::set('openwa_session', $request->openwa_session ?: 'default', 'OpenWA Session Name');
-        Setting::set('openwa_api_key', $request->openwa_api_key ?: '', 'OpenWA API Key');
 
         // Pengaturan TV Mode
         Setting::set('tv_title', $request->tv_title ?: 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM', 'Judul Utama TV');
@@ -127,29 +111,7 @@ class SettingController extends Controller
         Setting::set('tv_show_monthly', $request->has('tv_show_monthly') ? '1' : '0', 'Tampilkan Slide Peringkat Bulanan TV');
         Setting::set('tv_show_hof', $request->has('tv_show_hof') ? '1' : '0', 'Tampilkan Slide Hall of Fame TV');
 
-        return redirect()->route('settings.index')->with('success', 'Semua pengaturan presensi, OpenWA, dan mode TV berhasil diperbarui.');
-    }
-
-    /**
-     * Uji coba pengiriman pesan WhatsApp via OpenWA
-     */
-    public function testWhatsApp(Request $request)
-    {
-        $request->validate([
-            'test_phone' => 'required|string',
-            'test_message' => 'nullable|string',
-        ]);
-
-        $to = $request->test_phone;
-        $message = $request->test_message ?: 'Halo! Ini adalah pesan uji coba dari Sistem Presensi Fingerprint Sekolah via OpenWA pada '.Carbon::now('Asia/Jakarta')->translatedFormat('d F Y H:i:s').' WIB.';
-
-        $sent = WhatsAppService::sendRawMessage($to, $message, 'Test Admin');
-
-        if ($sent) {
-            return redirect()->back()->with('success', "Pesan uji coba berhasil dikirim ke {$to} via OpenWA!");
-        } else {
-            return redirect()->back()->with('error', "Gagal mengirim pesan uji coba ke {$to}. Pastikan server OpenWA aktif dan URL/Session sudah benar.");
-        }
+        return redirect()->route('settings.index')->with('success', 'Semua pengaturan presensi dan mode TV berhasil diperbarui.');
     }
 
     /**

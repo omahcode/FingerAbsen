@@ -15,7 +15,7 @@
                     Monitoring Presensi: <span class="text-yellow-300">{{ $currentClass ? $currentClass->name : 'Pilih Kelas' }}</span>
                 </h1>
                 <p class="text-blue-100 mt-1 text-sm sm:text-base">
-                    Pantau kehadiran siswa secara real-time dan kirim pengingat WhatsApp 1-klik ke orang tua murid yang belum hadir.
+                    Pantau kehadiran siswa kelas secara real-time dan pantau sinkronisasi permohonan izin/sakit dari wali murid.
                 </p>
                 <div class="flex flex-wrap items-center gap-3 mt-3 text-xs sm:text-sm text-blue-200">
                     <span class="inline-flex items-center gap-1.5"><i class="far fa-calendar-alt text-yellow-300"></i> Tanggal: <strong>{{ $stats['date_formatted'] }}</strong></span>
@@ -62,26 +62,6 @@
                     @endif
                 </form>
 
-                @if($currentClass)
-                    @if($stats['is_holiday'])
-                    <!-- Tombol Disabled Jika Akhir Pekan / Libur -->
-                    <button type="button" disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 text-white/60 font-semibold px-4 py-2.5 rounded-xl border border-white/20 text-sm cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
-                        <i class="fab fa-whatsapp text-lg opacity-40"></i>
-                        <span>Pengingat WA Nonaktif (Libur)</span>
-                    </button>
-                    @elseif($stats['absent'] > 0)
-                    <!-- Tombol 1-Klik Ingatkan Semua Ortu -->
-                    <form action="{{ route('guru.reminder_all') }}" method="POST" data-confirm="Kirim pesan WhatsApp pengingat otomatis ke SEMUA orang tua siswa kelas {{ $currentClass->name }} yang belum hadir hari ini?" data-title="Kirim Pengingat Massal WhatsApp" data-danger="false" data-icon="question">
-                        @csrf
-                        <input type="hidden" name="school_class_id" value="{{ $currentClass->id }}">
-                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition border border-emerald-400/40 text-sm">
-                            <i class="fab fa-whatsapp text-lg"></i>
-                            <span>Ingatkan Semua Ortu ({{ $stats['absent'] }})</span>
-                        </button>
-                    </form>
-                    @endif
-                @endif
-
                 <a href="{{ route('announcements.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl backdrop-blur transition border border-white/30 text-sm">
                     <i class="fas fa-bullhorn text-yellow-300"></i>
                     <span>Ajukan Pengumuman TV</span>
@@ -103,14 +83,9 @@
                     <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Aktif</span>
                 </h4>
                 <p class="text-xs text-gray-600 mt-0.5 leading-relaxed">
-                    Tanggal <strong>{{ $stats['date_formatted'] }}</strong> terdeteksi sebagai hari libur / akhir pekan. Siswa yang tidak hadir diberi status <span class="font-bold text-indigo-700">Libur Akhir Pekan</span> (bukan bolos/alpha). Tombol pengingat WhatsApp dinonaktifkan otomatis agar tidak mengganggu hari istirahat orang tua siswa.
+                    Tanggal <strong>{{ $stats['date_formatted'] }}</strong> terdeteksi sebagai hari libur / akhir pekan. Siswa yang tidak hadir diberi status <span class="font-bold text-indigo-700">Libur Akhir Pekan</span> (bukan bolos/alpha).
                 </p>
             </div>
-        </div>
-        <div class="shrink-0 flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 bg-white text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs">
-                <i class="fas fa-shield-alt text-indigo-500"></i> Proteksi WA Aktif
-            </span>
         </div>
     </div>
     @endif
@@ -123,65 +98,76 @@
     </div>
     @else
 
-    <!-- Stat Summary Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Stat Summary Cards (Termasuk Izin/Sakit Card) -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <!-- Total Siswa -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shrink-0">
                 <i class="fas fa-users"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Siswa</p>
-                <h3 class="text-2xl font-black text-gray-800">{{ $stats['total'] }}</h3>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Siswa</p>
+                <h3 class="text-xl font-black text-gray-800">{{ $stats['total'] }}</h3>
             </div>
         </div>
 
         <!-- Tepat Waktu -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0">
                 <i class="fas fa-check-circle"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tepat Waktu</p>
-                <h3 class="text-2xl font-black text-emerald-600">{{ $stats['ontime'] }}</h3>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tepat Waktu</p>
+                <h3 class="text-xl font-black text-emerald-600">{{ $stats['ontime'] }}</h3>
             </div>
         </div>
 
         <!-- Terlambat -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0">
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg shrink-0">
                 <i class="fas fa-clock"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Terlambat</p>
-                <h3 class="text-2xl font-black text-amber-600">{{ $stats['late'] }}</h3>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Terlambat</p>
+                <h3 class="text-xl font-black text-amber-600">{{ $stats['late'] }}</h3>
             </div>
         </div>
 
-        <!-- Belum Hadir / Libur Akhir Pekan -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl {{ $stats['is_holiday'] ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600' }} flex items-center justify-center text-xl shrink-0">
+        <!-- Izin / Sakit (Stat Card Baru Sesuai PRD) -->
+        <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg shrink-0">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <div>
+                <p class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider">Izin / Sakit</p>
+                <h3 class="text-xl font-black text-purple-700">{{ $stats['permission'] }}</h3>
+            </div>
+        </div>
+
+        <!-- Belum Hadir / Alpha -->
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl {{ $stats['is_holiday'] ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-600' }} flex items-center justify-center text-lg shrink-0">
                 <i class="fas {{ $stats['is_holiday'] ? 'fa-umbrella-beach' : 'fa-user-times' }}"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $stats['is_holiday'] ? 'Libur Akhir Pekan' : 'Belum Hadir' }}</p>
-                <h3 class="text-2xl font-black {{ $stats['is_holiday'] ? 'text-slate-700' : 'text-rose-600' }}">{{ $stats['is_holiday'] ? $stats['holiday'] : $stats['absent'] }}</h3>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{{ $stats['is_holiday'] ? 'Libur' : 'Belum Hadir' }}</p>
+                <h3 class="text-xl font-black {{ $stats['is_holiday'] ? 'text-slate-700' : 'text-rose-600' }}">{{ $stats['is_holiday'] ? $stats['holiday'] : $stats['absent'] }}</h3>
             </div>
         </div>
 
         <!-- Persentase Kehadiran -->
-        <div class="col-span-2 lg:col-span-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 sm:p-5 border border-indigo-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl shrink-0">
+        <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border border-indigo-100 shadow-sm flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg shrink-0">
                 <i class="fas fa-chart-pie"></i>
             </div>
             <div>
-                <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Kehadiran</p>
-                <h3 class="text-2xl font-black text-indigo-900">{{ $stats['percentage'] }}%</h3>
+                <p class="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider">Kehadiran</p>
+                <h3 class="text-xl font-black text-indigo-900">{{ $stats['percentage'] }}%</h3>
             </div>
         </div>
     </div>
 
-    <!-- Filter & Search Bar -->
+    <!-- Filter & Search Bar (Dengan Tab Izin/Sakit) -->
     <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="relative w-full sm:w-80">
             <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
@@ -189,28 +175,32 @@
         </div>
 
         <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            <button type="button" class="filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition" data-filter="all">
+            <button type="button" class="filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition whitespace-nowrap" data-filter="all">
                 Semua ({{ $stats['total'] }})
             </button>
             @if($stats['is_holiday'])
-            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition" data-filter="holiday">
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap" data-filter="holiday">
                 <i class="fas fa-umbrella-beach text-indigo-500 mr-1"></i> Libur ({{ $stats['holiday'] }})
             </button>
             @else
-            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-filter="absent">
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition whitespace-nowrap" data-filter="absent">
                 Belum Hadir ({{ $stats['absent'] }})
             </button>
             @endif
-            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-filter="ontime">
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition whitespace-nowrap" data-filter="ontime">
                 Tepat Waktu ({{ $stats['ontime'] }})
             </button>
-            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-filter="late">
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition whitespace-nowrap" data-filter="late">
                 Terlambat ({{ $stats['late'] }})
+            </button>
+            <!-- Tab Filter Izin / Sakit Baru Sesuai PRD -->
+            <button type="button" class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 transition whitespace-nowrap border border-purple-200" data-filter="permission">
+                <i class="fas fa-file-medical mr-1 text-purple-600"></i> Izin / Sakit ({{ $stats['permission'] }})
             </button>
         </div>
     </div>
 
-    <!-- Student Attendance List -->
+    <!-- Student Attendance List (Tanpa WhatsApp) -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse" id="students-table">
@@ -220,8 +210,7 @@
                         <th class="py-3.5 px-4">Siswa</th>
                         <th class="py-3.5 px-4 text-center">Status Kehadiran</th>
                         <th class="py-3.5 px-4 text-center">Waktu Presensi</th>
-                        <th class="py-3.5 px-4">Kontak Orang Tua</th>
-                        <th class="py-3.5 px-4 text-right">Aksi Notifikasi</th>
+                        <th class="py-3.5 px-4">Keterangan / Alasan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
@@ -254,59 +243,39 @@
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
                                 <i class="fas fa-clock"></i> Terlambat
                             </span>
+                            @elseif($s['status'] === 'permission')
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                <i class="fas fa-file-medical"></i> {{ $s['status_label'] }}
+                            </span>
                             @elseif($s['status'] === 'holiday')
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                                 <i class="fas fa-umbrella-beach text-indigo-500"></i> Libur Akhir Pekan
                             </span>
                             @else
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
-                                <i class="fas fa-times-circle"></i> Belum Hadir
+                                <i class="fas fa-times-circle"></i> Belum Hadir / Alpha
                             </span>
                             @endif
                         </td>
                         <td class="py-3.5 px-4 text-center font-mono font-semibold {{ in_array($s['status'], ['absent', 'holiday']) ? 'text-gray-400' : 'text-gray-700' }}">
                             {{ $s['tap_time'] }}
                         </td>
-                        <td class="py-3.5 px-4">
-                            @if($s['parent_phone'])
-                            <div class="flex items-center gap-1.5 font-mono text-xs text-gray-700">
-                                <i class="fab fa-whatsapp text-emerald-500 text-sm"></i>
-                                <span>{{ $s['parent_phone'] }}</span>
+                        <td class="py-3.5 px-4 text-xs text-gray-600">
+                            @if($s['permission'])
+                            <div>
+                                <span class="font-semibold text-gray-900 block">{{ $s['notes'] ?: 'Tidak ada catatan tambahan' }}</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 mt-1">
+                                    <i class="fas fa-check-double text-[9px]"></i> Disampaikan Ortu
+                                </span>
                             </div>
                             @else
-                            <span class="text-xs text-gray-400 italic">Belum didaftarkan</span>
-                            @endif
-                        </td>
-                        <td class="py-3.5 px-4 text-right">
-                            @if($s['status'] === 'holiday')
-                                <button type="button" disabled class="inline-flex items-center gap-1.5 bg-gray-50 text-gray-400 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
-                                    <i class="fab fa-whatsapp opacity-40"></i>
-                                    <span>Libur Akhir Pekan</span>
-                                </button>
-                            @elseif($s['status'] === 'absent')
-                                @if($s['parent_phone'])
-                                <form action="{{ route('guru.reminder', $s['id']) }}" method="POST" class="inline-block" data-confirm="Kirim WhatsApp pengingat kehadiran sekarang ke orang tua {{ $s['name'] }} ({{ $s['parent_phone'] }})?" data-title="Kirim Pengingat WhatsApp" data-danger="false" data-icon="question">
-                                    @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95">
-                                        <i class="fab fa-whatsapp"></i>
-                                        <span>Kirim Pengingat</span>
-                                    </button>
-                                </form>
-                                @else
-                                <button type="button" disabled class="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-xs font-medium cursor-not-allowed" title="Nomor WA ortu belum ada">
-                                    <i class="fab fa-whatsapp"></i> Tanpa No WA
-                                </button>
-                                @endif
-                            @else
-                            <span class="text-xs text-emerald-600 font-semibold inline-flex items-center gap-1">
-                                <i class="fas fa-check"></i> Sudah Hadir
-                            </span>
+                            <span class="text-gray-400">-</span>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400">
+                        <td colspan="5" class="py-8 text-center text-gray-400">
                             Belum ada siswa yang terdaftar di kelas ini.
                         </td>
                     </tr>
@@ -353,10 +322,14 @@
             btn.addEventListener('click', () => {
                 filterBtns.forEach(b => {
                     b.classList.remove('bg-blue-600', 'text-white', 'active');
-                    b.classList.add('bg-gray-100', 'text-gray-700');
+                    if (b.dataset.filter === 'permission') {
+                        b.classList.add('bg-purple-50', 'text-purple-700');
+                    } else {
+                        b.classList.add('bg-gray-100', 'text-gray-700');
+                    }
                 });
                 btn.classList.add('bg-blue-600', 'text-white', 'active');
-                btn.classList.remove('bg-gray-100', 'text-gray-700');
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'bg-purple-50', 'text-purple-700');
 
                 currentFilter = btn.dataset.filter || 'all';
                 filterList();

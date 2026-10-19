@@ -6,11 +6,10 @@ use App\Models\AttendanceLog;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
-use App\Services\WhatsAppService;
+use App\Models\StudentPermission;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class TeacherDashboardController extends Controller
 {
@@ -34,7 +33,7 @@ class TeacherDashboardController extends Controller
 
         // Tanggal yang dimonitor (bisa pilih tanggal lewat date picker)
         $selectedDate = $request->input('date', Carbon::today('Asia/Jakarta')->toDateString());
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
             $selectedDate = Carbon::today('Asia/Jakarta')->toDateString();
         }
 
@@ -51,6 +50,7 @@ class TeacherDashboardController extends Controller
             'total' => 0,
             'ontime' => 0,
             'late' => 0,
+            'permission' => 0,
             'absent' => 0,
             'holiday' => 0,
             'percentage' => 0,
@@ -82,16 +82,32 @@ class TeacherDashboardController extends Controller
                 ->get()
                 ->groupBy('student_id');
 
+            // Ambil izin/sakit siswa pada tanggal terpilih
+            $datePermissions = StudentPermission::whereIn('student_id', $students->pluck('id'))
+                ->whereDate('date', $selectedDate)
+                ->get()
+                ->keyBy('student_id');
+
             $ontimeCount = 0;
             $lateCount = 0;
+            $permissionCount = 0;
             $absentCount = 0;
             $holidayCount = 0;
 
-            $studentsData = $students->map(function ($student) use ($dateLogs, $checkinEnd, $isHolidayOrWeekend, &$ontimeCount, &$lateCount, &$absentCount, &$holidayCount) {
+            $studentsData = $students->map(function ($student) use ($dateLogs, $datePermissions, $checkinEnd, $isHolidayOrWeekend, &$ontimeCount, &$lateCount, &$permissionCount, &$absentCount, &$holidayCount) {
+                $permission = $datePermissions->get($student->id);
                 $logs = $dateLogs->get($student->id);
                 $earliestLog = $logs ? $logs->first() : null;
 
-                if ($earliestLog) {
+                $notes = null;
+
+                if ($permission) {
+                    $status = 'permission';
+                    $statusLabel = $permission->type;
+                    $tapTime = 'Disampaikan Ortu';
+                    $notes = $permission->notes;
+                    $permissionCount++;
+                } elseif ($earliestLog) {
                     $timeStr = Carbon::parse($earliestLog->timestamp)->format('H:i');
                     $isOntime = $timeStr <= $checkinEnd;
                     if ($isOntime) {
@@ -127,6 +143,8 @@ class TeacherDashboardController extends Controller
                     'status_label' => $statusLabel,
                     'tap_time' => $tapTime,
                     'device_user_id' => $student->device_user_id,
+                    'permission' => $permission,
+                    'notes' => $notes,
                 ];
             });
 
@@ -137,6 +155,7 @@ class TeacherDashboardController extends Controller
             $stats['total'] = $total;
             $stats['ontime'] = $ontimeCount;
             $stats['late'] = $lateCount;
+            $stats['permission'] = $permissionCount;
             $stats['absent'] = $absentCount;
             $stats['holiday'] = $holidayCount;
             $stats['percentage'] = $percentage;
@@ -149,130 +168,5 @@ class TeacherDashboardController extends Controller
             'stats',
             'user'
         ));
-    }
-
-    /**
-     * Kirim Pengingat WhatsApp 1-Klik ke Orang Tua Murid yang Belum Hadir
-     */
-    public function sendParentReminder(Request $request, Student $student)
-    {
-        // Proteksi jika hari ini akhir pekan / libur
-        if (Setting::isHolidayOrWeekend()) {
-            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
-        }
-
-        $user = Auth::user();
-
-        // Otorisasi: hanya wali kelas bersangkutan atau admin yang boleh mengirim
-        if ($user->isGuru() && $user->school_class_id !== $student->school_class_id) {
-            return back()->with('error', 'Anda hanya memiliki wewenang untuk siswa di kelas Anda.');
-        }
-
-        if (empty($student->parent_phone)) {
-            return back()->with('error', "Nomor WhatsApp orang tua {$student->name} belum terdaftar.");
-        }
-
-        // Cek apakah siswa memang belum hadir
-        $today = Carbon::today('Asia/Jakarta')->toDateString();
-        $alreadyPresent = AttendanceLog::where('student_id', $student->id)
-            ->whereDate('timestamp', $today)
-            ->where('status_code', 0)
-            ->exists();
-
-        if ($alreadyPresent) {
-            return back()->with('warning', "Siswa {$student->name} sudah tercatat hadir hari ini.");
-        }
-
-        $nowWib = Carbon::now('Asia/Jakarta');
-        $timeStr = $nowWib->format('H:i');
-        $dateStr = $nowWib->translatedFormat('l, d F Y');
-        $className = $student->schoolClass->name ?? 'Kelas Siswa';
-        $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
-        $teacherName = $user->name;
-
-        $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-            ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-            ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$className}*.\n\n"
-            ."Mohon konfirmasi kepada pihak sekolah / wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-            ."Terima kasih atas perhatian dan kerja samanya.\n\n"
-            ."Salam hormat,\n"
-            ."Wali Kelas: *{$teacherName}*\n"
-            ."🏫 *{$schoolName}*";
-
-        $success = WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name);
-
-        if ($success) {
-            return back()->with('success', "Pesan pengingat WhatsApp berhasil dikirim ke orang tua {$student->name} ({$student->parent_phone}).");
-        } else {
-            return back()->with('error', 'Gagal mengirim pesan via Gateway WhatsApp. Pastikan OpenWA sedang aktif.');
-        }
-    }
-
-    /**
-     * Kirim Pengingat Massal (Batch) 1-Klik ke Semua Ortu Siswa yang Belum Hadir
-     */
-    public function sendParentReminderAll(Request $request)
-    {
-        // Proteksi jika hari ini akhir pekan / libur
-        if (Setting::isHolidayOrWeekend()) {
-            return back()->with('error', 'Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan.');
-        }
-
-        $user = Auth::user();
-        $classId = $user->isGuru() ? $user->school_class_id : $request->input('school_class_id');
-
-        if (! $classId) {
-            return back()->with('error', 'Kelas belum dipilih atau belum ditugaskan.');
-        }
-
-        $targetClass = SchoolClass::find($classId);
-        if (! $targetClass) {
-            return back()->with('error', 'Data kelas tidak ditemukan.');
-        }
-
-        $today = Carbon::today('Asia/Jakarta')->toDateString();
-        $nowWib = Carbon::now('Asia/Jakarta');
-        $timeStr = $nowWib->format('H:i');
-        $dateStr = $nowWib->translatedFormat('l, d F Y');
-        $schoolName = Setting::get('school_name', 'Sekolah Menengah Kejuruan');
-        $teacherName = $user->name;
-
-        // Ambil siswa di kelas ini yang belum hadir hari ini
-        $presentStudentIds = AttendanceLog::whereDate('timestamp', $today)
-            ->where('status_code', 0)
-            ->pluck('student_id')
-            ->filter()
-            ->unique();
-
-        $absentStudents = Student::where('school_class_id', $classId)
-            ->whereNotIn('id', $presentStudentIds)
-            ->where(function ($q) {
-                $q->where('privilege', 0)->orWhereNull('privilege');
-            })
-            ->whereNotNull('parent_phone')
-            ->where('parent_phone', '!=', '')
-            ->get();
-
-        if ($absentStudents->isEmpty()) {
-            return back()->with('warning', 'Tidak ada siswa yang belum hadir dengan nomor WhatsApp orang tua terdaftar.');
-        }
-
-        $sentCount = 0;
-        foreach ($absentStudents as $student) {
-            $message = "📢 *PEMBERITAHUAN KEHADIRAN SISWA*\n\n"
-                ."Yth. Bapak/Ibu Orang Tua / Wali dari ananda *{$student->name}*,\n\n"
-                ."Menginformasikan bahwa hingga pukul *{$timeStr} WIB* ({$dateStr}), ananda *belum tercatat melakukan presensi fingerprint* di sekolah pada kelas *{$targetClass->name}*.\n\n"
-                ."Mohon konfirmasi kepada wali kelas apabila ananda berhalangan hadir (sakit/izin) atau sedang dalam perjalanan ke sekolah.\n\n"
-                ."Terima kasih atas perhatian dan kerja samanya.\n\n"
-                ."Salam hormat,\n"
-                ."Wali Kelas: *{$teacherName}*\n"
-                ."🏫 *{$schoolName}*";
-
-            if (WhatsAppService::sendRawMessage($student->parent_phone, $message, $student->name)) {
-                $sentCount++;
-            }
-        }
-
-        return back()->with('success', "Berhasil mengirim pengingat WhatsApp ke {$sentCount} dari ".$absentStudents->count().' orang tua siswa yang belum hadir.');
     }
 }

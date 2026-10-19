@@ -1,7 +1,6 @@
 <?php
 
 use App\Events\AttendanceCreated;
-use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Middleware\RestrictInternalApiAccess;
 use App\Models\AttendanceLog;
 use App\Models\Device;
@@ -132,6 +131,3 @@ Route::middleware(['throttle:120,1', RestrictInternalApiAccess::class])->group(f
         ]);
     });
 });
-
-// Webhook OpenWA untuk Pesan Masuk & Auto-Reply (Terproteksi Throttle)
-Route::match(['get', 'post'], '/webhook/openwa', [WhatsAppWebhookController::class, 'handleWebhook'])->middleware('throttle:60,1');

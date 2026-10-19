@@ -15,7 +15,7 @@
                     Monitoring: <span class="text-yellow-300">{{ $currentMajor ? $currentMajor->name : 'Pilih Jurusan' }}</span>
                 </h1>
                 <p class="text-indigo-100 mt-1 text-sm sm:text-base max-w-2xl">
-                    Pantau akumulasi kehadiran seluruh kelas di jurusan, bandingkan tingkat kedisiplinan antar-kelas, dan kirim pengingat WhatsApp ke orang tua murid.
+                    Pantau akumulasi kehadiran seluruh kelas di jurusan dan bandingkan tingkat kedisiplinan antar-kelas secara transparan.
                 </p>
                 <div class="flex flex-wrap items-center gap-3 mt-3 text-xs sm:text-sm text-indigo-200">
                     <span class="inline-flex items-center gap-1.5"><i class="far fa-calendar-alt text-yellow-300"></i> Tanggal: <strong>{{ $majorStats['date_formatted'] }}</strong></span>
@@ -62,24 +62,7 @@
                     @endif
                 </form>
 
-                @if($currentMajor)
-                    @if($majorStats['is_holiday'])
-                    <!-- Tombol Disabled Jika Akhir Pekan / Libur -->
-                    <button type="button" disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 text-white/60 font-semibold px-4 py-2.5 rounded-xl border border-white/20 text-sm cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
-                        <i class="fab fa-whatsapp text-lg opacity-40"></i>
-                        <span>Pengingat WA Nonaktif (Libur)</span>
-                    </button>
-                    @elseif($majorStats['absent_count'] > 0)
-                    <!-- Tombol 1-Klik Ingatkan Semua Ortu di Jurusan -->
-                    <form action="{{ route('monitoring.jurusan.reminder_all', $currentMajor->id) }}" method="POST" data-confirm="Kirim WhatsApp pengingat otomatis ke SEMUA orang tua siswa jurusan {{ $currentMajor->name }} yang belum hadir hari ini ({{ $majorStats['absent_count'] }} siswa)?" data-title="Kirim Pengingat Seluruh Jurusan" data-danger="false" data-icon="question">
-                        @csrf
-                        <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-500/30 transition border border-emerald-400/40 text-sm">
-                            <i class="fab fa-whatsapp text-lg"></i>
-                            <span>Ingatkan Se-Jurusan ({{ $majorStats['absent_count'] }})</span>
-                        </button>
-                    </form>
-                    @endif
-                @endif
+
 
                 <a href="{{ route('guru.dashboard') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-xl backdrop-blur transition border border-white/30 text-sm">
                     <i class="fas fa-chalkboard-teacher text-yellow-300"></i>
@@ -102,7 +85,7 @@
                     <span class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Aktif</span>
                 </h4>
                 <p class="text-xs text-gray-600 mt-0.5 leading-relaxed">
-                    Tanggal <strong>{{ $majorStats['date_formatted'] }}</strong> terdeteksi sebagai hari libur / akhir pekan. Status siswa yang tidak hadir di jurusan ini tercatat sebagai <span class="font-bold text-indigo-700">Libur Akhir Pekan</span> (bukan bolos/alpha). Tombol pengingat WhatsApp dinonaktifkan demi kenyamanan orang tua murid.
+                    Tanggal <strong>{{ $majorStats['date_formatted'] }}</strong> terdeteksi sebagai hari libur / akhir pekan. Status siswa yang tidak hadir di jurusan ini tercatat sebagai <span class="font-bold text-indigo-700">Libur Akhir Pekan</span> (bukan bolos/alpha).
                 </p>
             </div>
         </div>
@@ -241,21 +224,9 @@
 
                 <!-- Action Buttons Per Kelas -->
                 <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
-                    <a href="{{ route('guru.dashboard', ['class_id' => $cb['id'], 'date' => $majorStats['date']]) }}" class="flex-1 text-center py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition">
+                    <a href="{{ route('guru.dashboard', ['class_id' => $cb['id'], 'date' => $majorStats['date']]) }}" class="w-full text-center py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition">
                         Detail Kelas
                     </a>
-                    @if($majorStats['is_holiday'])
-                    <button type="button" disabled class="py-1.5 px-2.5 rounded-lg bg-gray-100 text-gray-400 text-xs font-semibold cursor-not-allowed border border-gray-200" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
-                        <i class="fab fa-whatsapp opacity-40"></i> Libur
-                    </button>
-                    @elseif($cb['absent'] > 0)
-                    <form action="{{ route('monitoring.jurusan.class_reminder_all', [$currentMajor->id, $cb['id']]) }}" method="POST" data-confirm="Kirim WhatsApp pengingat ke orang tua {{ $cb['absent'] }} siswa kelas {{ $cb['name'] }} yang belum hadir hari ini?" data-title="Kirim Pengingat Kelas" data-danger="false" data-icon="question">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-sm" title="Kirim WA ke ortu siswa belum hadir di kelas ini">
-                            <i class="fab fa-whatsapp"></i> WA ({{ $cb['absent'] }})
-                        </button>
-                    </form>
-                    @endif
                 </div>
             </div>
             @empty
@@ -316,8 +287,6 @@
                         <th class="py-3.5 px-4">Kelas</th>
                         <th class="py-3.5 px-4 text-center">Status Kehadiran</th>
                         <th class="py-3.5 px-4 text-center">Waktu Presensi</th>
-                        <th class="py-3.5 px-4">Kontak Orang Tua</th>
-                        <th class="py-3.5 px-4 text-right">Aksi Notifikasi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
@@ -368,42 +337,6 @@
                         </td>
                         <td class="py-3.5 px-4 text-center font-mono font-semibold {{ in_array($s['status'], ['absent', 'holiday']) ? 'text-gray-400' : 'text-gray-700' }}">
                             {{ $s['tap_time'] }}
-                        </td>
-                        <td class="py-3.5 px-4">
-                            @if($s['parent_phone'])
-                            <div class="flex items-center gap-1.5 font-mono text-xs text-gray-700">
-                                <i class="fab fa-whatsapp text-emerald-500 text-sm"></i>
-                                <span>{{ $s['parent_phone'] }}</span>
-                            </div>
-                            @else
-                            <span class="text-xs text-gray-400 italic">Belum didaftarkan</span>
-                            @endif
-                        </td>
-                        <td class="py-3.5 px-4 text-right">
-                            @if($s['status'] === 'holiday')
-                                <button type="button" disabled class="inline-flex items-center gap-1.5 bg-gray-50 text-gray-400 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium cursor-not-allowed" title="Hari ini libur akhir pekan, pengingat WhatsApp dinonaktifkan">
-                                    <i class="fab fa-whatsapp opacity-40"></i>
-                                    <span>Libur Akhir Pekan</span>
-                                </button>
-                            @elseif($s['status'] === 'absent')
-                                @if($s['parent_phone'])
-                                <form action="{{ route('guru.reminder', $s['id']) }}" method="POST" class="inline-block" data-confirm="Kirim WhatsApp pengingat kehadiran sekarang ke orang tua {{ $s['name'] }} ({{ $s['parent_phone'] }})?" data-title="Kirim Pengingat WhatsApp" data-danger="false" data-icon="question">
-                                    @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition active:scale-95">
-                                        <i class="fab fa-whatsapp"></i>
-                                        <span>Kirim Pengingat</span>
-                                    </button>
-                                </form>
-                                @else
-                                <button type="button" disabled class="inline-flex items-center gap-1 bg-gray-100 text-gray-400 px-3 py-1.5 rounded-lg text-xs font-medium cursor-not-allowed">
-                                    <i class="fab fa-whatsapp"></i> Tanpa No WA
-                                </button>
-                                @endif
-                            @else
-                            <span class="text-xs text-emerald-600 font-semibold inline-flex items-center gap-1">
-                                <i class="fas fa-check"></i> Sudah Hadir
-                            </span>
-                            @endif
                         </td>
                     </tr>
                     @empty

@@ -31,7 +31,7 @@
                         placeholder="Contoh: SMK Negeri 1 Jakarta"
                         class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     >
-                    <p class="text-xs text-gray-400 mt-1">Nama ini akan tercantum pada kop surat laporan PDF dan pesan WhatsApp.</p>
+                    <p class="text-xs text-gray-400 mt-1">Nama ini akan tercantum pada kop surat laporan PDF dan dokumen resmi.</p>
                 </div>
             </div>
 
@@ -200,104 +200,7 @@
                 </div>
             </div>
 
-            <!-- Card 4: Notifikasi WhatsApp & Integrasi OpenWA -->
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-                <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
-                    <div>
-                        <h3 class="text-base font-bold text-gray-800 flex items-center">
-                            <i class="fab fa-whatsapp text-green-500 text-xl mr-2"></i> Integrasi WhatsApp (OpenWA Gateway)
-                        </h3>
-                        <p class="text-xs text-gray-500 mt-0.5">Kirim pesan WhatsApp otomatis ke wali murid & terima pesan pesan masuk via Webhook OpenWA.</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="wa_notification" value="1" {{ $settings['wa_notification'] == '1' ? 'checked' : '' }} class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    </label>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-                    <!-- URL Server OpenWA -->
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fas fa-server text-gray-400 mr-1"></i> URL Server OpenWA (REST API)
-                        </label>
-                        <input 
-                            type="text" 
-                            name="openwa_url" 
-                            value="{{ old('openwa_url', $settings['openwa_url']) }}" 
-                            placeholder="http://localhost:2785 atau https://openwa.domain.com"
-                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-green-500 focus:outline-none"
-                        >
-                        <p class="text-[11px] text-gray-400 mt-1">Alamat IP / Domain tempat server OpenWA REST API dijalankan (Contoh: <code class="bg-gray-100 px-1 rounded">http://localhost:2785</code>).</p>
-                    </div>
-
-                    <!-- Session ID -->
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fas fa-key text-gray-400 mr-1"></i> Nama Session OpenWA
-                        </label>
-                        <input 
-                            type="text" 
-                            name="openwa_session" 
-                            value="{{ old('openwa_session', $settings['openwa_session']) }}" 
-                            placeholder="default"
-                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-green-500 focus:outline-none"
-                        >
-                        <p class="text-[11px] text-gray-400 mt-1">Nama sesi WhatsApp (biasanya: <code class="bg-gray-100 px-1 rounded">default</code>).</p>
-                    </div>
-
-                    <!-- API Key -->
-                    <div class="md:col-span-3">
-                        <label class="block text-xs font-bold text-gray-700 mb-1">
-                            <i class="fas fa-shield-alt text-gray-400 mr-1"></i> OpenWA API Key (Opsional)
-                        </label>
-                        <input 
-                            type="password" 
-                            name="openwa_api_key" 
-                            value="{{ old('openwa_api_key', $settings['openwa_api_key']) }}" 
-                            placeholder="Kosongkan jika server OpenWA Anda tidak menggunakan API Key"
-                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-green-500 focus:outline-none"
-                        >
-                        <p class="text-[11px] text-gray-400 mt-1">Kunci autentikasi header X-API-Key (jika diatur pada konfigurasi OpenWA).</p>
-                    </div>
-                </div>
-
-                <!-- Box Webhook OpenWA Realtime -->
-                <div class="bg-emerald-50/70 border border-emerald-200 rounded-lg p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex-1">
-                            <h4 class="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center mb-1">
-                                <i class="fas fa-satellite-dish text-emerald-600 mr-1.5"></i> URL Webhook Penerima Pesan (OpenWA Webhook)
-                            </h4>
-                            <p class="text-xs text-emerald-800 mb-2 leading-relaxed">
-                                Masukkan URL webhook ini ke dalam konfigurasi OpenWA Anda agar pesan masuk dapat ditangkap secara real-time untuk fitur auto-reply dan cek kehadiran:
-                            </p>
-                            <div class="flex items-center gap-2">
-                                <input 
-                                    type="text" 
-                                    readonly 
-                                    id="webhook-url-input"
-                                    value="{{ url('/api/webhook/openwa') }}" 
-                                    class="w-full bg-white text-emerald-900 font-mono text-xs p-2.5 rounded-lg border border-emerald-300 select-all font-semibold"
-                                >
-                                <button 
-                                    type="button" 
-                                    onclick="copyWebhookUrl()" 
-                                    id="btn-copy-webhook"
-                                    class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2.5 rounded-lg transition whitespace-nowrap flex items-center gap-1.5 shadow-sm"
-                                >
-                                    <i class="far fa-copy"></i> Salin URL
-                                </button>
-                            </div>
-                            <p class="text-[11px] text-emerald-700 mt-2">
-                                <i class="fas fa-check-circle text-emerald-600 mr-1"></i> Mendukung format payload OpenWA: event <code class="bg-emerald-100 text-emerald-900 px-1 rounded font-mono">message.received</code> dengan data <code class="bg-emerald-100 text-emerald-900 px-1 rounded font-mono">data.from</code>, <code class="bg-emerald-100 text-emerald-900 px-1 rounded font-mono">data.body</code>, dan <code class="bg-emerald-100 text-emerald-900 px-1 rounded font-mono">data.contact.pushName</code>.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 5: Pengaturan Mode TV Layar Absen (Leaderboard) -->
+            <!-- Card 4: Pengaturan Mode TV Layar Absen (Leaderboard) -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-purple-600">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-100 gap-3">
                     <div>
@@ -582,56 +485,7 @@
                     <i class="fas fa-save mr-2"></i> Simpan Semua Pengaturan
                 </button>
             </div>
-        </div>
     </form>
-
-    <!-- Card Terpisah: Uji Coba Pengiriman WhatsApp via OpenWA -->
-    <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-600">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-gray-100">
-            <div>
-                <h3 class="text-base font-bold text-gray-800 flex items-center">
-                    <i class="fab fa-whatsapp text-emerald-600 text-lg mr-2"></i> Uji Coba Pengiriman WhatsApp (OpenWA Test)
-                </h3>
-                <p class="text-xs text-gray-500 mt-0.5">Kirim pesan uji coba langsung ke nomor WhatsApp Anda untuk memastikan koneksi ke server OpenWA berfungsi dengan lancar.</p>
-            </div>
-        </div>
-
-        <form action="{{ route('settings.test_whatsapp') }}" method="POST" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
-            @csrf
-            <div class="md:col-span-4">
-                <label class="block text-xs font-bold text-gray-700 mb-1">
-                    <i class="fas fa-mobile-alt text-emerald-600 mr-1"></i> Nomor HP / JID Tujuan:
-                </label>
-                <input 
-                    type="text" 
-                    name="test_phone" 
-                    required 
-                    placeholder="081234567890 atau 628xxx@c.us" 
-                    class="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                <p class="text-[10px] text-gray-400 mt-1">Bisa format 0812..., 62812..., atau JID OpenWA (@c.us / @lid).</p>
-            </div>
-
-            <div class="md:col-span-5">
-                <label class="block text-xs font-bold text-gray-700 mb-1">
-                    <i class="far fa-comment-alt text-gray-400 mr-1"></i> Isi Pesan Uji Coba (Opsional):
-                </label>
-                <input 
-                    type="text" 
-                    name="test_message" 
-                    placeholder="Pesan tes otomatis presensi sekolah" 
-                    class="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                <p class="text-[10px] text-gray-400 mt-1">Kosongkan untuk menggunakan pesan template default.</p>
-            </div>
-
-            <div class="md:col-span-3">
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fas fa-paper-plane"></i> Kirim Pesan Uji Coba
-                </button>
-            </div>
-        </form>
-    </div>
 
     <!-- Card Terpisah: Simulasi & Uji Coba Manual Streak Mode TV -->
     <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-indigo-100 border-l-4 border-l-indigo-600">
@@ -820,28 +674,6 @@
             input.classList.add('ring-2', 'ring-purple-500');
             setTimeout(() => input.classList.remove('ring-2', 'ring-purple-500'), 600);
         }
-    }
-
-    function copyWebhookUrl() {
-        const input = document.getElementById('webhook-url-input');
-        const btn = document.getElementById('btn-copy-webhook');
-        if (!input) return;
-
-        input.select();
-        input.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(input.value).then(() => {
-            if (btn) {
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check"></i> Tersalin!';
-                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-                btn.classList.add('bg-green-700');
-                setTimeout(() => {
-                    btn.innerHTML = originalHtml;
-                    btn.classList.remove('bg-green-700');
-                    btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
-                }, 2000);
-            }
-        });
     }
 </script>
 @endsection

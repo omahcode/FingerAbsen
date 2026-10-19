@@ -63,10 +63,17 @@
             </div>
         </div>
 
+        <!-- Nomor Induk Siswa (NIS Resmi) -->
+        <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Nomor Induk Siswa (NIS Resmi)</label>
+            <input type="text" name="nis" class="border border-gray-300 w-full p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="{{ old('nis', $student->nis) }}" placeholder="Contoh: 20241011">
+            <p class="text-[11px] text-gray-400 mt-1">NIS resmi siswa untuk verifikasi akun di Portal Orang Tua.</p>
+        </div>
+
         <!-- NIS & Status Fingerprint -->
         <div>
             <div class="flex items-center justify-between mb-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">NIS / ID Mesin (Terkunci)</label>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">PIN / ID Mesin (Terkunci)</label>
                 @if(($student->fingerprint_templates_count ?? 0) > 0)
                     <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                         <i class="fas fa-fingerprint text-emerald-600"></i> Terdaftar ({{ $student->fingerprint_templates_count }} Jari)
@@ -78,7 +85,7 @@
                 @endif
             </div>
             <input type="number" class="border w-full p-2.5 rounded-lg bg-gray-100 text-gray-500 text-sm font-mono" value="{{ $student->device_user_id }}" disabled>
-            <p class="text-[11px] text-gray-400 mt-1">NIS menjadi nomor PIN pengenal di seluruh mesin fingerprint.</p>
+            <p class="text-[11px] text-gray-400 mt-1">Nomor PIN pengenal di seluruh mesin fingerprint.</p>
         </div>
 
         <!-- Nama Lengkap -->

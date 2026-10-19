@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Student extends Model
 {
     protected $fillable = [
+        'nis',
         'name',
         'photo',
         'school_class_id',
@@ -37,6 +39,21 @@ class Student extends Model
         return $this->hasMany(AttendanceLog::class);
     }
 
+    public function permissions()
+    {
+        return $this->hasMany(StudentPermission::class);
+    }
+
+    public function studentPermissions()
+    {
+        return $this->hasMany(StudentPermission::class);
+    }
+
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(ParentPushSubscription::class);
+    }
+
     public function fingerprintTemplates()
     {
         return $this->hasMany(FingerprintTemplate::class, 'device_user_id', 'device_user_id');
@@ -53,7 +70,7 @@ class Student extends Model
      */
     public function calculateConsecutiveStreak($endDate = null): int
     {
-        $currentDate = $endDate ? \Carbon\Carbon::parse($endDate, 'Asia/Jakarta') : \Carbon\Carbon::today('Asia/Jakarta');
+        $currentDate = $endDate ? Carbon::parse($endDate, 'Asia/Jakarta') : Carbon::today('Asia/Jakarta');
         $streak = (int) ($this->manual_streak ?? 0);
 
         // Ambil riwayat tanggal siswa pernah absen masuk
@@ -61,7 +78,7 @@ class Student extends Model
             ->where('status_code', 0)
             ->whereDate('timestamp', '<=', $currentDate->toDateString())
             ->pluck('timestamp')
-            ->map(fn($t) => \Carbon\Carbon::parse($t, 'Asia/Jakarta')->toDateString())
+            ->map(fn ($t) => Carbon::parse($t, 'Asia/Jakarta')->toDateString())
             ->unique()
             ->flip(); // Menggunakan flip untuk O(1) lookup
 
@@ -69,16 +86,16 @@ class Student extends Model
         $lookbackLimit = 60; // Cek hingga 60 hari ke belakang
 
         // Jika hari ini bukan hari sekolah efektif (Sabtu/Minggu/Libur), mundur ke hari sekolah efektif terakhir
-        if (!Setting::isSchoolDay($checkDate)) {
-            while (!Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
+        if (! Setting::isSchoolDay($checkDate)) {
+            while (! Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
                 $checkDate->subDay();
                 $lookbackLimit--;
             }
-        } elseif (!isset($attendedDates[$checkDate->toDateString()])) {
+        } elseif (! isset($attendedDates[$checkDate->toDateString()])) {
             // Hari ini adalah hari sekolah tapi siswa belum hadir hari ini (misal pagi hari):
             // Jangan langsung hanguskan streak, periksa hari sekolah sebelumnya
             $checkDate->subDay();
-            while (!Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
+            while (! Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
                 $checkDate->subDay();
                 $lookbackLimit--;
             }
@@ -86,9 +103,10 @@ class Student extends Model
 
         while ($lookbackLimit > 0) {
             // Lewati hari yang bukan hari sekolah (akhir pekan / libur)
-            if (!Setting::isSchoolDay($checkDate)) {
+            if (! Setting::isSchoolDay($checkDate)) {
                 $checkDate->subDay();
                 $lookbackLimit--;
+
                 continue;
             }
 
