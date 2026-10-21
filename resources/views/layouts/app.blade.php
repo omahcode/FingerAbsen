@@ -270,9 +270,14 @@
                             <span class="sidebar-text truncate">Data Guru</span>
                         </a>
 
-                        <a href="{{ route('admin.teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.teachers.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Kelola Akun Guru">
-                            <i class="fas fa-user-tie w-5 text-center shrink-0 {{ request()->routeIs('admin.teachers.*') ? 'text-white' : 'text-cyan-400' }}"></i>
-                            <span class="sidebar-text truncate">Kelola Akun Guru</span>
+                        <a href="{{ route('admin.users.index') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.users.*') || request()->routeIs('users.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Manajemen Pengguna (Guru, Kepsek, Admin)">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-users-cog w-5 text-center shrink-0 {{ request()->routeIs('admin.users.*') || request()->routeIs('users.*') ? 'text-white' : 'text-amber-400' }}"></i>
+                                <span class="sidebar-text truncate">Manajemen Users</span>
+                            </div>
+                            <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                                Baru
+                            </span>
                         </a>
                     </nav>
                 </div>

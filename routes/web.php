@@ -18,6 +18,7 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherDashboardController;
 use App\Http\Controllers\TeacherManagementController;
 use App\Http\Controllers\TvController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -85,7 +86,12 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/announcements/{id}/reject', [AnnouncementController::class, 'reject'])->name('admin.announcements.reject');
     Route::delete('admin/announcements/{id}', [AnnouncementController::class, 'adminDestroy'])->name('admin.announcements.destroy');
 
-    // Manajemen Akun Guru (Admin)
+    // Manajemen Seluruh Akun Pengguna (Users: Guru, Kepala Sekolah, Admin)
+    Route::post('admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset_password');
+    Route::resource('admin/users', UserController::class)->names('admin.users')->except(['create', 'show', 'edit']);
+    Route::get('users', fn () => redirect()->route('admin.users.index'))->name('users.index');
+
+    // Manajemen Akun Guru (Admin) - Kompatibilitas rute lama
     Route::resource('admin/teachers', TeacherManagementController::class)->names('admin.teachers')->except(['create', 'show', 'edit']);
 
     // Manajemen Mesin & Master Data
