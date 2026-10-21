@@ -40,6 +40,16 @@ class User extends Authenticatable
         return $this->role === 'guru';
     }
 
+    public function isKepalaSekolah(): bool
+    {
+        return $this->role === 'kepala_sekolah';
+    }
+
+    public function canAccessTeachers(): bool
+    {
+        return $this->isAdmin() || $this->isKepalaSekolah();
+    }
+
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class);

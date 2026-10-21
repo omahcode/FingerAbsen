@@ -161,4 +161,61 @@ class TeacherFeatureTest extends TestCase
             'category' => 'GURU PPKN',
         ]);
     }
+
+    public function test_kepala_sekolah_can_view_teachers_page_and_ceremony(): void
+    {
+        $kepsek = User::factory()->create([
+            'role' => 'kepala_sekolah',
+            'name' => 'Bapak Kepala Sekolah',
+            'email' => 'kepsek_test@sekolah.sch.id',
+        ]);
+
+        Teacher::create([
+            'nip' => '197701012000011001',
+            'name' => 'Drs. Suparman',
+            'category' => 'GURU BIOLOGI',
+            'device_user_id' => '197701012000011001',
+        ]);
+
+        $responseIndex = $this->actingAs($kepsek)->get(route('teachers.index'));
+        $responseIndex->assertStatus(200);
+        $responseIndex->assertSee('Data Guru (User Mesin)');
+        $responseIndex->assertSee('Drs. Suparman');
+        $responseIndex->assertSee('Presensi Upacara');
+
+        $responseCeremony = $this->actingAs($kepsek)->get(route('teachers.ceremony'));
+        $responseCeremony->assertStatus(200);
+        $responseCeremony->assertSee('Presensi Upacara Dewan Guru');
+        $responseCeremony->assertSee('Drs. Suparman');
+    }
+
+    public function test_guru_cannot_view_teachers_page_or_ceremony(): void
+    {
+        $guru = User::factory()->create([
+            'role' => 'guru',
+            'name' => 'Wali Kelas X',
+        ]);
+
+        $responseIndex = $this->actingAs($guru)->get(route('teachers.index'));
+        $responseIndex->assertStatus(403);
+
+        $responseCeremony = $this->actingAs($guru)->get(route('teachers.ceremony'));
+        $responseCeremony->assertStatus(403);
+    }
+
+    public function test_kepala_sekolah_redirected_to_ceremony_page_on_login(): void
+    {
+        $kepsek = User::factory()->create([
+            'role' => 'kepala_sekolah',
+            'email' => 'kepsek_login@sekolah.sch.id',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $response = $this->post(route('login.post'), [
+            'email' => 'kepsek_login@sekolah.sch.id',
+            'password' => 'password123',
+        ]);
+
+        $response->assertRedirect(route('teachers.ceremony'));
+    }
 }

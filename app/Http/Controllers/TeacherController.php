@@ -14,10 +14,23 @@ use Maatwebsite\Excel\Facades\Excel;
 class TeacherController extends Controller
 {
     /**
+     * Otorisasi akses Master Data Guru & Presensi Upacara
+     */
+    protected function authorizeAccess(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->canAccessTeachers()) {
+            abort(403, 'Akses terbatas untuk Administrator dan Kepala Sekolah.');
+        }
+    }
+
+    /**
      * Tampilkan data guru (NIP, NAMA GURU, KATEGORI, SIDIK JARI, AKSI)
      */
     public function index(Request $request)
     {
+        $this->authorizeAccess();
+
         $query = Teacher::withCount('fingerprintTemplates');
 
         // Filter Kategori (GURU MTK, GURU PPKN, GURU SEJARAH, GURU JURUSAN, dll)
@@ -80,6 +93,8 @@ class TeacherController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'nip' => 'required|string|max:50|unique:teachers,nip',
             'name' => 'required|string|max:150',
@@ -116,6 +131,8 @@ class TeacherController extends Controller
      */
     public function update(Request $request, Teacher $teacher)
     {
+        $this->authorizeAccess();
+
         $validated = $request->validate([
             'nip' => 'required|string|max:50|unique:teachers,nip,'.$teacher->id,
             'name' => 'required|string|max:150',
@@ -153,6 +170,8 @@ class TeacherController extends Controller
      */
     public function destroy(Teacher $teacher)
     {
+        $this->authorizeAccess();
+
         $name = $teacher->name;
         $pin = $teacher->device_user_id;
 
@@ -174,6 +193,8 @@ class TeacherController extends Controller
      */
     public function destroyMultiple(Request $request)
     {
+        $this->authorizeAccess();
+
         $ids = $request->input('ids', []);
         if (empty($ids)) {
             return back()->with('error', 'Pilih minimal satu data guru untuk dihapus.');
@@ -200,6 +221,8 @@ class TeacherController extends Controller
      */
     public function syncAll()
     {
+        $this->authorizeAccess();
+
         $teachers = Teacher::all();
         $devices = Device::all();
 
@@ -221,6 +244,8 @@ class TeacherController extends Controller
      */
     public function ceremonyAttendance(Request $request)
     {
+        $this->authorizeAccess();
+
         $date = $request->query('date', Carbon::today('Asia/Jakarta')->toDateString());
         $category = $request->query('category');
 
@@ -288,6 +313,8 @@ class TeacherController extends Controller
      */
     public function importForm()
     {
+        $this->authorizeAccess();
+
         $existingCategories = Teacher::distinct()->pluck('category')->filter()->toArray();
         $categories = array_values(array_unique(array_merge(Teacher::$defaultCategories, $existingCategories)));
         sort($categories);
@@ -300,6 +327,8 @@ class TeacherController extends Controller
      */
     public function importExcel(Request $request)
     {
+        $this->authorizeAccess();
+
         $request->validate([
             'file_excel' => 'required|file|mimes:xlsx,xls,csv|max:4096',
         ], [
@@ -328,6 +357,8 @@ class TeacherController extends Controller
      */
     public function downloadTemplate(Request $request)
     {
+        $this->authorizeAccess();
+
         $format = $request->query('format', 'xlsx');
         if (! in_array($format, ['xlsx', 'csv'])) {
             $format = 'xlsx';

@@ -49,6 +49,10 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('guru.dashboard');
         }
 
+        if (Auth::user()->isKepalaSekolah()) {
+            return redirect()->route('teachers.ceremony');
+        }
+
         return redirect()->route('devices.index');
     });
 

@@ -171,7 +171,9 @@
                             <i class="fas fa-clipboard-check w-5 text-center shrink-0 {{ request()->routeIs('attendance.index') ? 'text-white' : 'text-emerald-400' }}"></i>
                             <span class="sidebar-text truncate">Log & Rekap Absensi</span>
                         </a>
+                        @endif
 
+                        @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
                         <a href="{{ route('teachers.ceremony') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.ceremony*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Presensi Guru (Upacara & Acara)">
                             <div class="flex items-center gap-3 overflow-hidden">
                                 <i class="fas fa-flag w-5 text-center shrink-0 {{ request()->routeIs('teachers.ceremony*') ? 'text-white' : 'text-rose-400' }}"></i>
@@ -180,6 +182,13 @@
                             <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
                                 Guru
                             </span>
+                        </a>
+                        @endif
+
+                        @if(Auth::user()->isKepalaSekolah())
+                        <a href="{{ route('teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.index*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Guru (User Mesin)">
+                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('teachers.index*') ? 'text-white' : 'text-emerald-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Guru</span>
                         </a>
                         @endif
                     </nav>
@@ -268,10 +277,11 @@
                     </nav>
                 </div>
 
-                <!-- SECTION 4: SISTEM & LAPORAN (ADMIN ONLY) -->
+                <!-- SECTION 4: SISTEM & LAPORAN -->
+                @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
                 <div>
                     <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
-                        Sistem & Laporan
+                        {{ Auth::user()->isAdmin() ? 'Sistem & Laporan' : 'Laporan Sekolah' }}
                     </div>
                     <nav class="space-y-1">
                         <a href="{{ route('reports.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('reports.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Rekap & Ekspor PDF">
@@ -279,6 +289,7 @@
                             <span class="sidebar-text truncate">Rekap & PDF</span>
                         </a>
 
+                        @if(Auth::user()->isAdmin())
                         <a href="{{ route('sync.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('sync.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Sinkronisasi ADMS Mesin">
                             <i class="fas fa-sync-alt w-5 text-center shrink-0 {{ request()->routeIs('sync.*') ? 'text-white' : 'text-yellow-400' }}"></i>
                             <span class="sidebar-text truncate">Sinkronisasi ADMS</span>
@@ -293,8 +304,10 @@
                             <i class="fas fa-flask w-5 text-center shrink-0 text-purple-400"></i>
                             <span class="sidebar-text truncate">Simulasi Absensi</span>
                         </a>
+                        @endif
                     </nav>
                 </div>
+                @endif
                 @endif
                 @endauth
 
@@ -305,13 +318,13 @@
             <div class="p-3 border-t border-slate-800/80 bg-slate-950 shrink-0">
                 <div class="sidebar-user-card flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                     <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-bold flex items-center justify-center shrink-0 text-xs">
+                        <div class="w-8 h-8 rounded-lg {{ Auth::user()->isKepalaSekolah() ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : (Auth::user()->isGuru() ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40' : 'bg-indigo-600/30 text-indigo-400 border border-indigo-500/40') }} font-bold flex items-center justify-center shrink-0 text-xs">
                             {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                         </div>
                         <div class="sidebar-user-info overflow-hidden">
                             <div class="font-bold text-white text-xs truncate max-w-[100px] xl:max-w-[120px]">{{ Auth::user()->name }}</div>
-                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1 py-0.2 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40' }}">
-                                {{ Auth::user()->isGuru() ? 'Wali Kelas' : 'Admin' }}
+                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : (Auth::user()->isKepalaSekolah() ? 'bg-amber-950 text-amber-300 border border-amber-600/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40') }}">
+                                {{ Auth::user()->isGuru() ? 'Wali Kelas' : (Auth::user()->isKepalaSekolah() ? 'Kepala Sekolah' : 'Admin') }}
                             </span>
                         </div>
                     </div>
