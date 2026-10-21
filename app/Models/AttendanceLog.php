@@ -10,12 +10,12 @@ class AttendanceLog extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['device_id', 'device_user_id', 'student_id', 'timestamp', 'status_code'];
+    protected $fillable = ['device_id', 'device_user_id', 'student_id', 'teacher_id', 'timestamp', 'status_code'];
 
     protected static function booted(): void
     {
         static::created(function (AttendanceLog $log) {
-            if (in_array((int) $log->status_code, [0, 1])) {
+            if ($log->student_id && in_array((int) $log->status_code, [0, 1])) {
                 SendWebPushAttendanceJob::dispatch($log);
             }
         });
@@ -24,6 +24,11 @@ class AttendanceLog extends Model
     public function student()
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class);
     }
 
     public function device()

@@ -14,6 +14,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentDepartureMonitoringController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherDashboardController;
 use App\Http\Controllers\TeacherManagementController;
 use App\Http\Controllers\TvController;
@@ -99,6 +100,12 @@ Route::middleware('auth')->group(function () {
     Route::post('students/delete-multiple', [StudentController::class, 'destroyMultiple'])->name('students.destroyMultiple');
     Route::resource('students', StudentController::class)->except(['show']);
     Route::post('students/sync', [StudentController::class, 'sync'])->name('students.sync');
+
+    // Master Data Guru (User Mesin & Fingerprint)
+    Route::get('teachers/ceremony', [TeacherController::class, 'ceremonyAttendance'])->name('teachers.ceremony');
+    Route::post('teachers/sync-all', [TeacherController::class, 'syncAll'])->name('teachers.sync_all');
+    Route::post('teachers/delete-multiple', [TeacherController::class, 'destroyMultiple'])->name('teachers.destroyMultiple');
+    Route::resource('teachers', TeacherController::class)->except(['create', 'show', 'edit']);
 
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance/sync', [AttendanceController::class, 'sync'])->name('attendance.sync');

@@ -10,6 +10,7 @@ use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -161,15 +162,19 @@ class IclockController extends Controller
             $size = $request->query('size', strlen($body));
             $tmp = base64_encode($body);
 
-            $defaultClass = SchoolClass::first();
-            $student = Student::firstOrCreate(
-                ['device_user_id' => (string) $pin],
-                [
-                    'name' => 'Siswa '.$pin,
-                    'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                    'privilege' => '0',
-                ]
-            );
+            $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+            $student = null;
+            if (! $teacher) {
+                $defaultClass = SchoolClass::first();
+                $student = Student::firstOrCreate(
+                    ['device_user_id' => (string) $pin],
+                    [
+                        'name' => 'Siswa '.$pin,
+                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                        'privilege' => '0',
+                    ]
+                );
+            }
 
             FingerprintTemplate::updateOrCreate(
                 [
@@ -177,7 +182,8 @@ class IclockController extends Controller
                     'finger_index' => (int) $fid,
                 ],
                 [
-                    'student_id' => $student->id,
+                    'student_id' => $student ? $student->id : null,
+                    'teacher_id' => $teacher ? $teacher->id : null,
                     'size' => (int) $size,
                     'valid' => 1,
                     'template_data' => $tmp,
@@ -404,9 +410,25 @@ class IclockController extends Controller
             }
 
             $student = Student::where('device_user_id', (string) $userId)->first();
+            $teacher = Teacher::where('device_user_id', (string) $userId)->first();
             $isStrict = env('STRICT_ATTENDANCE', true);
 
-            if ($isStrict && $student) {
+            if ($teacher) {
+                // Anti-duplikat harian untuk guru (misal presensi upacara / kehadiran guru)
+                $date = substr($timestamp, 0, 10);
+                $exists = AttendanceLog::withTrashed()
+                    ->where('teacher_id', $teacher->id)
+                    ->where('status_code', $status)
+                    ->whereDate('timestamp', $date)
+                    ->exists();
+
+                if ($exists) {
+                    Log::info("ADMS Skip: Guru {$teacher->name} sudah absen status {$status} hari ini.");
+                    $savedCount++;
+
+                    continue;
+                }
+            } elseif ($isStrict && $student) {
                 // Anti-duplikat harian per status
                 $date = substr($timestamp, 0, 10);
                 $exists = AttendanceLog::withTrashed()
@@ -442,10 +464,12 @@ class IclockController extends Controller
                 'device_user_id' => (string) $userId,
                 'timestamp' => $timestamp,
                 'student_id' => $student ? $student->id : null,
+                'teacher_id' => $teacher ? $teacher->id : null,
                 'status_code' => $status,
             ]);
 
-            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: ".($student->name ?? 'Belum terdaftar').')');
+            $userName = $teacher ? "Guru {$teacher->name}" : ($student ? "Siswa {$student->name}" : 'Belum terdaftar');
+            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Nama: {$userName})");
 
             // Masukkan pengiriman notifikasi WhatsApp ke antrean antrean (Queue)
             if ($student && ! empty($student->parent_phone)) {
@@ -586,15 +610,19 @@ class IclockController extends Controller
 
             if ($pin && $tmp) {
                 $fid = $fid ?? 0;
-                $defaultClass = SchoolClass::first();
-                $student = Student::firstOrCreate(
-                    ['device_user_id' => (string) $pin],
-                    [
-                        'name' => 'Siswa '.$pin,
-                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                        'privilege' => '0',
-                    ]
-                );
+                $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+                $student = null;
+                if (! $teacher) {
+                    $defaultClass = SchoolClass::first();
+                    $student = Student::firstOrCreate(
+                        ['device_user_id' => (string) $pin],
+                        [
+                            'name' => 'Siswa '.$pin,
+                            'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                            'privilege' => '0',
+                        ]
+                    );
+                }
 
                 FingerprintTemplate::updateOrCreate(
                     [
@@ -602,7 +630,8 @@ class IclockController extends Controller
                         'finger_index' => (int) $fid,
                     ],
                     [
-                        'student_id' => $student->id,
+                        'student_id' => $student ? $student->id : null,
+                        'teacher_id' => $teacher ? $teacher->id : null,
                         'size' => (int) $size ?: strlen($tmp),
                         'valid' => 1,
                         'template_data' => $tmp,
