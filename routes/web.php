@@ -102,6 +102,9 @@ Route::middleware('auth')->group(function () {
     Route::post('students/sync', [StudentController::class, 'sync'])->name('students.sync');
 
     // Master Data Guru (User Mesin & Fingerprint)
+    Route::get('teachers/download-template', [TeacherController::class, 'downloadTemplate'])->name('teachers.downloadTemplate');
+    Route::get('teachers/import', [TeacherController::class, 'importForm'])->name('teachers.importForm');
+    Route::post('teachers/import', [TeacherController::class, 'importExcel'])->name('teachers.importExcel');
     Route::get('teachers/ceremony', [TeacherController::class, 'ceremonyAttendance'])->name('teachers.ceremony');
     Route::post('teachers/sync-all', [TeacherController::class, 'syncAll'])->name('teachers.sync_all');
     Route::post('teachers/delete-multiple', [TeacherController::class, 'destroyMultiple'])->name('teachers.destroyMultiple');

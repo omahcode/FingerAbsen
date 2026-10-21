@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class TeacherFeatureTest extends TestCase
@@ -117,5 +118,47 @@ class TeacherFeatureTest extends TestCase
         $response->assertSee('Presensi Upacara Dewan Guru');
         $response->assertSee('Bambang Supriyadi, S.Pd');
         $response->assertSee('GURU MTK');
+    }
+
+    public function test_admin_can_view_teacher_import_form(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('teachers.importForm'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Import Data Guru via Excel');
+        $response->assertSee('Download Template Excel');
+    }
+
+    public function test_admin_can_download_teacher_import_template(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('teachers.downloadTemplate', ['format' => 'xlsx']));
+
+        $response->assertStatus(200);
+        $this->assertTrue($response->headers->has('content-disposition'));
+    }
+
+    public function test_admin_can_import_teachers_via_csv(): void
+    {
+        $csvContent = "NIP,NAMA GURU,KATEGORI,NO HP,PIN MESIN\n".
+            "198101012006011001,Pak Wahyu Hidayat,GURU MTK,081234567890,198101012006011001\n".
+            "198202022007012002,Ibu Ratna Sari,GURU PPKN,082234567891,198202022007012002\n";
+
+        $file = UploadedFile::fake()->createWithContent('guru.csv', $csvContent);
+
+        $response = $this->actingAs($this->admin)->post(route('teachers.importExcel'), [
+            'file_excel' => $file,
+        ]);
+
+        $response->assertRedirect(route('teachers.index'));
+        $this->assertDatabaseHas('teachers', [
+            'nip' => '198101012006011001',
+            'name' => 'Pak Wahyu Hidayat',
+            'category' => 'GURU MTK',
+        ]);
+        $this->assertDatabaseHas('teachers', [
+            'nip' => '198202022007012002',
+            'name' => 'Ibu Ratna Sari',
+            'category' => 'GURU PPKN',
+        ]);
     }
 }

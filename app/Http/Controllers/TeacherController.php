@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TeacherTemplateExport;
+use App\Imports\TeachersImport;
 use App\Models\AttendanceLog;
 use App\Models\Device;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TeacherController extends Controller
 {
@@ -278,5 +281,61 @@ class TeacherController extends Controller
             'unattendedCount',
             'teachers'
         ));
+    }
+
+    /**
+     * Tampilkan form upload Excel untuk data guru
+     */
+    public function importForm()
+    {
+        $existingCategories = Teacher::distinct()->pluck('category')->filter()->toArray();
+        $categories = array_values(array_unique(array_merge(Teacher::$defaultCategories, $existingCategories)));
+        sort($categories);
+
+        return view('teachers.import', compact('categories'));
+    }
+
+    /**
+     * Proses impor file Excel / CSV data guru
+     */
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file_excel' => 'required|file|mimes:xlsx,xls,csv|max:4096',
+        ], [
+            'file_excel.required' => 'Pilih file Excel atau CSV terlebih dahulu.',
+            'file_excel.mimes' => 'Format file harus berupa Excel (.xlsx, .xls) atau CSV (.csv).',
+            'file_excel.max' => 'Ukuran file tidak boleh melebihi 4 MB.',
+        ]);
+
+        try {
+            $import = new TeachersImport;
+            Excel::import($import, $request->file('file_excel'));
+
+            $msg = "Berhasil mengimpor {$import->importedCount} data guru ke sistem dan mesin!";
+            if ($import->skippedCount > 0) {
+                $msg .= " ({$import->skippedCount} baris kosong/tidak valid dilewati).";
+            }
+
+            return redirect()->route('teachers.index')->with('success', $msg);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal memproses file Excel: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Download template Excel untuk impor data guru
+     */
+    public function downloadTemplate(Request $request)
+    {
+        $format = $request->query('format', 'xlsx');
+        if (! in_array($format, ['xlsx', 'csv'])) {
+            $format = 'xlsx';
+        }
+
+        $filename = 'template_import_guru_'.date('Ymd_His').'.'.$format;
+        $writerType = ($format === 'csv') ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX;
+
+        return Excel::download(new TeacherTemplateExport, $filename, $writerType);
     }
 }

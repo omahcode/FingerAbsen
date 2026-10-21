@@ -32,6 +32,11 @@
                     </button>
                 </form>
 
+                <a href="{{ route('teachers.importForm') }}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl border border-white/20 shadow-lg transition active:scale-95 text-xs sm:text-sm">
+                    <i class="fas fa-file-excel"></i>
+                    <span>Import Excel</span>
+                </a>
+
                 <button type="button" onclick="openAddTeacherModal()" class="inline-flex items-center gap-2 bg-white text-emerald-800 hover:bg-emerald-50 font-bold px-4 py-2.5 rounded-xl shadow-lg transition active:scale-95 text-xs sm:text-sm">
                     <i class="fas fa-user-plus"></i>
                     <span>Tambah Guru Baru</span>
