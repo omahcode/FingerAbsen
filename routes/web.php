@@ -23,12 +23,12 @@ use Illuminate\Support\Facades\Route;
 
 // Rute Autentikasi
 Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('login', [AuthController::class, 'login'])->middleware('throttle:15,1')->name('login.post');
+Route::post('login', [AuthController::class, 'login'])->name('login.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 // Halaman Publik (Mode TV & API Realtime Polling Terproteksi)
 Route::get('tv', [TvController::class, 'index'])->name('tv.index');
-Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:60,1')->name('attendance.latest');
+Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:300,1')->name('attendance.latest');
 
 // ====================================================
 // PORTAL ORANG TUA / WALI MURID
