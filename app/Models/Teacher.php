@@ -25,7 +25,6 @@ class Teacher extends Model
         'GURU MTK',
         'GURU PPKN',
         'GURU SEJARAH',
-        'GURU JURUSAN',
         'GURU BAHASA INDONESIA',
         'GURU BAHASA INGGRIS',
         'GURU PAI',

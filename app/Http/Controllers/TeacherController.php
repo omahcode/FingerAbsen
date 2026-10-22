@@ -33,7 +33,7 @@ class TeacherController extends Controller
 
         $query = Teacher::withCount('fingerprintTemplates');
 
-        // Filter Kategori (GURU MTK, GURU PPKN, GURU SEJARAH, GURU JURUSAN, dll)
+        // Filter Kategori (GURU MTK, GURU PPKN, GURU SEJARAH, GURU INFORMATIKA, dll)
         $selectedCategory = $request->query('category');
         if (! empty($selectedCategory)) {
             $query->where('category', $selectedCategory);

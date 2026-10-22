@@ -305,7 +305,6 @@
                     <option value="GURU MTK">GURU MTK</option>
                     <option value="GURU PPKN">GURU PPKN</option>
                     <option value="GURU SEJARAH">GURU SEJARAH</option>
-                    <option value="GURU JURUSAN">GURU JURUSAN</option>
                     <option value="GURU BAHASA INDONESIA">GURU BAHASA INDONESIA</option>
                     <option value="GURU BAHASA INGGRIS">GURU BAHASA INGGRIS</option>
                     <option value="GURU PAI">GURU PAI</option>
@@ -388,7 +387,6 @@
                     <option value="GURU MTK">GURU MTK</option>
                     <option value="GURU PPKN">GURU PPKN</option>
                     <option value="GURU SEJARAH">GURU SEJARAH</option>
-                    <option value="GURU JURUSAN">GURU JURUSAN</option>
                     <option value="GURU BAHASA INDONESIA">GURU BAHASA INDONESIA</option>
                     <option value="GURU BAHASA INGGRIS">GURU BAHASA INGGRIS</option>
                     <option value="GURU PAI">GURU PAI</option>

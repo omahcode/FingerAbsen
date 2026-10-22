@@ -72,7 +72,7 @@ class TeacherFeatureTest extends TestCase
         $teacher = Teacher::create([
             'nip' => '198803032012031003',
             'name' => 'Ahmad Suhendar, S.T',
-            'category' => 'GURU JURUSAN',
+            'category' => 'GURU BK',
             'device_user_id' => '198803032012031003',
         ]);
 

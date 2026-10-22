@@ -69,7 +69,7 @@
                     <tr class="hover:bg-emerald-50/40">
                         <td class="p-3 border border-gray-200 text-center font-mono font-bold text-gray-800">199003152019031008</td>
                         <td class="p-3 border border-gray-200 font-bold text-gray-900">Rizky Pratama, S.Kom</td>
-                        <td class="p-3 border border-gray-200 text-center"><span class="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded font-bold border border-purple-200">GURU JURUSAN</span></td>
+                        <td class="p-3 border border-gray-200 text-center"><span class="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded font-bold border border-purple-200">GURU INFORMATIKA</span></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                     </tr>

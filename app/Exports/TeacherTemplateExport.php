@@ -42,7 +42,7 @@ class TeacherTemplateExport implements FromArray, ShouldAutoSize, WithColumnForm
             [
                 '199003152019031008',
                 'Rizky Pratama, S.Kom',
-                'GURU JURUSAN',
+                'GURU INFORMATIKA',
                 '085712345678',
                 '199003152019031008',
             ],
