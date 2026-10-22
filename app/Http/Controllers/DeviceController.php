@@ -25,10 +25,11 @@ class DeviceController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
             'ip_address' => 'required',
             'port' => 'required|integer',
             'serial_number' => 'nullable|string',
+            'purpose' => 'nullable|in:all,teachers,students',
         ]);
 
         Device::create([
@@ -36,10 +37,37 @@ class DeviceController extends Controller
             'serial_number' => $request->serial_number,
             'ip_address' => $request->ip_address,
             'port' => $request->port,
+            'purpose' => $request->purpose ?? 'all',
             'status' => 'offline',
         ]);
 
         return redirect()->route('devices.index')->with('success', 'Mesin berhasil ditambahkan.');
+    }
+
+    public function edit(Device $device)
+    {
+        return view('devices.edit', compact('device'));
+    }
+
+    public function update(Request $request, Device $device)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'ip_address' => 'required',
+            'port' => 'required|integer',
+            'serial_number' => 'nullable|string',
+            'purpose' => 'nullable|in:all,teachers,students',
+        ]);
+
+        $device->update([
+            'name' => $request->name,
+            'serial_number' => $request->serial_number,
+            'ip_address' => $request->ip_address,
+            'port' => $request->port,
+            'purpose' => $request->purpose ?? 'all',
+        ]);
+
+        return redirect()->route('devices.index')->with('success', 'Data mesin berhasil diperbarui.');
     }
 
     public function destroy(Device $device)

@@ -232,7 +232,7 @@ class TeacherController extends Controller
 
         $count = 0;
         foreach ($teachers as $t) {
-            IclockController::queueCommand("DATA USER PIN={$t->device_user_id}\tName={$t->name}\tPri=0\tGrp=1");
+            IclockController::queueCommand("DATA USER PIN={$t->device_user_id}\tName={$t->name}\tPri=0\tGrp=1", null, null, 'teachers');
             $count++;
         }
 

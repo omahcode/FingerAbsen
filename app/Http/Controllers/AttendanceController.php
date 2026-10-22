@@ -19,7 +19,9 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AttendanceLog::with(['student.schoolClass', 'device'])->orderBy('timestamp', 'desc');
+        $query = AttendanceLog::with(['student.schoolClass', 'device'])
+            ->whereNull('teacher_id')
+            ->orderBy('timestamp', 'desc');
 
         $filter = $request->query('filter', 'all');
 
@@ -32,7 +34,7 @@ class AttendanceController extends Controller
         $logs = $query->paginate(50)->appends(['filter' => $filter]);
         $devices = Device::all();
         $isStrict = env('STRICT_ATTENDANCE', true);
-        $maxLogId = AttendanceLog::max('id') ?? 0;
+        $maxLogId = AttendanceLog::whereNull('teacher_id')->max('id') ?? 0;
 
         return view('attendance.index', compact('logs', 'devices', 'filter', 'isStrict', 'maxLogId'));
     }
@@ -44,6 +46,8 @@ class AttendanceController extends Controller
 
         $query = AttendanceLog::with(['student.schoolClass', 'device'])
             ->where('id', '>', $sinceId)
+            ->whereNull('teacher_id')
+            ->whereNotNull('student_id')
             ->orderBy('id', 'asc');
 
         if ($filter === 'registered') {
@@ -56,7 +60,7 @@ class AttendanceController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'max_id' => AttendanceLog::max('id') ?? $sinceId,
+            'max_id' => AttendanceLog::whereNull('teacher_id')->max('id') ?? $sinceId,
             'logs' => $logs,
         ]);
     }

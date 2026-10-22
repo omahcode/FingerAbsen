@@ -230,7 +230,7 @@ class IclockController extends Controller
     /**
      * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
      */
-    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null)
+    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null)
     {
         $devices = Device::all();
 
@@ -247,6 +247,16 @@ class IclockController extends Controller
         if ($devices->isNotEmpty()) {
             foreach ($devices as $device) {
                 if ($excludeSn && $device->serial_number === $excludeSn) {
+                    continue;
+                }
+
+                // Jangan kirim data siswa ke mesin khusus upacara guru
+                if ($forRole === 'students' && $device->isForTeachers()) {
+                    continue;
+                }
+
+                // Jangan kirim data guru ke mesin khusus siswa
+                if ($forRole === 'teachers' && $device->isForStudents()) {
                     continue;
                 }
 
@@ -409,27 +419,52 @@ class IclockController extends Controller
                 $status = 1;
             }
 
-            $student = Student::where('device_user_id', (string) $userId)->first();
-            $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+            // Cek isolasi peruntukan mesin (Device Purpose Isolation)
+            if ($device->isForTeachers()) {
+                // Mesin ini KHUSUS UPACARA GURU!
+                // Cek apakah user yang tap adalah Guru terdaftar
+                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                if (! $teacher) {
+                    Log::warning("ADMS Skip: Tap dari User {$userId} pada mesin '{$device->name}' (Khusus Upacara Guru) ditolak karena bukan Guru terdaftar.");
+                    self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus upacara guru, User {$userId} bukan guru");
+
+                    continue;
+                }
+                $student = null;
+            } elseif ($device->isForStudents()) {
+                // Mesin ini KHUSUS SISWA!
+                $student = Student::where('device_user_id', (string) $userId)->first();
+                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                if ($teacher || ! $student) {
+                    Log::warning("ADMS Skip: Tap dari Guru/User non-siswa {$userId} pada mesin '{$device->name}' (Khusus Siswa) diabaikan.");
+                    self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus siswa, User {$userId} tidak diproses");
+
+                    continue;
+                }
+            } else {
+                // Mesin Umum (Siswa & Guru)
+                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                $student = $teacher ? null : Student::where('device_user_id', (string) $userId)->first();
+            }
+
             $isStrict = env('STRICT_ATTENDANCE', true);
 
             if ($teacher) {
-                // Anti-duplikat harian untuk guru (misal presensi upacara / kehadiran guru)
+                // Anti-duplikat harian untuk guru (presensi upacara dewan guru)
                 $date = substr($timestamp, 0, 10);
                 $exists = AttendanceLog::withTrashed()
                     ->where('teacher_id', $teacher->id)
-                    ->where('status_code', $status)
                     ->whereDate('timestamp', $date)
                     ->exists();
 
                 if ($exists) {
-                    Log::info("ADMS Skip: Guru {$teacher->name} sudah absen status {$status} hari ini.");
+                    Log::info("ADMS Skip: Guru {$teacher->name} sudah absen hari ini.");
                     $savedCount++;
 
                     continue;
                 }
             } elseif ($isStrict && $student) {
-                // Anti-duplikat harian per status
+                // Anti-duplikat harian per status untuk siswa
                 $date = substr($timestamp, 0, 10);
                 $exists = AttendanceLog::withTrashed()
                     ->where('student_id', $student->id)
@@ -471,16 +506,19 @@ class IclockController extends Controller
             $userName = $teacher ? "Guru {$teacher->name}" : ($student ? "Siswa {$student->name}" : 'Belum terdaftar');
             Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Nama: {$userName})");
 
-            // Masukkan pengiriman notifikasi WhatsApp ke antrean antrean (Queue)
-            if ($student && ! empty($student->parent_phone)) {
-                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
-            }
+            // HANYA JIKA PRESENSI SISWA: Kirim notifikasi WA orang tua & Broadcast ke TV
+            // Data tap guru SAMA SEKALI TIDAK BOLEH masuk ke TV ataupun notifikasi siswa
+            if ($student && ! $teacher) {
+                if (! empty($student->parent_phone)) {
+                    SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
+                }
 
-            // Broadcast event websocket / realtime jika ada
-            try {
-                broadcast(new AttendanceCreated($log));
-            } catch (\Exception $e) {
-                // Abaikan jika broadcast driver lokal tidak aktif
+                // Broadcast event websocket / realtime jika ada
+                try {
+                    broadcast(new AttendanceCreated($log));
+                } catch (\Exception $e) {
+                    // Abaikan jika broadcast driver lokal tidak aktif
+                }
             }
 
             $savedCount++;

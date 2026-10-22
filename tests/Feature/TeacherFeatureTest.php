@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Device;
+use App\Models\Major;
+use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -217,5 +221,92 @@ class TeacherFeatureTest extends TestCase
         ]);
 
         $response->assertRedirect(route('teachers.ceremony'));
+    }
+
+    public function test_ceremony_table_has_requested_headers_without_category(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('teachers.ceremony'));
+        $response->assertStatus(200);
+        $response->assertSee('No');
+        $response->assertSee('NIP');
+        $response->assertSee('NAMA GURU');
+        $response->assertSee('WAKTU TAP');
+        $response->assertSee('STATUS KEHADIRAN');
+    }
+
+    public function test_teacher_tap_does_not_appear_in_tv_latest_polling_or_student_attendance(): void
+    {
+        $device = Device::create([
+            'name' => 'Mesin Fingerprint Guru',
+            'serial_number' => 'DEV-GURU-001',
+            'ip_address' => '192.168.1.199',
+            'port' => 4370,
+            'purpose' => 'teachers',
+            'status' => 'online',
+        ]);
+
+        $teacher = Teacher::create([
+            'nip' => '198501012010011001',
+            'name' => 'Pak Joko S., M.Pd',
+            'category' => 'GURU INFORMATIKA',
+            'device_user_id' => '198501012010011001',
+        ]);
+
+        // Simulasikan POST ATTLOG dari mesin
+        $attlogBody = "198501012010011001\t2026-10-22 06:45:00\t0\t1\n";
+        $response = $this->call('POST', '/iclock/cdata?SN=DEV-GURU-001&table=ATTLOG', [], [], [], [], $attlogBody);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'teacher_id' => $teacher->id,
+            'student_id' => null,
+            'device_user_id' => '198501012010011001',
+        ]);
+
+        // 1. Cek /attendance/latest (yang di-poll oleh TV): data guru TIDAK BOLEH muncul
+        $latestRes = $this->getJson(route('attendance.latest', ['since_id' => 0]));
+        $latestRes->assertStatus(200);
+        $logs = $latestRes->json('logs');
+        $this->assertEmpty($logs, 'Log guru tidak boleh masuk ke endpoint TV attendance.latest');
+
+        // 2. Cek /attendance (daftar absensi siswa): data guru TIDAK BOLEH muncul
+        $attIndexRes = $this->actingAs($this->admin)->get(route('attendance.index'));
+        $attIndexRes->assertStatus(200);
+        $attIndexRes->assertDontSee('Pak Joko S., M.Pd');
+
+        // 3. Cek /teachers/ceremony: data guru HARUS muncul sebagai hadir
+        $ceremonyRes = $this->actingAs($this->admin)->get(route('teachers.ceremony'));
+        $ceremonyRes->assertStatus(200);
+        $ceremonyRes->assertSee('Pak Joko S., M.Pd');
+        $ceremonyRes->assertSee('Hadir Upacara');
+    }
+
+    public function test_machine_dedicated_for_teachers_rejects_student_tap(): void
+    {
+        $device = Device::create([
+            'name' => 'Mesin Upacara Khusus Guru',
+            'serial_number' => 'DEV-UPACARA-002',
+            'ip_address' => '192.168.1.198',
+            'port' => 4370,
+            'purpose' => 'teachers',
+            'status' => 'online',
+        ]);
+
+        $major = Major::create(['name' => 'PPLG']);
+        $class = SchoolClass::create(['name' => 'XI RPL 1', 'major_id' => $major->id]);
+        $student = Student::create([
+            'device_user_id' => '999111',
+            'name' => 'Siswa Nyasar',
+            'school_class_id' => $class->id,
+        ]);
+
+        // Murid mencoba tap di mesin upacara khusus guru
+        $attlogBody = "999111\t2026-10-22 06:50:00\t0\t1\n";
+        $response = $this->call('POST', '/iclock/cdata?SN=DEV-UPACARA-002&table=ATTLOG', [], [], [], [], $attlogBody);
+
+        // Pastikan TIDAK tersimpan ke database absensi siswa
+        $this->assertDatabaseMissing('attendance_logs', [
+            'device_user_id' => '999111',
+            'student_id' => $student->id,
+        ]);
     }
 }

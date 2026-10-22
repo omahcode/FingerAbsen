@@ -19,14 +19,19 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5">
+                <button type="button" id="btn-toggle-live" onclick="toggleAutoRefresh()" class="inline-flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-white font-bold px-3.5 py-2.5 rounded-xl border border-emerald-400/40 backdrop-blur shadow transition active:scale-95 text-xs sm:text-sm">
+                    <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="live-text">Live Presensi: Aktif</span>
+                </button>
+
                 <a href="{{ route('teachers.index') }}" class="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl border border-white/30 backdrop-blur shadow transition active:scale-95 text-xs sm:text-sm">
                     <i class="fas fa-arrow-left"></i>
-                    <span>Kembali ke Data Guru</span>
+                    <span>Data Guru</span>
                 </a>
 
                 <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 bg-white text-rose-800 hover:bg-rose-50 font-bold px-4 py-2.5 rounded-xl shadow-lg transition active:scale-95 text-xs sm:text-sm">
                     <i class="fas fa-print"></i>
-                    <span>Cetak Presensi</span>
+                    <span>Cetak</span>
                 </button>
             </div>
         </div>
@@ -110,7 +115,6 @@
                         <th class="py-3.5 px-4 w-12 text-center">No</th>
                         <th class="py-3.5 px-4">NIP</th>
                         <th class="py-3.5 px-4">NAMA GURU</th>
-                        <th class="py-3.5 px-4">KATEGORI</th>
                         <th class="py-3.5 px-4 text-center">WAKTU TAP</th>
                         <th class="py-3.5 px-4 text-center">STATUS KEHADIRAN</th>
                     </tr>
@@ -133,15 +137,13 @@
                                 <div class="w-8 h-8 rounded-full bg-rose-50 text-rose-700 font-bold flex items-center justify-center text-xs shrink-0 border border-rose-200">
                                     {{ strtoupper(substr($row['name'], 0, 1)) }}
                                 </div>
-                                <span class="font-bold text-gray-900">{{ $row['name'] }}</span>
+                                <div>
+                                    <span class="font-bold text-gray-900 block">{{ $row['name'] }}</span>
+                                    @if(!empty($row['category']))
+                                        <span class="text-[11px] text-gray-400 font-medium">{{ $row['category'] }}</span>
+                                    @endif
+                                </div>
                             </div>
-                        </td>
-
-                        <!-- KATEGORI -->
-                        <td class="py-3.5 px-4">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                                {{ $row['category'] }}
-                            </span>
                         </td>
 
                         <!-- WAKTU TAP -->
@@ -170,7 +172,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="py-12 text-center text-gray-400">
+                        <td colspan="5" class="py-12 text-center text-gray-400">
                             <i class="fas fa-flag text-4xl mb-3 text-gray-300"></i>
                             <p class="font-medium text-gray-700">Belum ada guru terdaftar untuk presensi upacara.</p>
                             <a href="{{ route('teachers.index') }}" class="inline-flex items-center gap-1 text-xs text-rose-600 font-bold hover:underline mt-2">
@@ -184,4 +186,51 @@
         </div>
     </div>
 </div>
+
+<script>
+    let isLiveActive = true;
+    let refreshTimer = null;
+    const isToday = '{{ $date }}' === '{{ \Carbon\Carbon::today('Asia/Jakarta')->toDateString() }}';
+
+    function scheduleRefresh() {
+        if (!isLiveActive || !isToday) return;
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+            // Hanya reload jika user tidak sedang menginput form
+            if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+                window.location.reload();
+            } else {
+                scheduleRefresh();
+            }
+        }, 12000); // Auto-refresh setiap 12 detik saat halaman live
+    }
+
+    function toggleAutoRefresh() {
+        isLiveActive = !isLiveActive;
+        const btn = document.getElementById('btn-toggle-live');
+        const dot = document.getElementById('live-dot');
+        const text = document.getElementById('live-text');
+
+        if (isLiveActive) {
+            btn.className = "inline-flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-white font-bold px-3.5 py-2.5 rounded-xl border border-emerald-400/40 backdrop-blur shadow transition active:scale-95 text-xs sm:text-sm";
+            dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+            text.textContent = "Live Presensi: Aktif";
+            scheduleRefresh();
+        } else {
+            clearTimeout(refreshTimer);
+            btn.className = "inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white/80 font-bold px-3.5 py-2.5 rounded-xl border border-white/20 backdrop-blur shadow transition active:scale-95 text-xs sm:text-sm";
+            dot.className = "w-2 h-2 rounded-full bg-gray-400";
+            text.textContent = "Live Presensi: Jeda";
+        }
+    }
+
+    if (isToday) {
+        scheduleRefresh();
+    } else {
+        // Jika sedang melihat tanggal masa lalu, matikan auto refresh
+        isLiveActive = false;
+        const btn = document.getElementById('btn-toggle-live');
+        if (btn) btn.style.display = 'none';
+    }
+</script>
 @endsection
