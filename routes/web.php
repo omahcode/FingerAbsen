@@ -10,6 +10,7 @@ use App\Http\Controllers\MajorMonitoringController;
 use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SchoolClassController;
+use App\Http\Controllers\SchoolEventController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentDepartureMonitoringController;
@@ -139,6 +140,10 @@ Route::middleware('auth')->group(function () {
     Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
     Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
     Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
+
+    // Manajemen Hari Khusus / Kemah / Libur Sekolah (Streak Protection)
+    Route::post('school-events', [SchoolEventController::class, 'store'])->name('school-events.store');
+    Route::delete('school-events/{schoolEvent}', [SchoolEventController::class, 'destroy'])->name('school-events.destroy');
 
     // Rute Simulasi Absensi (Hanya dapat diakses setelah login)
     Route::match(['get', 'post'], 'attendance/simulate', [AttendanceController::class, 'simulate'])->name('attendance.simulate');

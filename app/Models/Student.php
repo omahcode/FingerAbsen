@@ -65,8 +65,9 @@ class Student extends Model
     }
 
     /**
-     * Hitung streak kehadiran berurutan siswa dengan melewati hari libur / akhir pekan (skip weekend/holidays).
-     * Hari Sabtu & Minggu otomatis dilewati sehingga streak Senin-Jumat tetap bersambung ke Senin berikutnya.
+     * Hitung streak kehadiran berurutan siswa dengan melewati hari libur / akhir pekan / hari khusus (kemah, ekspram, libur).
+     * Hari Sabtu & Minggu serta kegiatan khusus kelas (seperti kemah kelas 10) atau libur sekolah otomatis dilewati
+     * sehingga streak siswa tidak akan hancur/rusak.
      */
     public function calculateConsecutiveStreak($endDate = null): int
     {
@@ -82,12 +83,45 @@ class Student extends Model
             ->unique()
             ->flip(); // Menggunakan flip untuk O(1) lookup
 
-        $checkDate = $currentDate->copy();
         $lookbackLimit = 60; // Cek hingga 60 hari ke belakang
+        $startDateLimit = $currentDate->copy()->subDays($lookbackLimit)->toDateString();
 
-        // Jika hari ini bukan hari sekolah efektif (Sabtu/Minggu/Libur), mundur ke hari sekolah efektif terakhir
-        if (! Setting::isSchoolDay($checkDate)) {
-            while (! Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
+        // Ambil semua kegiatan / hari khusus yang melindungi streak yang relevan untuk siswa ini
+        try {
+            $exemptEvents = SchoolEvent::where('preserve_streak', true)
+                ->where('end_date', '>=', $startDateLimit)
+                ->where('start_date', '<=', $currentDate->toDateString())
+                ->with('schoolClass')
+                ->get()
+                ->filter(fn ($event) => $event->appliesToStudent($this));
+        } catch (\Throwable $e) {
+            $exemptEvents = collect();
+        }
+
+        // Helper closure untuk mengecek apakah hari adalah hari libur atau hari bebas kegiatan bagi siswa
+        $isExemptDay = function (Carbon $date) use ($exemptEvents): bool {
+            if (! Setting::isSchoolDay($date)) {
+                return true;
+            }
+
+            $dateStr = $date->toDateString();
+            foreach ($exemptEvents as $event) {
+                $startStr = $event->start_date ? Carbon::parse($event->start_date)->toDateString() : '';
+                $endStr = $event->end_date ? Carbon::parse($event->end_date)->toDateString() : '';
+
+                if ($startStr <= $dateStr && $endStr >= $dateStr) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $checkDate = $currentDate->copy();
+
+        // Jika hari ini bukan hari sekolah efektif / sedang kemah/libur, mundur ke hari sekolah efektif terakhir
+        if ($isExemptDay($checkDate)) {
+            while ($isExemptDay($checkDate) && $lookbackLimit > 0) {
                 $checkDate->subDay();
                 $lookbackLimit--;
             }
@@ -95,15 +129,15 @@ class Student extends Model
             // Hari ini adalah hari sekolah tapi siswa belum hadir hari ini (misal pagi hari):
             // Jangan langsung hanguskan streak, periksa hari sekolah sebelumnya
             $checkDate->subDay();
-            while (! Setting::isSchoolDay($checkDate) && $lookbackLimit > 0) {
+            while ($isExemptDay($checkDate) && $lookbackLimit > 0) {
                 $checkDate->subDay();
                 $lookbackLimit--;
             }
         }
 
         while ($lookbackLimit > 0) {
-            // Lewati hari yang bukan hari sekolah (akhir pekan / libur)
-            if (! Setting::isSchoolDay($checkDate)) {
+            // Lewati hari yang bukan hari sekolah atau hari khusus siswa
+            if ($isExemptDay($checkDate)) {
                 $checkDate->subDay();
                 $lookbackLimit--;
 
@@ -122,5 +156,13 @@ class Student extends Model
         }
 
         return $streak;
+    }
+
+    /**
+     * Ambil kegiatan/libur khusus aktif yang sedang berlangsung untuk siswa ini
+     */
+    public function getCurrentSchoolEvent($date = null): ?SchoolEvent
+    {
+        return SchoolEvent::getActiveEventForStudent($this, $date);
     }
 }
