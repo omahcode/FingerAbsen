@@ -192,13 +192,9 @@
                                         <i class="fas fa-edit"></i>
                                     </button>
 
-                                    <form action="{{ route('teachers.destroy', $t->id) }}" method="POST" data-confirm="Hapus data guru '{{ $t->name }}' (NIP: {{ $t->nip }}) dari sistem dan mesin fingerprint?" data-title="Hapus Data Guru" data-danger="true" data-icon="warning" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition" title="Hapus Guru">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" onclick="deleteSingleTeacher({{ $t->id }}, '{{ addslashes($t->name) }}', '{{ addslashes($t->nip) }}')" class="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition" title="Hapus Guru">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -218,6 +214,12 @@
                     </tbody>
                 </table>
             </div>
+        </form>
+
+        <!-- Form tersembunyi untuk hapus satuan guru -->
+        <form id="single-delete-teacher-form" method="POST" style="display: none;">
+            @csrf
+            @method('DELETE')
         </form>
     </div>
 </div>
@@ -366,6 +368,26 @@
 
     function closeEditTeacherModal() {
         document.getElementById('modal-edit-teacher').classList.add('hidden');
+    }
+
+    function deleteSingleTeacher(id, name, nip) {
+        Swal.fire({
+            title: 'Hapus Data Guru',
+            text: `Hapus data guru '${name}' (NIP: ${nip}) dari sistem dan mesin fingerprint?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Lanjutkan',
+            cancelButtonText: 'Batal',
+            reverseButtons: true,
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                const form = document.getElementById('single-delete-teacher-form');
+                form.action = `/teachers/${id}`;
+                form.submit();
+            }
+        });
     }
 
     // Bulk Delete Checkbox Logic

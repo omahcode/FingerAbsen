@@ -24,7 +24,12 @@ class AppServiceProvider extends ServiceProvider
         date_default_timezone_set(config('app.timezone', 'Asia/Jakarta'));
         Carbon::setLocale('id');
 
-        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        if (
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+            (isset($_SERVER['HTTP_CF_VISITOR']) && str_contains($_SERVER['HTTP_CF_VISITOR'], 'https')) ||
+            str_starts_with((string) config('app.url'), 'https://') ||
+            app()->environment('production')
+        ) {
             URL::forceScheme('https');
         }
     }

@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
     Route::get('students/download-template', [StudentController::class, 'downloadTemplate'])->name('students.downloadTemplate');
     Route::get('students/import', [StudentController::class, 'importForm'])->name('students.importForm');
     Route::post('students/import', [StudentController::class, 'importExcel'])->name('students.importExcel');
+    Route::get('students/delete-multiple', fn () => redirect()->route('students.index'));
     Route::post('students/delete-multiple', [StudentController::class, 'destroyMultiple'])->name('students.destroyMultiple');
     Route::resource('students', StudentController::class)->except(['show']);
     Route::post('students/sync', [StudentController::class, 'sync'])->name('students.sync');
@@ -118,11 +119,13 @@ Route::middleware('auth')->group(function () {
     Route::post('teachers/import', [TeacherController::class, 'importExcel'])->name('teachers.importExcel');
     Route::get('teachers/ceremony', [TeacherController::class, 'ceremonyAttendance'])->name('teachers.ceremony');
     Route::post('teachers/sync-all', [TeacherController::class, 'syncAll'])->name('teachers.sync_all');
+    Route::get('teachers/delete-multiple', fn () => redirect()->route('teachers.index'));
     Route::post('teachers/delete-multiple', [TeacherController::class, 'destroyMultiple'])->name('teachers.destroyMultiple');
     Route::resource('teachers', TeacherController::class)->except(['create', 'show', 'edit']);
 
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance/sync', [AttendanceController::class, 'sync'])->name('attendance.sync');
+    Route::get('attendance/delete-multiple', fn () => redirect()->route('attendance.index'));
     Route::post('attendance/delete-multiple', [AttendanceController::class, 'destroyMultiple'])->name('attendance.destroyMultiple');
     Route::post('attendance/toggle-strict', [AttendanceController::class, 'toggleStrict'])->name('attendance.toggleStrict');
     Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
