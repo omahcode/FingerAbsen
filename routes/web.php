@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
 
     Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
+    Route::post('sync/push', [SyncController::class, 'push'])->name('sync.push');
     Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
     Route::post('sync/backup-templates', [SyncController::class, 'backupTemplates'])->name('sync.backupTemplates');
 

@@ -266,7 +266,7 @@ class TeacherFeatureTest extends TestCase
         $attIndexRes->assertDontSee('Pak Joko S., M.Pd');
 
         // 3. Cek /teachers/ceremony: data guru HARUS muncul sebagai hadir
-        $ceremonyRes = $this->actingAs($this->admin)->get(route('teachers.ceremony'));
+        $ceremonyRes = $this->actingAs($this->admin)->get(route('teachers.ceremony', ['date' => '2026-10-22']));
         $ceremonyRes->assertStatus(200);
         $ceremonyRes->assertSee('Pak Joko S., M.Pd');
         $ceremonyRes->assertSee('Hadir Upacara');
