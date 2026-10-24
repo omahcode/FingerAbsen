@@ -68,23 +68,8 @@
     <!-- Filter & Search Bar -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
         <form action="{{ route('teachers.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-            <!-- Filter Kategori -->
-            <div class="md:col-span-4">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                    <i class="fas fa-tags text-teal-600 mr-1"></i> Filter Kategori:
-                </label>
-                <select name="category" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <option value="">-- Semua Kategori ({{ $totalTeachers }} Guru) --</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}" {{ ($selectedCategory === $cat) ? 'selected' : '' }}>
-                            {{ $cat }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
             <!-- Filter Status Sidik Jari -->
-            <div class="md:col-span-3">
+            <div class="md:col-span-4">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-fingerprint text-emerald-500 mr-1"></i> Status Sidik Jari:
                 </label>
@@ -96,7 +81,7 @@
             </div>
 
             <!-- Pencarian Nama / NIP -->
-            <div class="md:col-span-5">
+            <div class="md:col-span-8">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-search text-blue-500 mr-1"></i> Cari Nama / NIP:
                 </label>
@@ -108,7 +93,7 @@
                     <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">
                         Cari
                     </button>
-                    @if($selectedCategory || $search || $selectedFingerprint)
+                    @if($search || $selectedFingerprint)
                         <a href="{{ route('teachers.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-2.5 rounded-xl text-sm transition flex items-center gap-1" title="Reset Filter">
                             <i class="fas fa-times"></i>
                         </a>
@@ -121,9 +106,6 @@
         <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between text-xs text-gray-500 gap-2">
             <div>
                 Menampilkan <strong class="text-gray-900 font-bold">{{ $teachers->count() }}</strong> dari total <strong class="text-gray-900 font-bold">{{ $totalTeachers }}</strong> guru
-                @if($selectedCategory)
-                    dalam kategori <span class="bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-200">{{ $selectedCategory }}</span>
-                @endif
             </div>
 
             <div class="flex items-center gap-2">
@@ -206,7 +188,7 @@
                             <!-- AKSI -->
                             <td class="py-3.5 px-4 text-right">
                                 <div class="flex items-center justify-end gap-1.5">
-                                    <button type="button" onclick="openEditTeacherModal({{ $t->id }}, '{{ addslashes($t->nip) }}', '{{ addslashes($t->name) }}', '{{ addslashes($t->category) }}', '{{ addslashes($t->device_user_id) }}', '{{ addslashes($t->phone ?? '') }}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Edit Data Guru">
+                                    <button type="button" onclick="openEditTeacherModal({{ $t->id }}, '{{ addslashes($t->nip) }}', '{{ addslashes($t->name) }}', '{{ addslashes($t->device_user_id) }}', '{{ addslashes($t->phone ?? '') }}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Edit Data Guru">
                                         <i class="fas fa-edit"></i>
                                     </button>
 
@@ -272,28 +254,6 @@
                 <input type="text" id="add_name" name="name" required placeholder="Contoh: Drs. H. Ahmad Fauzi, M.Pd" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
-            <!-- KATEGORI -->
-            <div>
-                <label for="add_category_select" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Kategori / Bidang Guru <span class="text-rose-500">*</span>
-                </label>
-                <select id="add_category_select" onchange="handleCategoryChange(this, 'add_category_custom')" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                    <option value="GURU MTK">GURU MTK</option>
-                    <option value="GURU PPKN">GURU PPKN</option>
-                    <option value="GURU SEJARAH">GURU SEJARAH</option>
-                    <option value="GURU BAHASA INDONESIA">GURU BAHASA INDONESIA</option>
-                    <option value="GURU BAHASA INGGRIS">GURU BAHASA INGGRIS</option>
-                    <option value="GURU PAI">GURU PAI</option>
-                    <option value="GURU PJOK">GURU PJOK</option>
-                    <option value="GURU BK">GURU BK</option>
-                    <option value="GURU SENI BUDAYA">GURU SENI BUDAYA</option>
-                    <option value="GURU IPAS">GURU IPAS</option>
-                    <option value="GURU INFORMATIKA">GURU INFORMATIKA</option>
-                    <option value="__CUSTOM__">+ Ketik Kategori Lainnya...</option>
-                </select>
-                <input type="text" id="add_category_custom" name="category" value="GURU MTK" class="hidden mt-2 w-full px-3.5 py-2.5 border border-emerald-300 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-gray-400" placeholder="Ketik Kategori Baru (misal: GURU FISIKA)">
-            </div>
-
             <!-- PIN MESIN (OPSIONAL) -->
             <div>
                 <label for="add_device_user_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
@@ -354,28 +314,6 @@
                 <input type="text" id="edit_name" name="name" required class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
 
-            <!-- KATEGORI -->
-            <div>
-                <label for="edit_category_select" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Kategori / Bidang Guru <span class="text-rose-500">*</span>
-                </label>
-                <select id="edit_category_select" onchange="handleCategoryChange(this, 'edit_category_custom')" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    <option value="GURU MTK">GURU MTK</option>
-                    <option value="GURU PPKN">GURU PPKN</option>
-                    <option value="GURU SEJARAH">GURU SEJARAH</option>
-                    <option value="GURU BAHASA INDONESIA">GURU BAHASA INDONESIA</option>
-                    <option value="GURU BAHASA INGGRIS">GURU BAHASA INGGRIS</option>
-                    <option value="GURU PAI">GURU PAI</option>
-                    <option value="GURU PJOK">GURU PJOK</option>
-                    <option value="GURU BK">GURU BK</option>
-                    <option value="GURU SENI BUDAYA">GURU SENI BUDAYA</option>
-                    <option value="GURU IPAS">GURU IPAS</option>
-                    <option value="GURU INFORMATIKA">GURU INFORMATIKA</option>
-                    <option value="__CUSTOM__">+ Ketik Kategori Lainnya...</option>
-                </select>
-                <input type="text" id="edit_category_custom" name="category" class="hidden mt-2 w-full px-3.5 py-2.5 border border-blue-300 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400">
-            </div>
-
             <!-- PIN MESIN -->
             <div>
                 <label for="edit_device_user_id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
@@ -413,7 +351,7 @@
         document.getElementById('modal-add-teacher').classList.add('hidden');
     }
 
-    function openEditTeacherModal(id, nip, name, category, deviceUserId, phone) {
+    function openEditTeacherModal(id, nip, name, deviceUserId, phone) {
         const modal = document.getElementById('modal-edit-teacher');
         const form = document.getElementById('form-edit-teacher');
         form.action = `/teachers/${id}`;
@@ -423,44 +361,11 @@
         document.getElementById('edit_device_user_id').value = deviceUserId;
         document.getElementById('edit_phone').value = phone || '';
 
-        const select = document.getElementById('edit_category_select');
-        const customInput = document.getElementById('edit_category_custom');
-
-        let found = false;
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === category) {
-                select.selectedIndex = i;
-                found = true;
-                break;
-            }
-        }
-
-        if (found) {
-            customInput.classList.add('hidden');
-            customInput.value = category;
-        } else {
-            select.value = '__CUSTOM__';
-            customInput.classList.remove('hidden');
-            customInput.value = category;
-        }
-
         modal.classList.remove('hidden');
     }
 
     function closeEditTeacherModal() {
         document.getElementById('modal-edit-teacher').classList.add('hidden');
-    }
-
-    function handleCategoryChange(selectElem, customInputId) {
-        const customInput = document.getElementById(customInputId);
-        if (selectElem.value === '__CUSTOM__') {
-            customInput.classList.remove('hidden');
-            customInput.value = '';
-            customInput.focus();
-        } else {
-            customInput.classList.add('hidden');
-            customInput.value = selectElem.value;
-        }
     }
 
     // Bulk Delete Checkbox Logic

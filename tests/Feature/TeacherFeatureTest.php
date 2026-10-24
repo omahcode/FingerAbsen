@@ -52,7 +52,6 @@ class TeacherFeatureTest extends TestCase
         $response = $this->actingAs($this->admin)->post(route('teachers.store'), [
             'nip' => '199002022015021002',
             'name' => 'Ibu Sri Rahayu, S.Pd',
-            'category' => 'GURU PPKN',
             'phone' => '081234567890',
         ]);
 
@@ -60,7 +59,7 @@ class TeacherFeatureTest extends TestCase
         $this->assertDatabaseHas('teachers', [
             'nip' => '199002022015021002',
             'name' => 'Ibu Sri Rahayu, S.Pd',
-            'category' => 'GURU PPKN',
+            'category' => 'GURU UMUM',
             'device_user_id' => '199002022015021002',
         ]);
     }
@@ -70,21 +69,19 @@ class TeacherFeatureTest extends TestCase
         $teacher = Teacher::create([
             'nip' => '198803032012031003',
             'name' => 'Ahmad Suhendar, S.T',
-            'category' => 'GURU BK',
+            'category' => 'GURU UMUM',
             'device_user_id' => '198803032012031003',
         ]);
 
         $response = $this->actingAs($this->admin)->put(route('teachers.update', $teacher->id), [
             'nip' => '198803032012031003',
             'name' => 'Ahmad Suhendar, M.Kom',
-            'category' => 'GURU INFORMATIKA',
         ]);
 
         $response->assertRedirect(route('teachers.index'));
         $this->assertDatabaseHas('teachers', [
             'id' => $teacher->id,
             'name' => 'Ahmad Suhendar, M.Kom',
-            'category' => 'GURU INFORMATIKA',
         ]);
     }
 
@@ -141,9 +138,9 @@ class TeacherFeatureTest extends TestCase
 
     public function test_admin_can_import_teachers_via_csv(): void
     {
-        $csvContent = "NIP,NAMA GURU,KATEGORI,NO HP,PIN MESIN\n".
-            "198101012006011001,Pak Wahyu Hidayat,GURU MTK,081234567890,198101012006011001\n".
-            "198202022007012002,Ibu Ratna Sari,GURU PPKN,082234567891,198202022007012002\n";
+        $csvContent = "NIP,NAMA GURU,NO HP,PIN MESIN\n".
+            "198101012006011001,Pak Wahyu Hidayat,081234567890,198101012006011001\n".
+            "198202022007012002,Ibu Ratna Sari,082234567891,198202022007012002\n";
 
         $file = UploadedFile::fake()->createWithContent('guru.csv', $csvContent);
 
@@ -155,12 +152,10 @@ class TeacherFeatureTest extends TestCase
         $this->assertDatabaseHas('teachers', [
             'nip' => '198101012006011001',
             'name' => 'Pak Wahyu Hidayat',
-            'category' => 'GURU MTK',
         ]);
         $this->assertDatabaseHas('teachers', [
             'nip' => '198202022007012002',
             'name' => 'Ibu Ratna Sari',
-            'category' => 'GURU PPKN',
         ]);
     }
 

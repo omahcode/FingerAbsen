@@ -59,11 +59,6 @@ class TeacherController extends Controller
 
         $teachers = $query->orderBy('name')->get();
 
-        // Kategori dinamis dari database digabung dengan kategori bawaan
-        $existingCategories = Teacher::distinct()->pluck('category')->filter()->toArray();
-        $categories = array_values(array_unique(array_merge(Teacher::$defaultCategories, $existingCategories)));
-        sort($categories);
-
         $totalTeachers = Teacher::count();
         $registeredFpCount = Teacher::has('fingerprintTemplates')->count();
         $unregisteredFpCount = $totalTeachers - $registeredFpCount;
@@ -77,8 +72,6 @@ class TeacherController extends Controller
 
         return view('teachers.index', compact(
             'teachers',
-            'categories',
-            'selectedCategory',
             'selectedFingerprint',
             'search',
             'totalTeachers',
@@ -98,7 +91,7 @@ class TeacherController extends Controller
         $validated = $request->validate([
             'nip' => 'required|string|max:50|unique:teachers,nip',
             'name' => 'required|string|max:150',
-            'category' => 'required|string|max:100',
+            'category' => 'nullable|string|max:100',
             'device_user_id' => 'nullable|string|max:50|unique:teachers,device_user_id',
             'phone' => 'nullable|string|max:30',
         ]);
@@ -110,7 +103,7 @@ class TeacherController extends Controller
         $teacher = Teacher::create([
             'nip' => $validated['nip'],
             'name' => $validated['name'],
-            'category' => strtoupper(trim($validated['category'])),
+            'category' => ! empty($validated['category']) ? strtoupper(trim($validated['category'])) : 'GURU UMUM',
             'device_user_id' => $pin,
             'phone' => $validated['phone'] ?? null,
         ]);
@@ -136,7 +129,7 @@ class TeacherController extends Controller
         $validated = $request->validate([
             'nip' => 'required|string|max:50|unique:teachers,nip,'.$teacher->id,
             'name' => 'required|string|max:150',
-            'category' => 'required|string|max:100',
+            'category' => 'nullable|string|max:100',
             'device_user_id' => 'nullable|string|max:50|unique:teachers,device_user_id,'.$teacher->id,
             'phone' => 'nullable|string|max:30',
         ]);
@@ -147,7 +140,7 @@ class TeacherController extends Controller
         $teacher->update([
             'nip' => $validated['nip'],
             'name' => $validated['name'],
-            'category' => strtoupper(trim($validated['category'])),
+            'category' => ! empty($validated['category']) ? strtoupper(trim($validated['category'])) : ($teacher->category ?? 'GURU UMUM'),
             'device_user_id' => $newPin,
             'phone' => $validated['phone'] ?? null,
         ]);
@@ -315,11 +308,7 @@ class TeacherController extends Controller
     {
         $this->authorizeAccess();
 
-        $existingCategories = Teacher::distinct()->pluck('category')->filter()->toArray();
-        $categories = array_values(array_unique(array_merge(Teacher::$defaultCategories, $existingCategories)));
-        sort($categories);
-
-        return view('teachers.import', compact('categories'));
+        return view('teachers.import');
     }
 
     /**

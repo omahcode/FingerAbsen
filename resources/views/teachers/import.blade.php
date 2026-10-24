@@ -46,30 +46,26 @@
                     <tr class="bg-emerald-700 text-white font-bold">
                         <th class="p-3 border border-emerald-700 text-center w-36">Kolom A (NIP)*</th>
                         <th class="p-3 border border-emerald-700">Kolom B (NAMA GURU)*</th>
-                        <th class="p-3 border border-emerald-700 text-center w-40">Kolom C (KATEGORI)*</th>
-                        <th class="p-3 border border-emerald-700 text-center w-36">Kolom D (NO HP)</th>
-                        <th class="p-3 border border-emerald-700 text-center w-36">Kolom E (PIN MESIN)</th>
+                        <th class="p-3 border border-emerald-700 text-center w-36">Kolom C (NO HP)</th>
+                        <th class="p-3 border border-emerald-700 text-center w-36">Kolom D (PIN MESIN)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-gray-700 font-sans">
                     <tr class="hover:bg-emerald-50/40">
                         <td class="p-3 border border-gray-200 text-center font-mono font-bold text-gray-800">198005122005011003</td>
                         <td class="p-3 border border-gray-200 font-bold text-gray-900">Budi Santoso, S.Pd</td>
-                        <td class="p-3 border border-gray-200 text-center"><span class="bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded font-bold border border-blue-200">GURU MTK</span></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-600">081234567890</td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                     </tr>
                     <tr class="hover:bg-emerald-50/40">
                         <td class="p-3 border border-gray-200 text-center font-mono font-bold text-gray-800">198308222008012011</td>
                         <td class="p-3 border border-gray-200 font-bold text-gray-900">Siti Aminah, M.Pd</td>
-                        <td class="p-3 border border-gray-200 text-center"><span class="bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded font-bold border border-amber-200">GURU PPKN</span></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-600">082198765432</td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                     </tr>
                     <tr class="hover:bg-emerald-50/40">
                         <td class="p-3 border border-gray-200 text-center font-mono font-bold text-gray-800">199003152019031008</td>
                         <td class="p-3 border border-gray-200 font-bold text-gray-900">Rizky Pratama, S.Kom</td>
-                        <td class="p-3 border border-gray-200 text-center"><span class="bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded font-bold border border-purple-200">GURU INFORMATIKA</span></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                         <td class="p-3 border border-gray-200 text-center font-mono text-gray-400"><i>(Boleh Kosong)</i></td>
                     </tr>
@@ -93,23 +89,6 @@
             </a>
         </div>
     </div>
-
-    <!-- Suggested Categories Reference -->
-    @if(isset($categories) && count($categories) > 0)
-    <div class="p-5 bg-white border border-gray-200 rounded-2xl shadow-xs">
-        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-            <i class="fas fa-tags text-teal-600 mr-1"></i> Referensi Kategori Guru yang Tersedia:
-        </label>
-        <p class="text-xs text-gray-500 mb-3">Anda dapat mengisi kategori sesuai daftar berikut, atau mengetikkan kategori mata pelajaran lain yang berlaku di sekolah:</p>
-        <div class="flex flex-wrap gap-2">
-            @foreach($categories as $cat)
-                <span class="inline-block bg-teal-50 border border-teal-200 text-teal-800 text-xs px-2.5 py-1 rounded-lg font-bold">
-                    {{ $cat }}
-                </span>
-            @endforeach
-        </div>
-    </div>
-    @endif
 
     <!-- Upload Form -->
     <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
