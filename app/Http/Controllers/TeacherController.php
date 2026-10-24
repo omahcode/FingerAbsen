@@ -240,8 +240,17 @@ class TeacherController extends Controller
         $this->authorizeAccess();
 
         $date = $request->query('date', Carbon::today('Asia/Jakarta')->toDateString());
+        $selectedStatus = $request->query('status', 'all');
+        $search = $request->query('search');
 
-        $teachers = Teacher::orderBy('name')->get();
+        $teachersQuery = Teacher::orderBy('name');
+        if (! empty($search)) {
+            $teachersQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('nip', 'like', "%{$search}%");
+            });
+        }
+        $teachers = $teachersQuery->get();
 
         // Ambil log absensi guru pada tanggal tersebut
         $logs = AttendanceLog::whereNotNull('teacher_id')
@@ -253,7 +262,7 @@ class TeacherController extends Controller
         $attendedCount = 0;
         $unattendedCount = 0;
 
-        $reportData = $teachers->map(function ($teacher) use ($logs, &$attendedCount, &$unattendedCount) {
+        $allReportData = $teachers->map(function ($teacher) use ($logs, &$attendedCount, &$unattendedCount) {
             $teacherLogs = $logs->get($teacher->id);
             $hasAttended = ! empty($teacherLogs) && $teacherLogs->isNotEmpty();
 
@@ -279,11 +288,25 @@ class TeacherController extends Controller
             ];
         });
 
+        // Filter berdasarkan status pill (all, attended, unattended)
+        if ($selectedStatus === 'attended') {
+            $reportData = $allReportData->where('has_attended', true)->values();
+        } elseif ($selectedStatus === 'unattended') {
+            $reportData = $allReportData->where('has_attended', false)->values();
+        } else {
+            $reportData = $allReportData;
+        }
+
+        $totalCount = $teachers->count();
+
         return view('teachers.ceremony', compact(
             'reportData',
             'date',
+            'selectedStatus',
+            'search',
             'attendedCount',
             'unattendedCount',
+            'totalCount',
             'teachers'
         ));
     }

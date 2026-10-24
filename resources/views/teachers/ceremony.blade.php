@@ -61,32 +61,76 @@
         </div>
     </div>
 
-    <!-- Filter Tanggal -->
-    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
+    <!-- Filter Toolbar & Search -->
+    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 space-y-4">
+        <!-- Filter Tabs Status Pills -->
+        <div class="flex flex-wrap items-center gap-2 pb-3 border-b border-gray-100">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">FILTER STATUS:</span>
+            
+            <!-- Semua Guru -->
+            <a href="{{ route('teachers.ceremony', array_merge(request()->query(), ['status' => 'all'])) }}" class="filter-tab-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 {{ $selectedStatus === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                <i class="fas fa-users"></i> Semua Guru
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {{ $selectedStatus === 'all' ? 'bg-white/25 text-white' : 'bg-gray-200 text-gray-700' }}">{{ $totalCount }}</span>
+            </a>
+
+            <!-- Sudah Absen -->
+            <a href="{{ route('teachers.ceremony', array_merge(request()->query(), ['status' => 'attended'])) }}" class="filter-tab-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 {{ $selectedStatus === 'attended' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100' }}">
+                <span class="w-2 h-2 rounded-full {{ $selectedStatus === 'attended' ? 'bg-white' : 'bg-emerald-500 animate-pulse' }}"></span> Sudah Absen
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {{ $selectedStatus === 'attended' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800' }}">{{ $attendedCount }}</span>
+            </a>
+
+            <!-- Belum Absen -->
+            <a href="{{ route('teachers.ceremony', array_merge(request()->query(), ['status' => 'unattended'])) }}" class="filter-tab-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 {{ $selectedStatus === 'unattended' ? 'bg-rose-600 text-white shadow-sm' : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100' }}">
+                <i class="far fa-circle text-[10px]"></i> Belum Absen
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {{ $selectedStatus === 'unattended' ? 'bg-white/25 text-white' : 'bg-rose-100 text-rose-800' }}">{{ $unattendedCount }}</span>
+            </a>
+        </div>
+
+        <!-- Input Tanggal & Pencarian Nama/NIP -->
         <form action="{{ route('teachers.ceremony') }}" method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <input type="hidden" name="status" value="{{ $selectedStatus }}">
+
             <!-- Pilihan Tanggal -->
-            <div class="md:col-span-9">
+            <div class="md:col-span-5">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-calendar-day text-rose-500 mr-1"></i> Tanggal Upacara / Kegiatan:
                 </label>
                 <input type="date" name="date" value="{{ $date }}" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
             </div>
 
+            <!-- Pencarian Nama / NIP -->
+            <div class="md:col-span-5">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                    <i class="fas fa-search text-blue-500 mr-1"></i> Cari Nama / NIP:
+                </label>
+                <input type="text" name="search" value="{{ $search }}" placeholder="Ketik nama atau NIP guru..." class="w-full border border-gray-300 rounded-xl text-sm p-2.5 focus:ring-2 focus:ring-rose-500 focus:outline-none">
+            </div>
+
             <!-- Tombol Refresh / Submit -->
-            <div class="md:col-span-3 flex items-end">
-                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-1.5 mt-5 md:mt-0">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Tampilkan</span>
+            <div class="md:col-span-2 flex items-end gap-1.5">
+                <button type="submit" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-3 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-1.5 mt-5 md:mt-0">
+                    <i class="fas fa-search"></i>
+                    <span>Cari</span>
                 </button>
+                @if($search || $selectedStatus !== 'all')
+                    <a href="{{ route('teachers.ceremony', ['date' => $date]) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-2.5 rounded-xl text-sm transition flex items-center justify-center" title="Reset Filter">
+                        <i class="fas fa-times"></i>
+                    </a>
+                @endif
             </div>
         </form>
 
-        <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+        <div class="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between text-xs text-gray-500 gap-2">
             <div>
                 Data Presensi Tanggal: <strong class="text-gray-900 font-bold">{{ \Carbon\Carbon::parse($date)->isoFormat('dddd, D MMMM Y') }}</strong>
+                @if($selectedStatus === 'attended')
+                    • Menampilkan <span class="text-emerald-700 font-bold">Sudah Absen ({{ $reportData->count() }} Guru)</span>
+                @elseif($selectedStatus === 'unattended')
+                    • Menampilkan <span class="text-rose-700 font-bold">Belum Absen ({{ $reportData->count() }} Guru)</span>
+                @endif
             </div>
             <div>
-                Total Guru Terdata: <strong class="text-gray-900 font-bold">{{ $reportData->count() }} Guru</strong>
+                Menampilkan: <strong class="text-gray-900 font-bold">{{ $reportData->count() }}</strong> dari <strong class="text-gray-900 font-bold">{{ $totalCount }} Guru</strong>
             </div>
         </div>
     </div>
