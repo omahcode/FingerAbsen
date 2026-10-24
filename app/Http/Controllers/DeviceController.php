@@ -7,7 +7,6 @@ use App\Models\Device;
 use App\Models\DeviceUser;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -54,47 +53,6 @@ class DeviceController extends Controller
 
     public function show(Request $request, Device $device)
     {
-        // Auto-sinkronisasi awal jika pencatatan mesin masih kosong
-        if ($device->deviceUsers()->count() === 0) {
-            $logs = AttendanceLog::where('device_id', $device->id)
-                ->whereNotNull('device_user_id')
-                ->select('student_id', 'teacher_id', 'device_user_id')
-                ->distinct()
-                ->get();
-
-            foreach ($logs as $log) {
-                DeviceUser::firstOrCreate(
-                    [
-                        'device_id' => $device->id,
-                        'device_user_id' => (string) $log->device_user_id,
-                    ],
-                    [
-                        'user_type' => $log->teacher_id ? 'teacher' : 'student',
-                        'student_id' => $log->student_id,
-                        'teacher_id' => $log->teacher_id,
-                        'synced_at' => now(),
-                    ]
-                );
-            }
-
-            if ($device->isForTeachers() && $device->deviceUsers()->count() === 0) {
-                $teachers = Teacher::all();
-                foreach ($teachers as $t) {
-                    DeviceUser::firstOrCreate(
-                        [
-                            'device_id' => $device->id,
-                            'device_user_id' => (string) $t->device_user_id,
-                        ],
-                        [
-                            'user_type' => 'teacher',
-                            'teacher_id' => $t->id,
-                            'synced_at' => now(),
-                        ]
-                    );
-                }
-            }
-        }
-
         $type = $request->query('type', 'all');
         $search = $request->query('search');
         $classId = $request->query('school_class_id');
@@ -186,6 +144,22 @@ class DeviceController extends Controller
         IclockController::queueCommand('QUERY FINGERTMP PIN=0', $device->serial_number);
 
         return redirect()->back()->with('success', "Perintah inspeksi & penarikan daftar user telah dikirim ke mesin {$device->name}. Mesin akan segera mengunggah data.");
+    }
+
+    public function clearDeviceData(Device $device)
+    {
+        $count = $device->deviceUsers()->count();
+
+        // 1. Bersihkan catatan alokasi pengguna di mesin ini pada website
+        $device->deviceUsers()->delete();
+
+        // 2. Kirim perintah pembersihan memori ke antrean ADMS mesin fisik
+        IclockController::queueCommand('CLEAR DATA', $device->serial_number);
+        IclockController::queueCommand('DATA DELETE USER PIN=0', $device->serial_number);
+        IclockController::queueCommand('DATA DELETE FP PIN=0', $device->serial_number);
+
+        return redirect()->route('devices.show', $device->id)
+            ->with('success', "Berhasil mereset data mesin {$device->name}. {$count} catatan pengguna telah dikosongkan dan perintah pembersihan memori telah dikirim ke mesin.");
     }
 
     public function edit(Device $device)

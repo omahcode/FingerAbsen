@@ -192,4 +192,42 @@ class DeviceDataInspectionTest extends TestCase
         $queue = Cache::get('adms_queue_'.$this->device1->serial_number, []);
         $this->assertContains('QUERY USER PIN=0', $queue);
     }
+
+    public function test_admin_can_clear_device_data(): void
+    {
+        for ($i = 1; $i <= 3; $i++) {
+            $student = Student::create([
+                'nis' => '700'.$i,
+                'name' => 'Siswa Test '.$i,
+                'school_class_id' => $this->classA->id,
+                'device_user_id' => '700'.$i,
+            ]);
+
+            DeviceUser::create([
+                'device_id' => $this->device1->id,
+                'device_user_id' => '700'.$i,
+                'user_type' => 'student',
+                'student_id' => $student->id,
+                'synced_at' => now(),
+            ]);
+        }
+
+        $this->assertEquals(3, DeviceUser::where('device_id', $this->device1->id)->count());
+
+        $res = $this->actingAs($this->admin)->post(route('devices.clear_data', $this->device1->id));
+
+        $res->assertRedirect(route('devices.show', $this->device1->id));
+        $res->assertSessionHas('success');
+
+        // Pastikan catatan di device_users kosong (0 orang)
+        $this->assertEquals(0, DeviceUser::where('device_id', $this->device1->id)->count());
+
+        // Pastikan master data siswa tetap aman di database
+        $this->assertEquals(3, Student::where('school_class_id', $this->classA->id)->count());
+
+        // Pastikan perintah pembersihan terkirim ke antrean mesin
+        $queue = Cache::get('adms_queue_'.$this->device1->serial_number, []);
+        $this->assertContains('CLEAR DATA', $queue);
+        $this->assertContains('DATA DELETE USER PIN=0', $queue);
+    }
 }

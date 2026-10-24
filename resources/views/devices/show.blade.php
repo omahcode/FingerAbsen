@@ -33,14 +33,20 @@
         <div class="flex flex-wrap items-center gap-2">
             <form action="{{ route('devices.pull_data', $device->id) }}" method="POST" data-confirm="Kirim perintah ke mesin fisik untuk mengecek dan mengunggah daftar user terbarunya?" data-title="Tarik Data dari Mesin Fisik" data-icon="question">
                 @csrf
-                <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2 px-3.5 rounded-lg shadow-sm transition text-xs flex items-center gap-1.5">
+                <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold py-2 px-3.5 rounded-lg shadow-sm transition text-xs flex items-center gap-1.5" title="Minta mesin fisik mengunggah daftar user terbarunya">
                     <i class="fas fa-cloud-download-alt"></i> Tarik Data Mesin
                 </button>
             </form>
             <a href="{{ route('sync.index') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3.5 rounded-lg shadow-sm transition text-xs flex items-center gap-1.5">
                 <i class="fas fa-paper-plane"></i> Sebar Data ke Mesin Ini
             </a>
-            <a href="{{ route('devices.edit', $device->id) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg text-xs transition">
+            <form action="{{ route('devices.clear_data', $device->id) }}" method="POST" data-confirm="Kosongkan seluruh data pengguna di mesin '{{ $device->name }}'? Tindakan ini akan mereset daftar pengguna mesin ini di website dan mengirim perintah pembersihan ke memori mesin fisik. Master data siswa & guru di website tetap aman." data-title="Kosongkan Data Mesin" data-danger="true" data-icon="warning">
+                @csrf
+                <button type="submit" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-2 px-3.5 rounded-lg shadow-sm transition text-xs flex items-center gap-1.5" title="Kosongkan seluruh data di mesin ini">
+                    <i class="fas fa-broom"></i> Kosongkan Data Mesin
+                </button>
+            </form>
+            <a href="{{ route('devices.edit', $device->id) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg text-xs transition" title="Pengaturan Mesin">
                 <i class="fas fa-cog"></i>
             </a>
         </div>

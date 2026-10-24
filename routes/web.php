@@ -103,6 +103,7 @@ Route::middleware('auth')->group(function () {
     Route::post('devices/{device}/sync-time', [DeviceController::class, 'syncTime'])->name('devices.sync_time');
     Route::post('devices/{device}/remove-user/{deviceUserId}', [DeviceController::class, 'removeUser'])->name('devices.remove_user');
     Route::post('devices/{device}/pull-data', [DeviceController::class, 'pullData'])->name('devices.pull_data');
+    Route::post('devices/{device}/clear-data', [DeviceController::class, 'clearDeviceData'])->name('devices.clear_data');
 
     Route::resource('majors', MajorController::class)->except(['create', 'edit', 'update', 'show']);
     Route::resource('classes', SchoolClassController::class)->except(['create', 'edit', 'update', 'show']);
