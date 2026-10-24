@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Tabel Data Guru: NIP | NAMA GURU | KATEGORI | SIDIK JARI | AKSI -->
+    <!-- Tabel Data Guru: NIP | NAMA GURU | SIDIK JARI | AKSI -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <form id="bulk-delete-form" action="{{ route('teachers.destroyMultiple') }}" method="POST" data-confirm="Hapus seluruh data guru yang dicentang dari database dan mesin fingerprint?" data-title="Hapus Massal Guru" data-danger="true" data-icon="warning">
             @csrf
@@ -147,7 +147,6 @@
                             </th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700">NIP</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700">NAMA GURU</th>
-                            <th class="py-3.5 px-4 font-extrabold text-gray-700">KATEGORI</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700 text-center">SIDIK JARI</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700 text-right">AKSI</th>
                         </tr>
@@ -188,29 +187,6 @@
                                 </div>
                             </td>
 
-                            <!-- KATEGORI -->
-                            <td class="py-3.5 px-4">
-                                @php
-                                    $catUpper = strtoupper($t->category);
-                                    $badgeClass = 'bg-teal-50 text-teal-700 border-teal-200';
-                                    if (str_contains($catUpper, 'MTK') || str_contains($catUpper, 'MATEMATIKA')) {
-                                        $badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
-                                    } elseif (str_contains($catUpper, 'JURUSAN') || str_contains($catUpper, 'PRODUKTIF')) {
-                                        $badgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
-                                    } elseif (str_contains($catUpper, 'PPKN') || str_contains($catUpper, 'SEJARAH')) {
-                                        $badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
-                                    } elseif (str_contains($catUpper, 'AGAMA') || str_contains($catUpper, 'PAI')) {
-                                        $badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                                    } elseif (str_contains($catUpper, 'BAHASA')) {
-                                        $badgeClass = 'bg-sky-50 text-sky-700 border-sky-200';
-                                    }
-                                @endphp
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border {{ $badgeClass }}">
-                                    <i class="fas fa-bookmark text-[10px] opacity-75"></i>
-                                    {{ $t->category }}
-                                </span>
-                            </td>
-
                             <!-- SIDIK JARI -->
                             <td class="py-3.5 px-4 text-center">
                                 @if($t->fingerprint_templates_count > 0)
@@ -246,13 +222,13 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="py-14 text-center text-gray-400">
+                            <td colspan="5" class="py-14 text-center text-gray-400">
                                 <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">
                                     <i class="fas fa-chalkboard-teacher"></i>
                                 </div>
                                 <p class="font-bold text-gray-700 text-base">Belum Ada Data Guru</p>
                                 <p class="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
-                                    Klik tombol "Tambah Guru Baru" di atas untuk mendaftarkan NIP, Nama, Kategori Mapel, dan Sidik Jari guru.
+                                    Klik tombol "Tambah Guru Baru" di atas untuk mendaftarkan NIP, Nama, dan Sidik Jari guru.
                                 </p>
                             </td>
                         </tr>

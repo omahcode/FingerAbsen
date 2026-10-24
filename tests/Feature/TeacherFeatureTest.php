@@ -41,12 +41,10 @@ class TeacherFeatureTest extends TestCase
         $response->assertSee('Data Guru (User Mesin)');
         $response->assertSee('NIP');
         $response->assertSee('NAMA GURU');
-        $response->assertSee('KATEGORI');
         $response->assertSee('SIDIK JARI');
         $response->assertSee('AKSI');
         $response->assertSee('198501012010011001');
         $response->assertSee('Pak Joko Widodo, M.Pd');
-        $response->assertSee('GURU MTK');
     }
 
     public function test_admin_can_store_new_teacher(): void
