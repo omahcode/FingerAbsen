@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceLog;
 use App\Models\Device;
+use App\Models\DeviceUser;
+use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +16,11 @@ class DeviceController extends Controller
 {
     public function index()
     {
-        $devices = Device::all();
+        $devices = Device::withCount([
+            'deviceUsers as total_users_count',
+            'deviceUsers as students_count' => fn ($q) => $q->where('user_type', 'student'),
+            'deviceUsers as teachers_count' => fn ($q) => $q->where('user_type', 'teacher'),
+        ])->get();
 
         return view('devices.index', compact('devices'));
     }
@@ -42,6 +50,142 @@ class DeviceController extends Controller
         ]);
 
         return redirect()->route('devices.index')->with('success', 'Mesin berhasil ditambahkan.');
+    }
+
+    public function show(Request $request, Device $device)
+    {
+        // Auto-sinkronisasi awal jika pencatatan mesin masih kosong
+        if ($device->deviceUsers()->count() === 0) {
+            $logs = AttendanceLog::where('device_id', $device->id)
+                ->whereNotNull('device_user_id')
+                ->select('student_id', 'teacher_id', 'device_user_id')
+                ->distinct()
+                ->get();
+
+            foreach ($logs as $log) {
+                DeviceUser::firstOrCreate(
+                    [
+                        'device_id' => $device->id,
+                        'device_user_id' => (string) $log->device_user_id,
+                    ],
+                    [
+                        'user_type' => $log->teacher_id ? 'teacher' : 'student',
+                        'student_id' => $log->student_id,
+                        'teacher_id' => $log->teacher_id,
+                        'synced_at' => now(),
+                    ]
+                );
+            }
+
+            if ($device->isForTeachers() && $device->deviceUsers()->count() === 0) {
+                $teachers = Teacher::all();
+                foreach ($teachers as $t) {
+                    DeviceUser::firstOrCreate(
+                        [
+                            'device_id' => $device->id,
+                            'device_user_id' => (string) $t->device_user_id,
+                        ],
+                        [
+                            'user_type' => 'teacher',
+                            'teacher_id' => $t->id,
+                            'synced_at' => now(),
+                        ]
+                    );
+                }
+            }
+        }
+
+        $type = $request->query('type', 'all');
+        $search = $request->query('search');
+        $classId = $request->query('school_class_id');
+
+        $query = $device->deviceUsers()->with([
+            'student.schoolClass',
+            'teacher',
+            'fingerprintTemplates',
+        ]);
+
+        if ($type === 'students') {
+            $query->where('user_type', 'student');
+        } elseif ($type === 'teachers') {
+            $query->where('user_type', 'teacher');
+        }
+
+        if (! empty($classId) && $classId !== 'all') {
+            $query->whereHas('student', function ($q) use ($classId) {
+                $q->where('school_class_id', $classId);
+            });
+        }
+
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('device_user_id', 'like', "%{$search}%")
+                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('nis', 'like', "%{$search}%"))
+                    ->orWhereHas('teacher', fn ($tq) => $tq->where('name', 'like', "%{$search}%")->orWhere('nip', 'like', "%{$search}%"));
+            });
+        }
+
+        $deviceUsers = $query->paginate(30)->withQueryString();
+
+        // Statistik Ringkas Mesin
+        $totalUsers = $device->deviceUsers()->count();
+        $totalStudents = $device->deviceUsers()->where('user_type', 'student')->count();
+        $totalTeachers = $device->deviceUsers()->where('user_type', 'teacher')->count();
+
+        // Rincian Siswa per Kelas di Mesin Ini
+        $classBreakdown = SchoolClass::whereHas('students.deviceUsers', function ($q) use ($device) {
+            $q->where('device_id', $device->id);
+        })->withCount(['students as count' => function ($q) use ($device) {
+            $q->whereHas('deviceUsers', fn ($du) => $du->where('device_id', $device->id));
+        }])->get();
+
+        $classes = SchoolClass::orderBy('name')->get();
+
+        // 10 Riwayat Tap Terakhir di Mesin Ini
+        $recentLogs = AttendanceLog::where('device_id', $device->id)
+            ->with(['student.schoolClass', 'teacher'])
+            ->latest('timestamp')
+            ->take(10)
+            ->get();
+
+        return view('devices.show', compact(
+            'device',
+            'deviceUsers',
+            'totalUsers',
+            'totalStudents',
+            'totalTeachers',
+            'classBreakdown',
+            'classes',
+            'type',
+            'search',
+            'classId',
+            'recentLogs'
+        ));
+    }
+
+    public function removeUser(Device $device, string $deviceUserId)
+    {
+        // Kirim perintah hapus ke antrean ADMS mesin tersebut
+        IclockController::queueCommand("DATA DELETE USER PIN={$deviceUserId}", $device->serial_number);
+        IclockController::queueCommand("DATA DELETE FP PIN={$deviceUserId}", $device->serial_number);
+
+        // Hapus dari catatan user mesin ini
+        DeviceUser::where('device_id', $device->id)
+            ->where('device_user_id', $deviceUserId)
+            ->delete();
+
+        return redirect()->back()->with('success', "Perintah hapus pengguna PIN {$deviceUserId} telah dikirim ke mesin {$device->name}.");
+    }
+
+    public function pullData(Device $device)
+    {
+        IclockController::queueCommand('CHECK', $device->serial_number);
+        IclockController::queueCommand('QUERY USER PIN=0', $device->serial_number);
+        IclockController::queueCommand('DATA QUERY USER', $device->serial_number);
+        IclockController::queueCommand('QUERY USERINFO PIN=0', $device->serial_number);
+        IclockController::queueCommand('QUERY FINGERTMP PIN=0', $device->serial_number);
+
+        return redirect()->back()->with('success', "Perintah inspeksi & penarikan daftar user telah dikirim ke mesin {$device->name}. Mesin akan segera mengunggah data.");
     }
 
     public function edit(Device $device)

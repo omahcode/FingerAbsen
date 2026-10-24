@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Device;
+use App\Models\DeviceUser;
 use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -132,6 +133,38 @@ class SyncController extends Controller
                 IclockController::queueCommand("DATA UPDATE USER PIN={$item->device_user_id}\tName={$item->name}\tPri=0\tGrp=1", $targetSn, null, $roleFilter);
             }
             $userCount++;
+        }
+
+        // Catat alokasi data user ke masing-masing mesin
+        $targetDevices = collect();
+        if (! empty($deviceId) && $deviceId !== 'all') {
+            $singleDevice = Device::find($deviceId);
+            if ($singleDevice) {
+                $targetDevices->push($singleDevice);
+            }
+        } else {
+            if ($targetType === 'students') {
+                $targetDevices = Device::where(fn ($q) => $q->whereNull('purpose')->orWhere('purpose', '!=', 'teachers'))->get();
+            } else {
+                $targetDevices = Device::where(fn ($q) => $q->whereNull('purpose')->orWhere('purpose', '!=', 'students'))->get();
+            }
+        }
+
+        foreach ($targetDevices as $dev) {
+            foreach ($items as $item) {
+                DeviceUser::updateOrCreate(
+                    [
+                        'device_id' => $dev->id,
+                        'device_user_id' => (string) $item->device_user_id,
+                    ],
+                    [
+                        'user_type' => $targetType === 'teachers' ? 'teacher' : 'student',
+                        'student_id' => $targetType === 'students' ? $item->id : null,
+                        'teacher_id' => $targetType === 'teachers' ? $item->id : null,
+                        'synced_at' => now(),
+                    ]
+                );
+            }
         }
 
         // 2. Antrekan Template Sidik Jari (Hanya milik orang-orang di batch ini)

@@ -31,4 +31,14 @@ class Device extends Model
             default => 'Semua (Siswa & Guru)',
         };
     }
+
+    public function deviceUsers()
+    {
+        return $this->hasMany(DeviceUser::class);
+    }
+
+    public function attendanceLogs()
+    {
+        return $this->hasMany(AttendanceLog::class);
+    }
 }
