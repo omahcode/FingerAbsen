@@ -61,34 +61,19 @@
         </div>
     </div>
 
-    <!-- Filter Tanggal & Kategori -->
+    <!-- Filter Tanggal -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
         <form action="{{ route('teachers.ceremony') }}" method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             <!-- Pilihan Tanggal -->
-            <div class="md:col-span-5">
+            <div class="md:col-span-9">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-calendar-day text-rose-500 mr-1"></i> Tanggal Upacara / Kegiatan:
                 </label>
                 <input type="date" name="date" value="{{ $date }}" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
             </div>
 
-            <!-- Filter Kategori -->
-            <div class="md:col-span-5">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                    <i class="fas fa-tags text-teal-600 mr-1"></i> Filter Kategori Guru:
-                </label>
-                <select name="category" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
-                    <option value="">-- Semua Kategori Guru --</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}" {{ ($category === $cat) ? 'selected' : '' }}>
-                            {{ $cat }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
             <!-- Tombol Refresh / Submit -->
-            <div class="md:col-span-2 flex items-end">
+            <div class="md:col-span-3 flex items-end">
                 <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-1.5 mt-5 md:mt-0">
                     <i class="fas fa-sync-alt"></i>
                     <span>Tampilkan</span>
@@ -139,9 +124,6 @@
                                 </div>
                                 <div>
                                     <span class="font-bold text-gray-900 block">{{ $row['name'] }}</span>
-                                    @if(!empty($row['category']))
-                                        <span class="text-[11px] text-gray-400 font-medium">{{ $row['category'] }}</span>
-                                    @endif
                                 </div>
                             </div>
                         </td>
