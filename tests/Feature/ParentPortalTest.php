@@ -10,6 +10,7 @@ use App\Models\ParentPushSubscription;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\StudentPermission;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -408,5 +409,34 @@ class ParentPortalTest extends TestCase
         $response->assertJsonPath('attendance.checkin.time', '06:45');
         $response->assertJsonPath('attendance.checkin.is_ontime', true);
         $response->assertJsonPath('attendance.checkin.status_label', 'Hadir Tepat Waktu');
+    }
+
+    public function test_admin_can_simulate_checkin_and_checkout_notification_in_settings(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Tes Notif Masuk (Tepat Waktu)
+        $resIn = $this->actingAs($user)->postJson(route('settings.notification.test'), [
+            'student_id' => $this->student->id,
+            'type' => 'checkin_ontime',
+            'time' => '06:45',
+        ]);
+
+        $resIn->assertOk();
+        $resIn->assertJsonPath('status', 'success');
+        $resIn->assertJsonPath('action_label', 'Masuk Tepat Waktu');
+        $this->assertStringContainsString('Presensi Masuk Tepat Waktu', $resIn->json('title'));
+
+        // 2. Tes Notif Pulang (Keluar)
+        $resOut = $this->actingAs($user)->postJson(route('settings.notification.test'), [
+            'student_id' => $this->student->id,
+            'type' => 'checkout',
+            'time' => '14:15',
+        ]);
+
+        $resOut->assertOk();
+        $resOut->assertJsonPath('status', 'success');
+        $resOut->assertJsonPath('action_label', 'Pulang Sekolah');
+        $this->assertStringContainsString('Presensi Pulang', $resOut->json('title'));
     }
 }

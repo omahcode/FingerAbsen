@@ -476,9 +476,117 @@
                 </div>
             </div>
 
+            <!-- Tombol Simpan Pengaturan Utama -->
+            <div class="flex justify-end pt-2">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-sm active:scale-[0.98]">
+                    <i class="fas fa-save"></i>
+                    <span>Simpan Pengaturan Utama</span>
+                </button>
+            </div>
+
             </div>
         </div>
     </form>
+
+    <!-- Card Terpisah: Uji Coba & Simulasi Notifikasi Orang Tua (Masuk & Keluar) -->
+    <div class="mt-8 bg-white p-6 rounded-xl shadow-sm border border-blue-100 border-l-4 border-l-blue-600">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+            <div>
+                <h3 class="text-base font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-bell text-blue-600 mr-2"></i> Uji Coba & Simulasi Notifikasi Orang Tua (Masuk & Keluar)
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    Kirimkan simulasi notifikasi presensi ke perangkat HP orang tua terdaftar serta dengarkan efek bunyi lonceng bel.
+                </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    <i class="fas fa-mobile-screen"></i> {{ $pushSubscribersCount }} HP Ortu Terdaftar ({{ $pushStudentsCount }} Siswa)
+                </span>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Dropdown Siswa Target -->
+                <div class="md:col-span-2">
+                    <label for="test-notif-student-id" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        Pilih Siswa Target Uji Coba <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="test-notif-student-id" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="">-- Pilih Siswa Target --</option>
+                        @foreach($students as $st)
+                        <option value="{{ $st->id }}" data-name="{{ $st->name }}" data-devices="{{ $st->push_subscriptions_count }}">
+                            {{ $st->name }} ({{ $st->schoolClass?->name ?? 'Tanpa Kelas' }}) - {{ $st->push_subscriptions_count > 0 ? '🟢 ' . $st->push_subscriptions_count . ' HP Terdaftar' : '⚪ Belum Ada HP' }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Jam Presensi Simulasi -->
+                <div>
+                    <label for="test-notif-time" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                        Jam Simulasi (Opsional)
+                    </label>
+                    <input type="time" id="test-notif-time" value="{{ date('H:i') }}" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Opsi Bunyi & Browser Notification -->
+            <div class="flex flex-wrap items-center gap-4 py-2 border-y border-gray-100 text-xs text-gray-700">
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="test-play-sound" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
+                    <span class="font-semibold"><i class="fas fa-volume-high text-blue-600"></i> Mainkan Efek Bel Suara di Komputer Ini</span>
+                </label>
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="test-show-browser-notif" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
+                    <span class="font-semibold"><i class="fas fa-window-restore text-indigo-600"></i> Munculkan Pop-up Notifikasi Browser</span>
+                </label>
+            </div>
+
+            <!-- 3 Tombol Aksi Simulasi -->
+            <div>
+                <span class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Jenis Notifikasi yang Ingin Diuji:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Tombol 1: Masuk Tepat Waktu -->
+                    <button type="button" onclick="triggerTestNotification('checkin_ontime')" id="btn-test-in-ontime" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-[0.98]">
+                        <i class="fas fa-door-open text-emerald-200"></i>
+                        <span>Tes Masuk (Tepat Waktu)</span>
+                    </button>
+
+                    <!-- Tombol 2: Masuk Terlambat -->
+                    <button type="button" onclick="triggerTestNotification('checkin_late')" id="btn-test-in-late" class="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-[0.98]">
+                        <i class="fas fa-clock text-amber-200"></i>
+                        <span>Tes Masuk (Terlambat)</span>
+                    </button>
+
+                    <!-- Tombol 3: Pulang Sekolah -->
+                    <button type="button" onclick="triggerTestNotification('checkout')" id="btn-test-out" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-sm transition active:scale-[0.98]">
+                        <i class="fas fa-person-walking-arrow-right text-blue-200"></i>
+                        <span>Tes Pulang (Keluar)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kotak Laporan Hasil Simulasi Terakhir -->
+            <div id="test-notif-result-box" class="hidden mt-3 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 animate-in fade-in">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-800 flex items-center gap-1.5" id="res-badge">
+                        <i class="fas fa-check-circle text-emerald-600"></i> Hasil Simulasi Notifikasi
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono" id="res-timestamp"></span>
+                </div>
+                <div class="p-2.5 rounded-lg bg-white border border-slate-200/80 space-y-1">
+                    <p class="font-bold text-slate-900" id="res-title"></p>
+                    <p class="text-slate-600 leading-relaxed" id="res-body"></p>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <span id="res-device-status"></span>
+                    <span class="text-slate-400">Target Siswa: <strong id="res-student-name" class="text-slate-700"></strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Card Terpisah: Hari Khusus, Kegiatan Kemah / Ekspram & Libur Panjang Sekolah -->
     <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-500">
@@ -1032,6 +1140,159 @@
             form.scrollIntoView({ behavior: 'smooth', block: 'center' });
             form.classList.add('ring-2', 'ring-emerald-500');
             setTimeout(() => form.classList.remove('ring-2', 'ring-emerald-500'), 1000);
+        }
+    }
+
+    // ==========================================
+    // SISTEM UJI COBA NOTIFIKASI MASUK & KELUAR
+    // ==========================================
+    function playAdminChime(type) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const now = ctx.currentTime;
+
+            if (type === 'checkin_ontime' || type === 'checkin_late') {
+                // 3-Tone Happy Arpeggio
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + (i * 0.1));
+                    gain.gain.setValueAtTime(0.2, now + (i * 0.1));
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + (i * 0.1) + 0.35);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + (i * 0.1));
+                    osc.stop(now + (i * 0.1) + 0.35);
+                });
+            } else {
+                // 2-Tone Warm Ding
+                [783.99, 523.25].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + (i * 0.14));
+                    gain.gain.setValueAtTime(0.22, now + (i * 0.14));
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + (i * 0.14) + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + (i * 0.14));
+                    osc.stop(now + (i * 0.14) + 0.4);
+                });
+            }
+        } catch (e) {
+            console.log('AudioContext not available:', e);
+        }
+    }
+
+    async function triggerTestNotification(type) {
+        const studentSelect = document.getElementById('test-notif-student-id');
+        const studentId = studentSelect ? studentSelect.value : '';
+
+        if (!studentId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Pilih Siswa Target',
+                text: 'Silakan pilih siswa yang ingin diuji coba notifikasinya terlebih dahulu.',
+                confirmButtonColor: '#2563eb'
+            });
+            if (studentSelect) studentSelect.focus();
+            return;
+        }
+
+        const timeInput = document.getElementById('test-notif-time');
+        const timeVal = timeInput ? timeInput.value : '';
+        const playSound = document.getElementById('test-play-sound')?.checked;
+        const showBrowserNotif = document.getElementById('test-show-browser-notif')?.checked;
+
+        // Play chime immediately if checked
+        if (playSound) {
+            playAdminChime(type);
+        }
+
+        // Disable buttons during request
+        const btnOntime = document.getElementById('btn-test-in-ontime');
+        const btnLate = document.getElementById('btn-test-in-late');
+        const btnOut = document.getElementById('btn-test-out');
+        if (btnOntime) btnOntime.disabled = true;
+        if (btnLate) btnLate.disabled = true;
+        if (btnOut) btnOut.disabled = true;
+
+        try {
+            const res = await fetch("{{ route('settings.notification.test') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    type: type,
+                    time: timeVal
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                // Browser notification preview
+                if (showBrowserNotif && 'Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        new Notification(data.title, {
+                            body: data.body,
+                            icon: '/favicon.ico'
+                        });
+                    } else if (Notification.permission !== 'denied') {
+                        Notification.requestPermission().then(p => {
+                            if (p === 'granted') {
+                                new Notification(data.title, { body: data.body, icon: '/favicon.ico' });
+                            }
+                        });
+                    }
+                }
+
+                // Update result box
+                const resultBox = document.getElementById('test-notif-result-box');
+                if (resultBox) {
+                    resultBox.classList.remove('hidden');
+                    document.getElementById('res-timestamp').innerText = data.timestamp + ' WIB';
+                    document.getElementById('res-title').innerText = data.title;
+                    document.getElementById('res-body').innerText = data.body;
+                    document.getElementById('res-student-name').innerText = `${data.student_name} (${data.student_class})`;
+                    document.getElementById('res-device-status').innerHTML = data.sent_count > 0
+                        ? `<span class="text-emerald-600 font-bold"><i class="fas fa-check-double"></i> Terkirim ke ${data.sent_count} HP Orang Tua</span>`
+                        : `<span class="text-amber-600 font-medium"><i class="fas fa-circle-info"></i> Simulasi Selesai (${data.device_count} HP terdaftar)</span>`;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Simulasi Terkirim!',
+                    html: `<div class="text-left text-xs space-y-2 mt-2">
+                            <div class="p-2.5 rounded bg-slate-50 border border-slate-200">
+                                <p class="font-bold text-slate-800">${data.title}</p>
+                                <p class="text-slate-600 mt-1">${data.body}</p>
+                            </div>
+                            <p class="text-slate-500 font-medium">${data.message}</p>
+                           </div>`,
+                    confirmButtonColor: '#2563eb'
+                });
+            } else {
+                throw new Error(data.message || 'Gagal mengirimkan uji coba notifikasi.');
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Uji Coba',
+                text: err.message,
+                confirmButtonColor: '#2563eb'
+            });
+        } finally {
+            if (btnOntime) btnOntime.disabled = false;
+            if (btnLate) btnLate.disabled = false;
+            if (btnOut) btnOut.disabled = false;
         }
     }
 </script>

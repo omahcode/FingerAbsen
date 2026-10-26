@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ParentPushSubscription;
 use App\Models\SchoolClass;
 use App\Models\SchoolEvent;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Services\WebPushService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -47,9 +51,9 @@ class SettingController extends Controller
             'school_days' => Setting::getSchoolDays(),
         ];
 
-        // Daftar siswa untuk simulasi / uji coba streak
+        // Daftar siswa untuk simulasi / uji coba streak & notifikasi
         $hasManualStreakCol = Schema::hasColumn('students', 'manual_streak');
-        $students = Student::with('schoolClass')->orderBy('name', 'asc')->get();
+        $students = Student::with('schoolClass')->withCount('pushSubscriptions')->orderBy('name', 'asc')->get();
         $manualStreakStudents = $hasManualStreakCol
             ? Student::with('schoolClass')->where('manual_streak', '>', 0)->orderBy('manual_streak', 'desc')->get()
             : collect();
@@ -58,7 +62,11 @@ class SettingController extends Controller
         $schoolEvents = SchoolEvent::with('schoolClass')->orderBy('start_date', 'desc')->get();
         $classes = SchoolClass::orderBy('name', 'asc')->get();
 
-        return view('settings.index', compact('settings', 'students', 'manualStreakStudents', 'schoolEvents', 'classes'));
+        // Statistik Langganan Notifikasi Push Layar Orang Tua
+        $pushSubscribersCount = ParentPushSubscription::count();
+        $pushStudentsCount = ParentPushSubscription::distinct('student_id')->count('student_id');
+
+        return view('settings.index', compact('settings', 'students', 'manualStreakStudents', 'schoolEvents', 'classes', 'pushSubscribersCount', 'pushStudentsCount'));
     }
 
     /**
@@ -174,5 +182,73 @@ class SettingController extends Controller
         }
 
         return redirect()->route('settings.index')->with('success', 'Simulasi Top 3 Podium TV berhasil dibuat (Juara 1: 15 hari, Juara 2: 12 hari, Juara 3: 10 hari). Buka Mode TV untuk melihat hasilnya!');
+    }
+
+    /**
+     * Menguji pengiriman notifikasi presensi masuk / keluar ke perangkat orang tua siswa.
+     */
+    public function testNotification(Request $request, WebPushService $webPushService): JsonResponse
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'type' => 'required|in:checkin_ontime,checkin_late,checkout',
+            'time' => 'nullable|date_format:H:i',
+        ], [
+            'student_id.required' => 'Pilih siswa target uji coba notifikasi.',
+            'student_id.exists' => 'Siswa tidak ditemukan.',
+            'type.required' => 'Pilih jenis notifikasi (masuk tepat waktu, masuk terlambat, atau pulang).',
+        ]);
+
+        $student = Student::with('schoolClass')->findOrFail($request->student_id);
+        $time = $request->input('time') ?: Carbon::now('Asia/Jakarta')->format('H:i');
+        $checkinEnd = Setting::get('checkin_end', '07:15');
+
+        $type = $request->input('type');
+        $statusCode = ($type === 'checkout') ? 1 : 0;
+
+        if ($type === 'checkin_ontime') {
+            $title = "🟢 Presensi Masuk Tepat Waktu: {$student->name}";
+            $body = "Ananda {$student->name} hadir tepat waktu dan berhasil tap presensi masuk pada pukul {$time} WIB.";
+            $actionLabel = 'Masuk Tepat Waktu';
+        } elseif ($type === 'checkin_late') {
+            $title = "🟡 Presensi Masuk (Terlambat): {$student->name}";
+            $body = "Perhatian: Ananda {$student->name} telah tap presensi masuk pukul {$time} WIB (melewati batas waktu sekolah {$checkinEnd} WIB).";
+            $actionLabel = 'Masuk Terlambat';
+        } else {
+            $title = "🔵 Presensi Pulang: {$student->name}";
+            $body = "Ananda {$student->name} telah melakukan presensi kepulangan sekolah pada pukul {$time} WIB. Selamat beristirahat di rumah.";
+            $actionLabel = 'Pulang Sekolah';
+        }
+
+        $sentCount = $webPushService->sendToStudent($student, $title, $body, [
+            'status_code' => $statusCode,
+            'time' => $time,
+            'student_id' => $student->id,
+            'student_name' => $student->name,
+            'type' => ($type === 'checkout') ? 'checkout' : 'checkin',
+            'is_test' => true,
+        ]);
+
+        $deviceCount = $student->pushSubscriptions()->count();
+
+        $message = ($sentCount > 0)
+            ? "Notifikasi {$actionLabel} berhasil dikirim ke {$sentCount} perangkat HP orang tua terdaftar."
+            : ($deviceCount > 0
+                ? "Gagal mengirim ke {$deviceCount} perangkat HP (mungkin izin notifikasi ditolak/kedaluwarsa)."
+                : "Simulasi berhasil. Catatan: Orang tua ananda {$student->name} belum mendaftarkan HP di Portal Orang Tua (/orang-tua).");
+
+        return response()->json([
+            'status' => 'success',
+            'title' => $title,
+            'body' => $body,
+            'time' => $time,
+            'action_label' => $actionLabel,
+            'sent_count' => $sentCount,
+            'device_count' => $deviceCount,
+            'student_name' => $student->name,
+            'student_class' => $student->schoolClass?->name ?? '-',
+            'message' => $message,
+            'timestamp' => now('Asia/Jakarta')->format('H:i:s'),
+        ]);
     }
 }

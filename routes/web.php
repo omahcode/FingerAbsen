@@ -148,6 +148,7 @@ Route::middleware('auth')->group(function () {
     Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
     Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
     Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
+    Route::post('settings/test-notification', [SettingController::class, 'testNotification'])->name('settings.notification.test');
 
     // Manajemen Hari Khusus / Kemah / Libur Sekolah (Streak Protection)
     Route::post('school-events', [SchoolEventController::class, 'store'])->name('school-events.store');
