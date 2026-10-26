@@ -53,29 +53,43 @@ class WebPushService
         }
     }
 
+    protected array $lastErrors = [];
+
+    public function getLastErrors(): array
+    {
+        return $this->lastErrors;
+    }
+
     /**
      * Kirim notifikasi push ke seluruh perangkat terdaftar milik orang tua siswa.
      */
     public function sendToStudent(Student $student, string $title, string $body, array $extra = []): int
     {
+        $this->lastErrors = [];
+
         if (! $this->webPush) {
+            $this->lastErrors[] = 'WebPush library belum terinisialisasi pada server.';
+
             return 0;
         }
 
         $subscriptions = ParentPushSubscription::where('student_id', $student->id)->get();
         if ($subscriptions->isEmpty()) {
+            $this->lastErrors[] = "Belum ada perangkat HP yang terdaftar untuk ananda {$student->name}.";
+
             return 0;
         }
 
         $payload = json_encode(array_merge([
             'title' => $title,
             'body' => $body,
-            'icon' => asset('favicon.ico'),
+            'icon' => asset('favicon.svg'),
+            'badge' => asset('favicon.svg'),
             'url' => route('parent.index'),
             'timestamp' => now()->timestamp,
         ], $extra));
 
-        $sentCount = 0;
+        $queuedCount = 0;
         foreach ($subscriptions as $sub) {
             try {
                 $subscription = Subscription::create([
@@ -85,29 +99,36 @@ class WebPushService
                 ]);
 
                 $this->webPush->queueNotification($subscription, $payload);
-                $sentCount++;
+                $queuedCount++;
             } catch (\Throwable $e) {
+                $this->lastErrors[] = "Subscription #{$sub->id}: ".$e->getMessage();
                 Log::warning("Gagal antre push untuk subscription ID {$sub->id}: ".$e->getMessage());
             }
         }
 
-        if ($sentCount > 0) {
+        $successCount = 0;
+        if ($queuedCount > 0) {
             try {
                 foreach ($this->webPush->flush() as $report) {
                     $endpoint = (string) $report->getRequest()->getUri();
-                    if (! $report->isSuccess()) {
-                        Log::warning('Push gagal ke endpoint '.$endpoint.': '.$report->getReason());
+                    if ($report->isSuccess()) {
+                        $successCount++;
+                    } else {
+                        $reason = $report->getReason();
+                        $this->lastErrors[] = 'Endpoint: '.substr($endpoint, 0, 45)."... - {$reason}";
+                        Log::warning('Push gagal ke endpoint '.$endpoint.': '.$reason);
                         if ($report->isSubscriptionExpired()) {
                             ParentPushSubscription::where('endpoint_hash', hash('sha256', $endpoint))->delete();
                         }
                     }
                 }
             } catch (\Throwable $e) {
+                $this->lastErrors[] = 'Error flush WebPush: '.$e->getMessage();
                 Log::error('Gagal mengirim Web Push: '.$e->getMessage());
             }
         }
 
-        return $sentCount;
+        return $successCount;
     }
 
     /**

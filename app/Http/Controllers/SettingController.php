@@ -230,12 +230,16 @@ class SettingController extends Controller
         ]);
 
         $deviceCount = $student->pushSubscriptions()->count();
+        $errors = $webPushService->getLastErrors();
 
-        $message = ($sentCount > 0)
-            ? "Notifikasi {$actionLabel} berhasil dikirim ke {$sentCount} perangkat HP orang tua terdaftar."
-            : ($deviceCount > 0
-                ? "Gagal mengirim ke {$deviceCount} perangkat HP (mungkin izin notifikasi ditolak/kedaluwarsa)."
-                : "Simulasi berhasil. Catatan: Orang tua ananda {$student->name} belum mendaftarkan HP di Portal Orang Tua (/orang-tua).");
+        if ($sentCount > 0) {
+            $message = "Notifikasi {$actionLabel} berhasil dikirim dan diterima oleh server push (Google FCM) untuk {$sentCount} perangkat HP orang tua.";
+        } elseif ($deviceCount > 0) {
+            $errDetail = ! empty($errors) ? implode('; ', $errors) : 'Endpoint push tidak merespons atau token browser telah kedaluwarsa.';
+            $message = "Gagal terkirim ke {$deviceCount} HP terdaftar. Detail: {$errDetail}. Harap buka kembali Portal Orang Tua (/orang-tua) di HP tersebut lalu klik tombol 'Notifikasi di HP' untuk memperbarui izin token notifikasi.";
+        } else {
+            $message = "Simulasi notifikasi berhasil dijalankan di layar. Catatan: Belum ada perangkat HP yang didaftarkan untuk ananda {$student->name}.";
+        }
 
         return response()->json([
             'status' => 'success',

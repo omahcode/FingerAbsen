@@ -1178,16 +1178,22 @@
                 const reg = await navigator.serviceWorker.ready;
                 let subscription = await reg.pushManager.getSubscription();
 
-                if (!subscription) {
-                    if (!VAPID_PUBLIC_KEY) {
-                        throw new Error('VAPID Public Key belum terkonfigurasi di server.');
+                if (subscription) {
+                    try {
+                        await subscription.unsubscribe();
+                    } catch (e) {
+                        console.log('Unsubscribe old token:', e);
                     }
-                    const convertedVapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-                    subscription = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: convertedVapidKey
-                    });
                 }
+
+                if (!VAPID_PUBLIC_KEY) {
+                    throw new Error('VAPID Public Key belum terkonfigurasi di server.');
+                }
+                const convertedVapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
 
                 const res = await fetch("{{ route('parent.push.subscribe') }}", {
                     method: 'POST',
