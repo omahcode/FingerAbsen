@@ -40,6 +40,7 @@ Route::post('orang-tua/pilih', [ParentDashboardController::class, 'selectStudent
 Route::post('orang-tua/keluar', [ParentDashboardController::class, 'clear'])->name('parent.clear');
 Route::get('orang-tua/data', [ParentDashboardController::class, 'data'])->name('parent.data');
 Route::post('orang-tua/izin', [ParentDashboardController::class, 'storePermission'])->name('parent.permission.store');
+Route::delete('orang-tua/izin/{id}', [ParentDashboardController::class, 'destroyPermission'])->name('parent.permission.destroy');
 Route::post('orang-tua/push-subscribe', [ParentDashboardController::class, 'subscribePush'])->name('parent.push.subscribe');
 Route::post('orang-tua/push-unsubscribe', [ParentDashboardController::class, 'unsubscribePush'])->name('parent.push.unsubscribe');
 Route::post('orang-tua/push-test', [ParentDashboardController::class, 'testPush'])->name('parent.push.test');

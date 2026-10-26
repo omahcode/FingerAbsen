@@ -267,6 +267,11 @@
                                 <span class="inline-flex items-center gap-1 text-[10px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 mt-1">
                                     <i class="fas fa-check-double text-[9px]"></i> Disampaikan Ortu
                                 </span>
+                                @if($s['permission']->attachment)
+                                <a href="{{ asset('storage/' . $s['permission']->attachment) }}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-700 font-bold bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200 transition mt-1 ml-1" title="Lihat Dokumen / Foto Surat">
+                                    <i class="fas fa-paperclip"></i> Lihat Lampiran
+                                </a>
+                                @endif
                             </div>
                             @else
                             <span class="text-gray-400">-</span>

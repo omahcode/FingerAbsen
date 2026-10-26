@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ParentDashboardController extends Controller
@@ -232,6 +233,54 @@ class ParentDashboardController extends Controller
         // Recent history untuk kompatibilitas
         $recentHistory = array_values(array_reverse(array_filter($monthlyDays, fn ($item) => ! $item['is_future'] && ! $item['is_holiday'])));
 
+        // Linimasa Aktivitas & Notifikasi Presensi Hari Ini
+        $activitiesToday = [];
+        if ($todayCheckin) {
+            $checkinTimeStr = Carbon::parse($todayCheckin->timestamp)->format('H:i');
+            $isOntime = $checkinTimeStr <= $checkinEnd;
+            $activitiesToday[] = [
+                'type' => 'checkin',
+                'time' => $checkinTimeStr.' WIB',
+                'title' => $isOntime ? 'Presensi Masuk Tepat Waktu' : 'Presensi Masuk Terlambat',
+                'description' => "Ananda telah tap presensi sidik jari masuk pada pukul {$checkinTimeStr} WIB (".($isOntime ? 'Tepat Waktu' : "Melewati Batas {$checkinEnd} WIB").').',
+                'icon' => 'fa-door-open',
+                'badge' => $isOntime ? 'Tepat Waktu' : 'Terlambat',
+                'badge_class' => $isOntime ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200',
+            ];
+        }
+
+        if ($todayCheckout) {
+            $checkoutTimeStr = Carbon::parse($todayCheckout->timestamp)->format('H:i');
+            $activitiesToday[] = [
+                'type' => 'checkout',
+                'time' => $checkoutTimeStr.' WIB',
+                'title' => 'Presensi Pulang Sekolah',
+                'description' => "Ananda telah tap presensi sidik jari pulang sekolah pada pukul {$checkoutTimeStr} WIB.",
+                'icon' => 'fa-person-walking-arrow-right',
+                'badge' => 'Sudah Pulang',
+                'badge_class' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            ];
+        }
+
+        if ($todayPermission) {
+            $activitiesToday[] = [
+                'type' => 'permission',
+                'time' => Carbon::parse($todayPermission->created_at ?? now())->format('H:i').' WIB',
+                'title' => 'Keterangan '.$todayPermission->type,
+                'description' => $todayPermission->notes ?: 'Telah disampaikan secara resmi oleh orang tua / wali murid.',
+                'icon' => 'fa-notes-medical',
+                'badge' => 'Disetujui',
+                'badge_class' => 'bg-purple-50 text-purple-700 border-purple-200',
+                'attachment' => $todayPermission->attachment ? asset('storage/'.$todayPermission->attachment) : null,
+            ];
+        }
+
+        // Riwayat Pengajuan Izin Siswa Terakhir
+        $permissionHistory = StudentPermission::where('student_id', $student->id)
+            ->orderBy('date', 'desc')
+            ->limit(10)
+            ->get();
+
         $vapidPublicKey = config('webpush.vapid.public_key', '');
 
         return view('parent.dashboard', compact(
@@ -265,6 +314,8 @@ class ParentDashboardController extends Controller
             'statsTerlambat',
             'statsIzin',
             'statsAlpha',
+            'activitiesToday',
+            'permissionHistory',
             'vapidPublicKey'
         ));
     }
@@ -357,6 +408,27 @@ class ParentDashboardController extends Controller
             ->whereDate('date', $today)
             ->first();
 
+        $checkinTime = $todayCheckin ? Carbon::parse($todayCheckin->timestamp)->format('H:i') : null;
+        $checkoutTime = $todayCheckout ? Carbon::parse($todayCheckout->timestamp)->format('H:i') : null;
+        $isOntime = $checkinTime ? ($checkinTime <= $checkinEnd) : false;
+
+        $studyDuration = '-';
+        if ($todayCheckout && $todayCheckin) {
+            $start = Carbon::parse($todayCheckin->timestamp);
+            $end = Carbon::parse($todayCheckout->timestamp);
+            $diffMinutes = $start->diffInMinutes($end);
+            $hours = floor($diffMinutes / 60);
+            $minutes = $diffMinutes % 60;
+            $studyDuration = ($hours > 0 ? "{$hours} Jam " : '')."{$minutes} Menit";
+        } elseif ($todayCheckin) {
+            $start = Carbon::parse($todayCheckin->timestamp);
+            $now = Carbon::now('Asia/Jakarta');
+            $diffMinutes = $start->diffInMinutes($now);
+            $hours = floor($diffMinutes / 60);
+            $minutes = $diffMinutes % 60;
+            $studyDuration = ($hours > 0 ? "{$hours} Jam " : '')."{$minutes} Menit (Berjalan)";
+        }
+
         return response()->json([
             'status' => 'success',
             'student' => [
@@ -367,24 +439,35 @@ class ParentDashboardController extends Controller
             ],
             'attendance' => [
                 'checkin' => $todayCheckin ? [
-                    'time' => Carbon::parse($todayCheckin->timestamp)->format('H:i'),
-                    'is_ontime' => Carbon::parse($todayCheckin->timestamp)->format('H:i') <= $checkinEnd,
+                    'time' => $checkinTime,
+                    'time_formatted' => $checkinTime.' WIB',
+                    'is_ontime' => $isOntime,
+                    'status_label' => $isOntime ? 'Hadir Tepat Waktu' : 'Hadir Terlambat',
+                    'notification_title' => $isOntime ? '🟢 Presensi Masuk (Tepat Waktu)' : '🟡 Presensi Masuk (Terlambat)',
+                    'notification_body' => "Ananda {$student->name} telah melakukan presensi masuk pukul {$checkinTime} WIB.",
                 ] : null,
                 'checkout' => $todayCheckout ? [
-                    'time' => Carbon::parse($todayCheckout->timestamp)->format('H:i'),
+                    'time' => $checkoutTime,
+                    'time_formatted' => $checkoutTime.' WIB',
+                    'status_label' => 'Sudah Pulang Sekolah',
+                    'notification_title' => '🔵 Presensi Pulang',
+                    'notification_body' => "Ananda {$student->name} telah melakukan presensi pulang sekolah pukul {$checkoutTime} WIB.",
                 ] : null,
                 'permission' => $todayPermission ? [
+                    'id' => $todayPermission->id,
                     'type' => $todayPermission->type,
                     'notes' => $todayPermission->notes,
                     'status' => $todayPermission->status,
+                    'attachment_url' => $todayPermission->attachment ? asset('storage/'.$todayPermission->attachment) : null,
                 ] : null,
+                'study_duration' => $studyDuration,
             ],
             'timestamp' => now()->timestamp,
         ]);
     }
 
     /**
-     * Menyimpan formulir permohonan izin atau sakit anak ke database.
+     * Menyimpan formulir permohonan izin atau sakit anak ke database (mendukung multi-hari & unggah surat).
      */
     public function storePermission(Request $request): JsonResponse|RedirectResponse
     {
@@ -399,35 +482,110 @@ class ParentDashboardController extends Controller
 
         $request->validate([
             'date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:date',
             'type' => 'required|in:Sakit,Izin,Izin Ada Keperluan Keluarga,Izin Lainnya',
             'notes' => 'nullable|string|max:1000',
+            'attachment' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:3072',
         ], [
             'date.required' => 'Tanggal izin wajib ditentukan.',
+            'end_date.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
             'type.required' => 'Pilih keterangan izin atau sakit.',
             'type.in' => 'Jenis izin tidak valid.',
+            'attachment.mimes' => 'Bukti surat harus berupa file gambar (JPG, PNG, WebP) atau PDF.',
+            'attachment.max' => 'Ukuran file bukti surat maksimal 3MB.',
         ]);
 
-        $permission = StudentPermission::updateOrCreate(
-            [
-                'student_id' => $studentId,
-                'date' => $request->date,
-            ],
-            [
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('permissions', 'public');
+        }
+
+        $startDate = Carbon::parse($request->date);
+        $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : $startDate;
+        if ($endDate->lt($startDate)) {
+            $endDate = $startDate;
+        }
+        // Batasi rentang izin maksimal 7 hari per satu kali pengajuan
+        if ($startDate->diffInDays($endDate) > 7) {
+            $endDate = $startDate->copy()->addDays(7);
+        }
+
+        $firstPermission = null;
+        for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+            $data = [
                 'type' => $request->type,
                 'notes' => $request->notes,
                 'status' => 'disetujui',
-            ]
-        );
+            ];
+            if ($attachmentPath) {
+                $data['attachment'] = $attachmentPath;
+            }
+
+            $perm = StudentPermission::updateOrCreate(
+                [
+                    'student_id' => $studentId,
+                    'date' => $d->toDateString(),
+                ],
+                $data
+            );
+
+            if (! $firstPermission) {
+                $firstPermission = $perm;
+            }
+        }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Permohonan keterangan '.$permission->type.' berhasil disimpan dan diverifikasi.',
-                'data' => $permission,
+                'message' => 'Permohonan keterangan '.$request->type.' berhasil disimpan dan diverifikasi.',
+                'data' => $firstPermission,
             ]);
         }
 
-        return redirect()->route('parent.index')->with('success', 'Keterangan '.$permission->type.' resmi disetujui.');
+        return redirect()->route('parent.index')->with('success', 'Keterangan '.$request->type.' resmi disetujui.');
+    }
+
+    /**
+     * Membatalkan keterangan izin atau sakit siswa oleh orang tua.
+     */
+    public function destroyPermission(Request $request, int $id): JsonResponse|RedirectResponse
+    {
+        $studentId = session('parent_student_id');
+        if (! $studentId) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['error' => 'Sesi tidak sah.'], 401);
+            }
+
+            return redirect()->route('parent.index')->withErrors(['auth' => 'Sesi telah berakhir, silakan verifikasi ulang.']);
+        }
+
+        $permission = StudentPermission::where('id', $id)
+            ->where('student_id', $studentId)
+            ->first();
+
+        if (! $permission) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['error' => 'Data izin tidak ditemukan.'], 404);
+            }
+
+            return redirect()->route('parent.index')->withErrors(['error' => 'Data izin tidak ditemukan.']);
+        }
+
+        if ($permission->attachment && Storage::disk('public')->exists($permission->attachment)) {
+            Storage::disk('public')->delete($permission->attachment);
+        }
+
+        $type = $permission->type;
+        $permission->delete();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => "Keterangan {$type} berhasil dibatalkan.",
+            ]);
+        }
+
+        return redirect()->route('parent.index')->with('success', "Keterangan {$type} berhasil dibatalkan.");
     }
 
     /**

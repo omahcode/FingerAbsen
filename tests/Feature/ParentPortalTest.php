@@ -337,7 +337,76 @@ class ParentPortalTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Sakit');
-        $response->assertSee('Disampaikan Ortu');
+        $response->assertSee('Disampaikan');
         $response->assertSee('Istirahat dokter 2 hari.');
+    }
+
+    public function test_parent_can_submit_multi_day_permission(): void
+    {
+        $today = Carbon::today('Asia/Jakarta');
+        $tomorrow = $today->copy()->addDay();
+
+        $response = $this->withSession(['parent_student_id' => $this->student->id])
+            ->post(route('parent.permission.store'), [
+                'date' => $today->toDateString(),
+                'end_date' => $tomorrow->toDateString(),
+                'type' => 'Sakit',
+                'notes' => 'Rawat inap demam berdarah.',
+            ]);
+
+        $response->assertRedirect(route('parent.index'));
+
+        $this->assertDatabaseHas('student_permissions', [
+            'student_id' => $this->student->id,
+            'date' => $today->toDateString(),
+            'type' => 'Sakit',
+        ]);
+
+        $this->assertDatabaseHas('student_permissions', [
+            'student_id' => $this->student->id,
+            'date' => $tomorrow->toDateString(),
+            'type' => 'Sakit',
+        ]);
+    }
+
+    public function test_parent_can_cancel_own_permission(): void
+    {
+        $todayStr = Carbon::today('Asia/Jakarta')->toDateString();
+
+        $permission = StudentPermission::create([
+            'student_id' => $this->student->id,
+            'date' => $todayStr,
+            'type' => 'Izin',
+            'status' => 'disetujui',
+            'notes' => 'Izin keperluan keluarga.',
+        ]);
+
+        $response = $this->withSession(['parent_student_id' => $this->student->id])
+            ->delete(route('parent.permission.destroy', $permission->id));
+
+        $response->assertRedirect(route('parent.index'));
+        $this->assertDatabaseMissing('student_permissions', ['id' => $permission->id]);
+    }
+
+    public function test_parent_polling_data_endpoint_returns_enhanced_attendance_structure(): void
+    {
+        $todayStr = Carbon::today('Asia/Jakarta')->toDateString();
+
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => $todayStr.' 06:45:00',
+            'status_code' => 0,
+        ]);
+
+        $response = $this->withSession(['parent_student_id' => $this->student->id])
+            ->get(route('parent.data'));
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'success');
+        $response->assertJsonPath('attendance.checkin.time', '06:45');
+        $response->assertJsonPath('attendance.checkin.is_ontime', true);
+        $response->assertJsonPath('attendance.checkin.status_label', 'Hadir Tepat Waktu');
     }
 }
