@@ -70,7 +70,7 @@
             <form id="parent-login-form" action="{{ route('parent.select') }}" method="POST" class="space-y-5">
                 @csrf
 
-                <!-- Input 1: Nomor Induk Siswa (NIS) -->
+                <!-- Input: Nomor Induk Siswa (NIS) -->
                 <div>
                     <label for="nis" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
                         Nomor Induk Siswa (NIS) <span class="text-rose-400">*</span>
@@ -86,10 +86,20 @@
                             value="{{ old('nis') }}" 
                             required 
                             autofocus
-                            placeholder="Contoh: 20241011 atau ID Siswa"
-                            class="w-full pl-10 pr-4 py-3 bg-slate-800/60 border @error('nis') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
+                            autocomplete="off"
+                            placeholder="Ketik NIS ananda (Contoh: 12530955)"
+                            class="w-full pl-10 pr-10 py-3 bg-slate-800/60 border @error('nis') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
                         >
+                        <!-- Loading Spinner saat pengecekan NIS -->
+                        <div id="nis-spinner" class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none hidden">
+                            <i class="fas fa-circle-notch fa-spin text-indigo-400 text-sm"></i>
+                        </div>
+                        <!-- Centang Hijau saat Siswa Ditemukan -->
+                        <div id="nis-check-icon" class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none hidden">
+                            <i class="fas fa-check-circle text-emerald-400 text-sm"></i>
+                        </div>
                     </div>
+                    <p class="text-[11px] text-slate-400 mt-1.5">Ketik NIS siswa untuk menampilkan data nama dan kelas secara otomatis.</p>
                     @error('nis')
                         <p class="mt-1.5 text-xs text-rose-400 flex items-center">
                             <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
@@ -97,61 +107,37 @@
                     @enderror
                 </div>
 
-                <!-- Input 2: Nama Lengkap Siswa -->
-                <div>
-                    <label for="name" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                        Nama Lengkap Siswa <span class="text-rose-400">*</span>
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fas fa-user text-sm"></i>
+                <!-- Preview Info Siswa (Muncul Otomatis saat NIS Ditemukan) -->
+                <div id="student-preview-card" class="hidden transition-all duration-300">
+                    <div class="p-3.5 rounded-xl bg-slate-800/90 border border-emerald-500/40 shadow-lg shadow-emerald-500/5 flex items-center space-x-3.5">
+                        <!-- Avatar / Foto Siswa -->
+                        <div class="relative shrink-0">
+                            <div id="student-avatar-fallback" class="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white text-lg shadow-md">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <img id="student-photo" src="" alt="Foto Siswa" class="w-12 h-12 rounded-xl object-cover border border-slate-700 hidden shadow-md">
+                            <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                                <i class="fas fa-check text-[8px] text-white"></i>
+                            </span>
                         </div>
-                        <input 
-                            type="text" 
-                            id="name" 
-                            name="name" 
-                            value="{{ old('name') }}" 
-                            required 
-                            placeholder="Masukkan nama lengkap ananda"
-                            class="w-full pl-10 pr-4 py-3 bg-slate-800/60 border @error('name') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition"
-                        >
+
+                        <!-- Data Nama & Kelas Siswa -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 mb-0.5">
+                                <span class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    <i class="fas fa-id-badge text-[9px]"></i> Siswa Teridentifikasi
+                                </span>
+                            </div>
+                            <h4 id="student-name" class="text-sm font-bold text-white truncate leading-tight">Nama Siswa</h4>
+                            <p id="student-class" class="text-xs text-indigo-300 font-medium truncate mt-0.5">Kelas & Jurusan</p>
+                        </div>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-1">Pencocokan nama bersifat bebas huruf besar/kecil (case-insensitive).</p>
-                    @error('name')
-                        <p class="mt-1.5 text-xs text-rose-400 flex items-center">
-                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
-                        </p>
-                    @enderror
                 </div>
 
-                <!-- Input 3: Pilihan Kelas -->
-                <div>
-                    <label for="school_class_id" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                        Pilih Kelas Siswa <span class="text-rose-400">*</span>
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fas fa-school text-sm"></i>
-                        </div>
-                        <select 
-                            id="school_class_id" 
-                            name="school_class_id" 
-                            required 
-                            class="w-full pl-10 pr-4 py-3 bg-slate-800/60 border @error('school_class_id') border-rose-500/80 @else border-slate-700/70 @enderror rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition cursor-pointer"
-                        >
-                            <option value="" disabled {{ old('school_class_id') ? '' : 'selected' }} class="text-slate-400">-- Pilih Kelas Aktif --</option>
-                            @foreach($classes as $c)
-                                <option value="{{ $c->id }}" {{ old('school_class_id') == $c->id ? 'selected' : '' }} class="bg-slate-800 text-white">
-                                    {{ $c->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @error('school_class_id')
-                        <p class="mt-1.5 text-xs text-rose-400 flex items-center">
-                            <i class="fas fa-exclamation-circle mr-1"></i> {{ $message }}
-                        </p>
-                    @enderror
+                <!-- Pesan Siswa Tidak Ditemukan -->
+                <div id="student-not-found" class="hidden text-xs text-rose-400 flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 px-3 py-2.5 rounded-xl">
+                    <i class="fas fa-exclamation-circle text-rose-400 shrink-0"></i>
+                    <span id="not-found-text">Siswa dengan NIS tersebut tidak ditemukan.</span>
                 </div>
 
                 <!-- Submit Button matching Login Style -->
@@ -160,7 +146,7 @@
                     id="btn-submit"
                     class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transform active:scale-[0.99] transition duration-200 text-sm flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    <span id="btn-text">Verifikasi & Masuk Portal</span>
+                    <span id="btn-text">Masuk Portal</span>
                     <i id="btn-icon" class="fas fa-arrow-right text-xs"></i>
                 </button>
 
@@ -183,6 +169,105 @@
     </div>
 
     <script>
+        // Live NIS Student Lookup
+        const nisInput = document.getElementById('nis');
+        const nisSpinner = document.getElementById('nis-spinner');
+        const nisCheckIcon = document.getElementById('nis-check-icon');
+        const previewCard = document.getElementById('student-preview-card');
+        const avatarFallback = document.getElementById('student-avatar-fallback');
+        const studentPhoto = document.getElementById('student-photo');
+        const studentName = document.getElementById('student-name');
+        const studentClass = document.getElementById('student-class');
+        const notFoundCard = document.getElementById('student-not-found');
+        const notFoundText = document.getElementById('not-found-text');
+        const checkNisUrl = @json(route('parent.check-nis'));
+
+        let debounceTimer = null;
+        let activeAbort = null;
+
+        function checkStudentNis(val) {
+            const query = (val || '').trim();
+
+            if (activeAbort) {
+                activeAbort.abort();
+            }
+
+            if (!query || query.length < 2) {
+                nisSpinner.classList.add('hidden');
+                nisCheckIcon.classList.add('hidden');
+                previewCard.classList.add('hidden');
+                notFoundCard.classList.add('hidden');
+                return;
+            }
+
+            nisSpinner.classList.remove('hidden');
+            nisCheckIcon.classList.add('hidden');
+            previewCard.classList.add('hidden');
+            notFoundCard.classList.add('hidden');
+
+            activeAbort = new AbortController();
+
+            fetch(`${checkNisUrl}?nis=${encodeURIComponent(query)}`, {
+                signal: activeAbort.signal,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                nisSpinner.classList.add('hidden');
+
+                if (data && data.found && data.student) {
+                    nisCheckIcon.classList.remove('hidden');
+                    notFoundCard.classList.add('hidden');
+
+                    studentName.textContent = data.student.name;
+                    studentClass.textContent = data.student.class_name + (data.student.major_name ? ' • ' + data.student.major_name : '');
+
+                    if (data.student.photo_url) {
+                        studentPhoto.src = data.student.photo_url;
+                        studentPhoto.classList.remove('hidden');
+                        avatarFallback.classList.add('hidden');
+                    } else {
+                        studentPhoto.classList.add('hidden');
+                        avatarFallback.classList.remove('hidden');
+                    }
+
+                    previewCard.classList.remove('hidden');
+                } else {
+                    nisCheckIcon.classList.add('hidden');
+                    previewCard.classList.add('hidden');
+                    notFoundText.textContent = (data && data.message) ? data.message : 'Siswa dengan NIS tersebut tidak ditemukan.';
+                    notFoundCard.classList.remove('hidden');
+                }
+            })
+            .catch(err => {
+                if (err.name !== 'AbortError') {
+                    nisSpinner.classList.add('hidden');
+                }
+            });
+        }
+
+        if (nisInput) {
+            nisInput.addEventListener('input', function(e) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    checkStudentNis(e.target.value);
+                }, 300);
+            });
+
+            nisInput.addEventListener('change', function(e) {
+                clearTimeout(debounceTimer);
+                checkStudentNis(e.target.value);
+            });
+
+            // Otomatis cek jika input sudah terisi (misal saat reload dengan old input)
+            if (nisInput.value.trim().length >= 2) {
+                checkStudentNis(nisInput.value);
+            }
+        }
+
         // Anti-Double Submit Handler
         const form = document.getElementById('parent-login-form');
         const submitBtn = document.getElementById('btn-submit');

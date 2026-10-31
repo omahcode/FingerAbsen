@@ -36,6 +36,7 @@ Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middle
 // PORTAL ORANG TUA / WALI MURID
 // ====================================================
 Route::get('orang-tua', [ParentDashboardController::class, 'index'])->name('parent.index');
+Route::get('orang-tua/cek-nis', [ParentDashboardController::class, 'checkNis'])->name('parent.check-nis');
 Route::post('orang-tua/pilih', [ParentDashboardController::class, 'selectStudent'])->name('parent.select');
 Route::post('orang-tua/keluar', [ParentDashboardController::class, 'clear'])->name('parent.clear');
 Route::get('orang-tua/data', [ParentDashboardController::class, 'data'])->name('parent.data');
