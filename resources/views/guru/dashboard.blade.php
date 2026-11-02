@@ -211,6 +211,7 @@
                         <th class="py-3.5 px-4 text-center">Status Kehadiran</th>
                         <th class="py-3.5 px-4 text-center">Waktu Presensi</th>
                         <th class="py-3.5 px-4">Keterangan / Alasan</th>
+                        <th class="py-3.5 px-4 text-center">Aksi / Atur Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
@@ -249,7 +250,7 @@
                             </span>
                             @elseif($s['status'] === 'holiday')
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                <i class="fas fa-umbrella-beach text-indigo-500"></i> Libur Akhir Pekan
+                                <i class="fas fa-umbrella-beach text-indigo-500"></i> {{ $s['status_label'] }}
                             </span>
                             @else
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
@@ -268,14 +269,44 @@
                                     <i class="fas fa-check-double text-[9px]"></i> Disampaikan Ortu
                                 </span>
                             </div>
+                            @elseif(!empty($s['notes']))
+                            <div>
+                                <span class="font-semibold text-gray-800">{{ $s['notes'] }}</span>
+                            </div>
                             @else
                             <span class="text-gray-400">-</span>
                             @endif
                         </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                @if($s['status'] === 'absent')
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'in_school', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-xs font-bold transition border border-emerald-200" title="Tandai Hadir">
+                                    <i class="fas fa-check"></i> Hadir
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'holiday', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 text-xs font-bold transition border border-purple-200" title="Atur Libur">
+                                    <i class="fas fa-umbrella-beach"></i> Libur
+                                </button>
+                                @elseif($s['status'] === 'holiday')
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'in_school', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-xs font-bold transition border border-emerald-200" title="Tandai Hadir">
+                                    <i class="fas fa-check"></i> Hadir
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'reset', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 text-xs font-bold transition border border-slate-200" title="Kembalikan ke Belum Masuk">
+                                    <i class="far fa-circle"></i> Belum Masuk
+                                </button>
+                                @else
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'holiday', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 text-xs font-bold transition border border-purple-200" title="Atur Libur">
+                                    <i class="fas fa-umbrella-beach"></i> Libur
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'reset', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 text-xs font-bold transition border border-slate-200" title="Reset ke Belum Masuk">
+                                    <i class="far fa-circle"></i> Belum Masuk
+                                </button>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="py-8 text-center text-gray-400">
+                        <td colspan="6" class="py-8 text-center text-gray-400">
                             Belum ada siswa yang terdaftar di kelas ini.
                         </td>
                     </tr>
@@ -335,6 +366,62 @@
                 filterList();
             });
         });
-    });
+    // Fungsi Ubah Status Siswa Cepat (Hadir, Belum Masuk, Libur)
+    async function changeGuruStudentStatus(studentId, action, studentName) {
+        let title = '';
+        let confirmColor = '#4f46e5';
+        if (action === 'in_school') {
+            title = `Tandai siswa ${studentName} HADIR hari ini?`;
+            confirmColor = '#059669';
+        } else if (action === 'holiday') {
+            title = `Atur siswa ${studentName} menjadi LIBUR hari ini? (Streak kehadiran tetap aman)`;
+            confirmColor = '#7c3aed';
+        } else if (action === 'reset') {
+            title = `Reset presensi ${studentName} menjadi BELUM MASUK?`;
+            confirmColor = '#64748b';
+        }
+
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: 'Konfirmasi Atur Status',
+                text: title,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal'
+            });
+            if (!res.isConfirmed) return;
+        } else {
+            if (!confirm(title)) return;
+        }
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const resp = await fetch(`/monitoring/kepulangan/${studentId}/update-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ action: action })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                if (typeof Toast !== 'undefined') {
+                    Toast.fire({ icon: 'success', title: data.message });
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, timer: 1500, showConfirmButton: false });
+                }
+                setTimeout(() => window.location.reload(), 700);
+            } else {
+                alert(data.message || 'Gagal mengubah status');
+            }
+        } catch (e) {
+            alert('Terjadi kesalahan koneksi saat memperbarui status.');
+        }
+    }
 </script>
 @endsection

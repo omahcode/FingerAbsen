@@ -101,7 +101,13 @@ class TeacherDashboardController extends Controller
 
                 $notes = null;
 
-                if ($permission) {
+                if ($permission && in_array($permission->type, ['Libur', 'Dispensasi'])) {
+                    $status = 'holiday';
+                    $statusLabel = 'Libur';
+                    $tapTime = '-';
+                    $notes = $permission->notes ?: 'Diliburkan (Manual / Khusus)';
+                    $holidayCount++;
+                } elseif ($permission) {
                     $status = 'permission';
                     $statusLabel = $permission->type;
                     $tapTime = 'Disampaikan Ortu';

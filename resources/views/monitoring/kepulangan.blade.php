@@ -48,7 +48,7 @@
     </div>
 
     <!-- Live Status Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <!-- Card 1: Masuk (Sedang di Sekolah - HOLD STATE) -->
         <div class="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-5 rounded-2xl border-2 border-emerald-500/30 shadow-sm relative overflow-hidden">
             <div class="flex items-center justify-between mb-2">
@@ -79,7 +79,22 @@
             <div class="text-[11px] text-gray-500 mt-1" id="stat-percent-text">{{ $stats['departed_percentage'] }}% dari yang hadir hari ini</div>
         </div>
 
-        <!-- Card 3: Total Hadir Hari Ini -->
+        <!-- Card 3: Libur / Dispensasi -->
+        <div class="bg-gradient-to-br from-purple-500/10 to-indigo-500/5 p-5 rounded-2xl border border-purple-200 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
+                    <i class="fas fa-umbrella-beach text-[9px]"></i> LIBUR
+                </span>
+                <div class="w-8 h-8 rounded-lg bg-purple-500 text-white flex items-center justify-center text-sm shadow-sm">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-black text-purple-600 tracking-tight" id="stat-holiday">{{ $stats['holiday'] ?? 0 }}</div>
+            <div class="text-xs font-bold text-gray-700 mt-0.5">Libur / Dispensasi</div>
+            <div class="text-[11px] text-gray-500 mt-1">Streak kehadiran terjaga</div>
+        </div>
+
+        <!-- Card 4: Total Hadir Hari Ini -->
         <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Hadir</span>
@@ -89,10 +104,10 @@
             </div>
             <div class="text-3xl font-black text-gray-800 tracking-tight" id="stat-attended">{{ $stats['attended_today'] }}</div>
             <div class="text-xs font-semibold text-gray-600 mt-0.5">Siswa Hadir Hari Ini</div>
-            <div class="text-[11px] text-gray-400 mt-1">Total siswa yang sudah tap masuk</div>
+            <div class="text-[11px] text-gray-400 mt-1">Total siswa tap masuk</div>
         </div>
 
-        <!-- Card 4: Belum Hadir -->
+        <!-- Card 5: Belum Hadir -->
         <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tidak / Belum Ada</span>
@@ -102,7 +117,7 @@
             </div>
             <div class="text-3xl font-black text-slate-600 tracking-tight" id="stat-not-present">{{ $stats['not_present'] }}</div>
             <div class="text-xs font-semibold text-gray-600 mt-0.5">Belum Hadir</div>
-            <div class="text-[11px] text-gray-400 mt-1">Dari total {{ $stats['total'] }} siswa terdaftar</div>
+            <div class="text-[11px] text-gray-400 mt-1">Dari {{ $stats['total'] }} siswa</div>
         </div>
     </div>
 
@@ -149,6 +164,11 @@
                 <a href="{{ route('monitoring.kepulangan', array_merge(request()->query(), ['status' => 'departed'])) }}" class="filter-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 {{ $selectedStatus === 'departed' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' }}">
                     <i class="fas fa-walking"></i> Sudah Pulang
                     <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $selectedStatus === 'departed' ? 'bg-white/20' : 'bg-indigo-200/60' }}">{{ $stats['departed'] }}</span>
+                </a>
+
+                <a href="{{ route('monitoring.kepulangan', array_merge(request()->query(), ['status' => 'holiday'])) }}" class="filter-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 {{ $selectedStatus === 'holiday' ? 'bg-purple-600 text-white shadow-sm' : 'bg-purple-50 text-purple-700 hover:bg-purple-100' }}">
+                    <i class="fas fa-umbrella-beach"></i> Libur
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $selectedStatus === 'holiday' ? 'bg-white/20' : 'bg-purple-200/60' }}">{{ $stats['holiday'] ?? 0 }}</span>
                 </a>
 
                 <a href="{{ route('monitoring.kepulangan', array_merge(request()->query(), ['status' => 'not_present'])) }}" class="filter-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 {{ $selectedStatus === 'not_present' ? 'bg-slate-700 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
@@ -288,7 +308,7 @@
                             @endif
                         </td>
 
-                        <!-- Status Badge (HOLD / PULANG / BELUM HADIR) -->
+                        <!-- Status Badge (HOLD / PULANG / LIBUR / BELUM HADIR) -->
                         <td class="py-3.5 px-4 text-center status-badge-cell">
                             @if($item['status_code'] === 'in_school')
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300 shadow-sm animate-pulse">
@@ -297,6 +317,10 @@
                             @elseif($item['status_code'] === 'departed')
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px] border border-indigo-300 shadow-sm">
                                     <i class="fas fa-check-circle text-indigo-600"></i> SUDAH PULANG
+                                </span>
+                            @elseif($item['status_code'] === 'holiday' || $item['status_code'] === 'permission')
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px] border border-purple-300 shadow-sm">
+                                    <i class="fas fa-umbrella-beach text-purple-600"></i> {{ strtoupper($item['status_label'] ?? 'LIBUR') }}
                                 </span>
                             @else
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[11px]">
@@ -314,20 +338,36 @@
                         <td class="py-3.5 px-4 text-center action-cell">
                             <div class="flex items-center justify-center gap-1.5">
                                 @if($item['status_code'] === 'in_school')
-                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'departed', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang Sekarang">
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'departed', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang Sekarang">
                                         <i class="fas fa-walking"></i> Pulang
                                     </button>
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'holiday', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur">
+                                        <i class="fas fa-umbrella-beach"></i> Libur
+                                    </button>
                                 @elseif($item['status_code'] === 'departed')
-                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan (Kembalikan ke Masuk)">
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan (Kembalikan ke Masuk)">
                                         <i class="fas fa-undo"></i> Batal
                                     </button>
-                                @else
-                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah">
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'holiday', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur">
+                                        <i class="fas fa-umbrella-beach"></i> Libur
+                                    </button>
+                                @elseif($item['status_code'] === 'holiday' || $item['status_code'] === 'permission')
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah">
                                         <i class="fas fa-school"></i> Hadir
+                                    </button>
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'reset', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 font-bold text-[11px] transition flex items-center gap-1 border border-slate-200 shadow-sm" title="Kembalikan ke Belum Masuk">
+                                        <i class="far fa-circle"></i> Belum Masuk
+                                    </button>
+                                @else
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'in_school', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah">
+                                        <i class="fas fa-school"></i> Hadir
+                                    </button>
+                                    <button type="button" onclick="quickChangeStatus({{ $item['id'] }}, 'holiday', '{{ addslashes($item['name']) }}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur">
+                                        <i class="fas fa-umbrella-beach"></i> Libur
                                     </button>
                                 @endif
 
-                                <button type="button" onclick='openStatusModal(@json($item))' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)">
+                                <button type="button" onclick='openStatusModal(@json($item))' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Atur Status Lengkap">
                                     <i class="fas fa-edit text-xs"></i>
                                 </button>
                             </div>
@@ -395,8 +435,41 @@
             <!-- Pilih Tindakan Status -->
             <div>
                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Pilih Status Baru:</label>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    <!-- Option 1: Pulang -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <!-- Option 1: Hadir / Di Sekolah -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-emerald-400 border-gray-200 bg-white" id="label-action-in-school">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                                <i class="fas fa-school"></i> Hadir
+                            </span>
+                            <input type="radio" name="action" value="in_school" class="text-emerald-600 focus:ring-emerald-500" onchange="handleActionChange('in_school')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Masuk di sekolah.</p>
+                    </label>
+
+                    <!-- Option 2: Belum Masuk / Reset -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-slate-400 border-gray-200 bg-white" id="label-action-reset">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="far fa-circle"></i> Belum Masuk
+                            </span>
+                            <input type="radio" name="action" value="reset" class="text-slate-600 focus:ring-slate-500" onchange="handleActionChange('reset')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Reset presensi hari ini.</p>
+                    </label>
+
+                    <!-- Option 3: Libur / Dispensasi -->
+                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-purple-400 border-gray-200 bg-white" id="label-action-holiday">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-purple-700 flex items-center gap-1.5">
+                                <i class="fas fa-umbrella-beach"></i> Libur
+                            </span>
+                            <input type="radio" name="action" value="holiday" class="text-purple-600 focus:ring-purple-500" onchange="handleActionChange('holiday')">
+                        </div>
+                        <p class="text-[10px] text-gray-500">Libur (Streak aman).</p>
+                    </label>
+
+                    <!-- Option 4: Pulang -->
                     <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-indigo-400 border-indigo-500 bg-indigo-50/30" id="label-action-departed">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
@@ -404,37 +477,15 @@
                             </span>
                             <input type="radio" name="action" value="departed" class="text-indigo-600 focus:ring-indigo-500" checked onchange="handleActionChange('departed')">
                         </div>
-                        <p class="text-[10px] text-gray-500">Tandai telah pulang sekolah.</p>
-                    </label>
-
-                    <!-- Option 2: Masuk / Di Sekolah -->
-                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-emerald-400 border-gray-200 bg-white" id="label-action-in-school">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                                <i class="fas fa-school"></i> Di Sekolah
-                            </span>
-                            <input type="radio" name="action" value="in_school" class="text-emerald-600 focus:ring-emerald-500" onchange="handleActionChange('in_school')">
-                        </div>
-                        <p class="text-[10px] text-gray-500">Batalkan pulang / kembali aktif.</p>
-                    </label>
-
-                    <!-- Option 3: Reset -->
-                    <label class="cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition hover:border-slate-400 border-gray-200 bg-white" id="label-action-reset">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                <i class="fas fa-undo"></i> Reset
-                            </span>
-                            <input type="radio" name="action" value="reset" class="text-slate-600 focus:ring-slate-500" onchange="handleActionChange('reset')">
-                        </div>
-                        <p class="text-[10px] text-gray-500">Hapus presensi hari ini.</p>
+                        <p class="text-[10px] text-gray-500">Tandai telah pulang.</p>
                     </label>
                 </div>
             </div>
 
-            <!-- Bagian Opsi Waktu & Keterangan (Muncul saat status Pulang atau Di Sekolah) -->
+            <!-- Bagian Opsi Waktu & Keterangan -->
             <div id="section-departed-options" class="space-y-3 bg-indigo-50/40 p-3.5 rounded-2xl border border-indigo-100">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
+                    <div id="wrapper-time-input">
                         <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Waktu Presensi (WIB):</label>
                         <div class="relative">
                             <input type="time" name="time" id="modal-time-input" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -448,6 +499,9 @@
                         <label class="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Keterangan / Alasan:</label>
                         <select name="preset_notes" id="modal-preset-notes" onchange="handlePresetNotes(this.value)" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 bg-white">
                             <option value="Pulang Normal">Pulang Normal</option>
+                            <option value="Hadir Masuk Normal">Hadir Masuk Normal</option>
+                            <option value="Libur Khusus Siswa">Libur Khusus Siswa</option>
+                            <option value="Dispensasi Lomba / Acara">Dispensasi Lomba / Acara</option>
                             <option value="Izin Pulang Lebih Cepat">Izin Pulang Cepat (Dispensasi)</option>
                             <option value="Pulang Karena Sakit">Pulang Sakit (Dijemput/UKS)</option>
                             <option value="Lupa Tap Fingerprint">Lupa Fingerprint Pulang</option>
@@ -574,6 +628,7 @@
                 if (data.stats) {
                     const inSchoolEl = document.getElementById('stat-in-school');
                     const departedEl = document.getElementById('stat-departed');
+                    const holidayEl = document.getElementById('stat-holiday');
                     const attendedEl = document.getElementById('stat-attended');
                     const notPresentEl = document.getElementById('stat-not-present');
                     const percentTextEl = document.getElementById('stat-percent-text');
@@ -582,6 +637,7 @@
 
                     if (inSchoolEl) inSchoolEl.textContent = data.stats.in_school;
                     if (departedEl) departedEl.textContent = data.stats.departed;
+                    if (holidayEl) holidayEl.textContent = data.stats.holiday || 0;
                     if (attendedEl) attendedEl.textContent = data.stats.attended_today;
                     if (notPresentEl) notPresentEl.textContent = data.stats.not_present;
                     if (percentTextEl) percentTextEl.textContent = `${data.stats.departed_percentage}% dari yang hadir hari ini`;
@@ -652,6 +708,8 @@
                 cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300 shadow-sm animate-pulse"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> MASUK (DI SEKOLAH)</span>`;
             } else if (student.status_code === 'departed') {
                 cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px] border border-indigo-300 shadow-sm"><i class="fas fa-check-circle text-indigo-600"></i> SUDAH PULANG</span>`;
+            } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
+                cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px] border border-purple-300 shadow-sm"><i class="fas fa-umbrella-beach text-purple-600"></i> ${(student.status_label || 'LIBUR').toUpperCase()}</span>`;
             } else {
                 cells[5].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[11px]"><i class="far fa-circle text-[9px]"></i> Belum Hadir</span>`;
             }
@@ -664,15 +722,21 @@
                 let quickBtnHtml = '';
                 const safeName = (student.name || '').replace(/'/g, "\\'");
                 if (student.status_code === 'in_school') {
-                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'departed', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang Sekarang"><i class="fas fa-walking"></i> Pulang</button>`;
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'departed', '${safeName}')" class="px-2 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-[11px] transition flex items-center gap-1 border border-indigo-200 shadow-sm" title="Tandai Sudah Pulang"><i class="fas fa-walking"></i> Pulang</button>
+                    <button type="button" onclick="quickChangeStatus(${student.id}, 'holiday', '${safeName}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur"><i class="fas fa-umbrella-beach"></i> Libur</button>`;
                 } else if (student.status_code === 'departed') {
-                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan (Kembalikan ke Masuk)"><i class="fas fa-undo"></i> Batal</button>`;
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2 py-1 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 font-bold text-[11px] transition flex items-center gap-1 border border-amber-200 shadow-sm" title="Batalkan Kepulangan"><i class="fas fa-undo"></i> Batal</button>
+                    <button type="button" onclick="quickChangeStatus(${student.id}, 'holiday', '${safeName}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur"><i class="fas fa-umbrella-beach"></i> Libur</button>`;
+                } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah"><i class="fas fa-school"></i> Hadir</button>
+                    <button type="button" onclick="quickChangeStatus(${student.id}, 'reset', '${safeName}')" class="px-2 py-1 rounded-xl bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 font-bold text-[11px] transition flex items-center gap-1 border border-slate-200 shadow-sm" title="Kembalikan ke Belum Masuk"><i class="far fa-circle"></i> Belum Masuk</button>`;
                 } else {
-                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah"><i class="fas fa-school"></i> Hadir</button>`;
+                    quickBtnHtml = `<button type="button" onclick="quickChangeStatus(${student.id}, 'in_school', '${safeName}')" class="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-[11px] transition flex items-center gap-1 border border-emerald-200 shadow-sm" title="Tandai Hadir di Sekolah"><i class="fas fa-school"></i> Hadir</button>
+                    <button type="button" onclick="quickChangeStatus(${student.id}, 'holiday', '${safeName}')" class="px-2 py-1 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 font-bold text-[11px] transition flex items-center gap-1 border border-purple-200 shadow-sm" title="Atur Status Libur"><i class="fas fa-umbrella-beach"></i> Libur</button>`;
                 }
 
                 const studentJsonStr = JSON.stringify(student).replace(/'/g, "&#39;");
-                const editBtnHtml = `<button type="button" onclick='openStatusModal(${studentJsonStr})' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Ubah Status Manual (Opsi Jam & Keterangan)"><i class="fas fa-edit text-xs"></i></button>`;
+                const editBtnHtml = `<button type="button" onclick='openStatusModal(${studentJsonStr})' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Atur Status Lengkap"><i class="fas fa-edit text-xs"></i></button>`;
 
                 cells[7].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}</div>`;
             }
@@ -703,6 +767,8 @@
             badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Di Sekolah</span>`;
         } else if (student.status_code === 'departed') {
             badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px] border border-indigo-300"><i class="fas fa-check-circle text-indigo-600"></i> Sudah Pulang</span>`;
+        } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
+            badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px] border border-purple-300"><i class="fas fa-umbrella-beach text-purple-600"></i> Libur</span>`;
         } else {
             badgeEl.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[10px]">Belum Hadir</span>`;
         }
@@ -721,10 +787,14 @@
         }
 
         // Set action radio default
-        let defaultAction = 'departed';
-        if (student.status_code === 'departed') {
+        let defaultAction = 'in_school';
+        if (student.status_code === 'in_school') {
+            defaultAction = 'departed';
+        } else if (student.status_code === 'departed') {
             defaultAction = 'in_school';
-        } else if (student.status_code === 'not_present') {
+        } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
+            defaultAction = 'holiday';
+        } else {
             defaultAction = 'in_school';
         }
 
@@ -739,7 +809,15 @@
 
         // Reset preset & custom note
         const selectNotes = document.getElementById('modal-preset-notes');
-        if (selectNotes) selectNotes.value = 'Pulang Normal';
+        if (selectNotes) {
+            if (defaultAction === 'holiday') {
+                selectNotes.value = 'Libur Khusus Siswa';
+            } else if (defaultAction === 'in_school') {
+                selectNotes.value = 'Hadir Masuk Normal';
+            } else {
+                selectNotes.value = 'Pulang Normal';
+            }
+        }
         const customNoteContainer = document.getElementById('custom-note-container');
         if (customNoteContainer) customNoteContainer.classList.add('hidden');
         const customNoteInput = document.getElementById('modal-custom-notes');
@@ -765,7 +843,7 @@
     }
 
     function handleActionChange(action) {
-        ['departed', 'in_school', 'reset'].forEach(act => {
+        ['departed', 'in_school', 'holiday', 'reset'].forEach(act => {
             const label = document.getElementById(`label-action-${act}`);
             if (!label) return;
             if (act === action) {
@@ -773,6 +851,8 @@
                     label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-indigo-500 bg-indigo-50/40 shadow-sm';
                 } else if (act === 'in_school') {
                     label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-emerald-500 bg-emerald-50/40 shadow-sm';
+                } else if (act === 'holiday') {
+                    label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-purple-500 bg-purple-50/40 shadow-sm';
                 } else {
                     label.className = 'cursor-pointer border-2 rounded-2xl p-3 flex flex-col justify-between transition border-slate-500 bg-slate-50 shadow-sm';
                 }
@@ -782,10 +862,24 @@
         });
 
         const optionsSection = document.getElementById('section-departed-options');
+        const timeWrapper = document.getElementById('wrapper-time-input');
+        const presetNotes = document.getElementById('modal-preset-notes');
+
         if (action === 'reset') {
             optionsSection.classList.add('hidden');
         } else {
             optionsSection.classList.remove('hidden');
+            if (action === 'holiday') {
+                if (timeWrapper) timeWrapper.classList.add('hidden');
+                if (presetNotes) presetNotes.value = 'Libur Khusus Siswa';
+            } else {
+                if (timeWrapper) timeWrapper.classList.remove('hidden');
+                if (action === 'in_school') {
+                    if (presetNotes) presetNotes.value = 'Hadir Masuk Normal';
+                } else if (action === 'departed') {
+                    if (presetNotes) presetNotes.value = 'Pulang Normal';
+                }
+            }
         }
     }
 
@@ -853,10 +947,19 @@
 
     async function quickChangeStatus(studentId, action, studentName) {
         let confirmText = '';
+        let confirmColor = '#4f46e5';
         if (action === 'departed') {
             confirmText = `Tandai siswa ${studentName} SUDAH PULANG sekarang?`;
+            confirmColor = '#4f46e5';
         } else if (action === 'in_school') {
-            confirmText = `Kembalikan status ${studentName} ke MASUK (DI SEKOLAH)?`;
+            confirmText = `Tandai siswa ${studentName} MASUK (DI SEKOLAH)?`;
+            confirmColor = '#059669';
+        } else if (action === 'holiday') {
+            confirmText = `Atur status ${studentName} menjadi LIBUR hari ini? (Streak kehadiran tetap aman)`;
+            confirmColor = '#7c3aed';
+        } else if (action === 'reset') {
+            confirmText = `Kembalikan presensi ${studentName} hari ini menjadi BELUM MASUK?`;
+            confirmColor = '#64748b';
         } else {
             confirmText = `Ubah status presensi ${studentName}?`;
         }
@@ -867,7 +970,7 @@
                 text: confirmText,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: action === 'departed' ? '#4f46e5' : '#059669',
+                confirmButtonColor: confirmColor,
                 cancelButtonColor: '#6b7280',
                 confirmButtonText: 'Ya, Lanjutkan',
                 cancelButtonText: 'Batal'

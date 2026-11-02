@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -253,7 +254,8 @@ class TeacherFeatureTest extends TestCase
         ]);
 
         // Simulasikan POST ATTLOG dari mesin
-        $attlogBody = "198501012010011001\t2026-10-22 06:45:00\t0\t1\n";
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+        $attlogBody = "198501012010011001\t{$today} 06:45:00\t0\t1\n";
         $response = $this->call('POST', '/iclock/cdata?SN=DEV-GURU-001&table=ATTLOG', [], [], [], [], $attlogBody);
 
         $this->assertDatabaseHas('attendance_logs', [

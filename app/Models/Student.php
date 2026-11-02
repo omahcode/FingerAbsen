@@ -98,13 +98,31 @@ class Student extends Model
             $exemptEvents = collect();
         }
 
+        // Ambil izin / libur individu siswa yang disetujui untuk melindungi streak
+        try {
+            $studentApprovedPermissions = $this->permissions()
+                ->where('status', 'disetujui')
+                ->where('date', '>=', $startDateLimit)
+                ->where('date', '<=', $currentDate->toDateString())
+                ->pluck('date')
+                ->map(fn ($d) => Carbon::parse($d, 'Asia/Jakarta')->toDateString())
+                ->unique()
+                ->flip();
+        } catch (\Throwable $e) {
+            $studentApprovedPermissions = collect();
+        }
+
         // Helper closure untuk mengecek apakah hari adalah hari libur atau hari bebas kegiatan bagi siswa
-        $isExemptDay = function (Carbon $date) use ($exemptEvents): bool {
+        $isExemptDay = function (Carbon $date) use ($exemptEvents, $studentApprovedPermissions): bool {
             if (! Setting::isSchoolDay($date)) {
                 return true;
             }
 
             $dateStr = $date->toDateString();
+            if (isset($studentApprovedPermissions[$dateStr])) {
+                return true;
+            }
+
             foreach ($exemptEvents as $event) {
                 $startStr = $event->start_date ? Carbon::parse($event->start_date)->toDateString() : '';
                 $endStr = $event->end_date ? Carbon::parse($event->end_date)->toDateString() : '';
