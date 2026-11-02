@@ -228,14 +228,40 @@
 
     <!-- Student Table List -->
     <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-        <div class="p-4 md:px-6 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-list-ul text-indigo-600"></i>
-                <span>Daftar Siswa (<span id="rendered-count">{{ $filteredStudents->count() }}</span> data)</span>
-            </h2>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>Auto-Update Realtime</span>
+        <div class="p-4 md:px-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-list-ul text-indigo-600"></i>
+                    <span>Daftar Siswa (<span id="rendered-count">{{ $filteredStudents->count() }}</span> data)</span>
+                </h2>
+                <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Auto-Update Realtime</span>
+                    <span class="text-gray-300">&bull;</span>
+                    <span id="selected-count-badge" class="text-gray-400">0 siswa dipilih (klik tombol untuk ubah semua)</span>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Massal / Sekaligus Langsung -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:inline mr-1">
+                    <i class="fas fa-layer-group text-indigo-500 mr-1"></i> Aksi Sekaligus:
+                </span>
+
+                <button type="button" onclick="executeBulkAction('holiday')" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm shadow-purple-500/20 flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Jadikan semua siswa terpilih / terfilter berstatus LIBUR">
+                    <i class="fas fa-umbrella-beach"></i>
+                    <span class="bulk-btn-text">Semua Libur</span>
+                </button>
+
+                <button type="button" onclick="executeBulkAction('in_school')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Jadikan semua siswa terpilih / terfilter berstatus HADIR">
+                    <i class="fas fa-school"></i>
+                    <span class="bulk-btn-text">Semua Hadir</span>
+                </button>
+
+                <button type="button" onclick="executeBulkAction('reset')" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Reset semua siswa terpilih / terfilter ke BELUM MASUK / ALFA">
+                    <i class="far fa-circle"></i>
+                    <span class="bulk-btn-text">Semua Belum Masuk / Alfa</span>
+                </button>
             </div>
         </div>
 
@@ -243,7 +269,10 @@
             <table class="w-full text-left border-collapse" id="students-table">
                 <thead>
                     <tr class="bg-gray-50/80 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
-                        <th class="py-3.5 px-4 text-center w-12">#</th>
+                        <th class="py-3.5 px-3 text-center w-10">
+                            <input type="checkbox" id="check-all-students" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" title="Centang / Hapus Semua">
+                        </th>
+                        <th class="py-3.5 px-2 text-center w-10">#</th>
                         <th class="py-3.5 px-4">Nama Siswa</th>
                         <th class="py-3.5 px-4">Kelas & Jurusan</th>
                         <th class="py-3.5 px-4 text-center">Jam Masuk</th>
@@ -256,8 +285,13 @@
                 <tbody class="divide-y divide-gray-100 text-xs" id="students-tbody">
                     @forelse($filteredStudents as $index => $item)
                     <tr class="hover:bg-slate-50/80 transition duration-150 student-row" id="row-student-{{ $item['id'] }}" data-student-id="{{ $item['id'] }}" data-status="{{ $item['status_code'] }}">
+                        <!-- Checkbox -->
+                        <td class="py-3.5 px-3 text-center">
+                            <input type="checkbox" class="student-checkbox w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" value="{{ $item['id'] }}" data-name="{{ $item['name'] }}">
+                        </td>
+
                         <!-- Index -->
-                        <td class="py-3.5 px-4 text-center font-bold text-gray-400">
+                        <td class="py-3.5 px-2 text-center font-bold text-gray-400">
                             {{ $loop->iteration }}
                         </td>
 
@@ -375,7 +409,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center py-12 text-gray-400">
+                        <td colspan="9" class="text-center py-12 text-gray-400">
                             <div class="w-12 h-12 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center mx-auto text-xl mb-2">
                                 <i class="fas fa-inbox"></i>
                             </div>
@@ -686,39 +720,39 @@
     }
 
     function updateStudentRowHtml(row, student) {
-        // Update cells
+        // Update cells (Col 0: Checkbox, Col 1: #, Col 2: Name, Col 3: Class, Col 4: Jam Masuk, Col 5: Jam Pulang, Col 6: Status, Col 7: Duration, Col 8: Action)
         const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            // Cell 3: Jam Masuk
+        if (cells.length >= 8) {
+            // Cell 4: Jam Masuk
             if (student.jam_masuk) {
-                cells[3].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-mono font-bold text-[11px] border border-emerald-200/50"><i class="far fa-clock text-[10px]"></i> ${student.jam_masuk} WIB</span>`;
-            } else {
-                cells[3].innerHTML = `<span class="text-gray-300 font-mono">-</span>`;
-            }
-
-            // Cell 4: Jam Pulang
-            if (student.jam_pulang) {
-                cells[4].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-[11px] border border-indigo-200/50"><i class="fas fa-walking text-[10px]"></i> ${student.jam_pulang} WIB</span>`;
+                cells[4].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-mono font-bold text-[11px] border border-emerald-200/50"><i class="far fa-clock text-[10px]"></i> ${student.jam_masuk} WIB</span>`;
             } else {
                 cells[4].innerHTML = `<span class="text-gray-300 font-mono">-</span>`;
             }
 
-            // Cell 5: Status Badge
-            if (student.status_code === 'in_school') {
-                cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300 shadow-sm animate-pulse"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> MASUK (DI SEKOLAH)</span>`;
-            } else if (student.status_code === 'departed') {
-                cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px] border border-indigo-300 shadow-sm"><i class="fas fa-check-circle text-indigo-600"></i> SUDAH PULANG</span>`;
-            } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
-                cells[5].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px] border border-purple-300 shadow-sm"><i class="fas fa-umbrella-beach text-purple-600"></i> ${(student.status_label || 'LIBUR').toUpperCase()}</span>`;
+            // Cell 5: Jam Pulang
+            if (student.jam_pulang) {
+                cells[5].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-[11px] border border-indigo-200/50"><i class="fas fa-walking text-[10px]"></i> ${student.jam_pulang} WIB</span>`;
             } else {
-                cells[5].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[11px]"><i class="far fa-circle text-[9px]"></i> Belum Hadir</span>`;
+                cells[5].innerHTML = `<span class="text-gray-300 font-mono">-</span>`;
             }
 
-            // Cell 6: Duration
-            cells[6].textContent = student.duration || '-';
+            // Cell 6: Status Badge
+            if (student.status_code === 'in_school') {
+                cells[6].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300 shadow-sm animate-pulse"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> MASUK (DI SEKOLAH)</span>`;
+            } else if (student.status_code === 'departed') {
+                cells[6].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[11px] border border-indigo-300 shadow-sm"><i class="fas fa-check-circle text-indigo-600"></i> SUDAH PULANG</span>`;
+            } else if (student.status_code === 'holiday' || student.status_code === 'permission') {
+                cells[6].innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px] border border-purple-300 shadow-sm"><i class="fas fa-umbrella-beach text-purple-600"></i> ${(student.status_label || 'LIBUR').toUpperCase()}</span>`;
+            } else {
+                cells[6].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[11px]"><i class="far fa-circle text-[9px]"></i> Belum Hadir</span>`;
+            }
 
-            // Cell 7: Action & Manual Status Buttons
-            if (cells.length >= 8) {
+            // Cell 7: Duration
+            cells[7].textContent = student.duration || '-';
+
+            // Cell 8: Action & Manual Status Buttons
+            if (cells.length >= 9) {
                 let quickBtnHtml = '';
                 const safeName = (student.name || '').replace(/'/g, "\\'");
                 if (student.status_code === 'in_school') {
@@ -738,7 +772,7 @@
                 const studentJsonStr = JSON.stringify(student).replace(/'/g, "&#39;");
                 const editBtnHtml = `<button type="button" onclick='openStatusModal(${studentJsonStr})' class="p-1.5 px-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition border border-slate-200/60" title="Atur Status Lengkap"><i class="fas fa-edit text-xs"></i></button>`;
 
-                cells[7].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}</div>`;
+                cells[8].innerHTML = `<div class="flex items-center justify-center gap-1.5">${quickBtnHtml}${editBtnHtml}</div>`;
             }
         }
     }
@@ -1022,6 +1056,124 @@
                 icon: type === 'success' ? 'success' : 'info',
                 title: message
             });
+        }
+    }
+
+    // Check-all & Bulk Action logic
+    const checkAllBox = document.getElementById('check-all-students');
+
+    function getSelectedStudentIds() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.student-checkbox:checked'));
+        if (checkedBoxes.length > 0) {
+            return checkedBoxes.map(cb => parseInt(cb.value)).filter(Boolean);
+        }
+
+        // Jika tidak ada yang dicentang secara spesifik, otomatis gunakan seluruh siswa yang sedang tampil di tabel
+        const visibleRows = Array.from(document.querySelectorAll('.student-row'))
+            .filter(r => r.style.display !== 'none');
+        return visibleRows.map(r => parseInt(r.dataset.studentId)).filter(Boolean);
+    }
+
+    if (checkAllBox) {
+        checkAllBox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const visibleRows = Array.from(document.querySelectorAll('.student-row'))
+                .filter(r => r.style.display !== 'none');
+            visibleRows.forEach(row => {
+                const cb = row.querySelector('.student-checkbox');
+                if (cb) cb.checked = isChecked;
+            });
+            updateBulkSelectionLabel();
+        });
+    }
+
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('student-checkbox')) {
+            updateBulkSelectionLabel();
+        }
+    });
+
+    function updateBulkSelectionLabel() {
+        const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        const totalRows = document.querySelectorAll('.student-row').length;
+
+        if (checkAllBox && totalRows > 0) {
+            checkAllBox.checked = (checkedCount === totalRows);
+            checkAllBox.indeterminate = (checkedCount > 0 && checkedCount < totalRows);
+        }
+    }
+
+    async function executeBulkAction(action) {
+        const targetIds = getSelectedStudentIds();
+        if (targetIds.length === 0) {
+            alert('Tidak ada siswa yang dipilih atau tersedia pada daftar saat ini.');
+            return;
+        }
+
+        const count = targetIds.length;
+        let actionLabel = '';
+        let confirmColor = '#4f46e5';
+
+        if (action === 'holiday') {
+            actionLabel = `menandai ${count} siswa menjadi LIBUR (streak absensi tetap aman)`;
+            confirmColor = '#7c3aed';
+        } else if (action === 'in_school') {
+            actionLabel = `menandai ${count} siswa menjadi HADIR (Masuk Sekolah)`;
+            confirmColor = '#059669';
+        } else if (action === 'reset') {
+            actionLabel = `mereset presensi ${count} siswa menjadi BELUM MASUK / ALFA`;
+            confirmColor = '#334155';
+        }
+
+        const confirmText = `Apakah Anda yakin ingin ${actionLabel}? Tindakan ini akan diterapkan ke ${count} siswa terpilih / terfilter.`;
+
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: 'Konfirmasi Aksi Sekaligus',
+                text: confirmText,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Jalankan',
+                cancelButtonText: 'Batal'
+            });
+            if (!res.isConfirmed) return;
+        } else {
+            if (!confirm(confirmText)) return;
+        }
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            const resp = await fetch('{{ route('monitoring.kepulangan.update_status_bulk') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    action: action,
+                    student_ids: targetIds
+                })
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                showToast(data.message, 'success');
+                if (checkAllBox) {
+                    checkAllBox.checked = false;
+                    checkAllBox.indeterminate = false;
+                }
+                document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+                await fetchDepartureData();
+            } else {
+                alert(data.message || 'Gagal mengubah status massal.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
         }
     }
 

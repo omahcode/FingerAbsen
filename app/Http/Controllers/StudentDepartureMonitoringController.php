@@ -669,6 +669,189 @@ class StudentDepartureMonitoringController extends Controller
     }
 
     /**
+     * Ubah status presensi banyak siswa sekaligus (Massal / Bulk)
+     */
+    public function updateStatusBulk(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:in_school,holiday,reset,departed',
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'exists:students,id',
+            'time' => 'nullable|string',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $action = $request->input('action');
+        $studentIds = $request->input('student_ids', []);
+        $timeInput = $request->input('time');
+        $notes = $request->input('notes');
+
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+        $nowWib = Carbon::now('Asia/Jakarta');
+
+        if (! empty($timeInput) && preg_match('/^\d{2}:\d{2}$/', $timeInput)) {
+            $timestamp = "{$today} {$timeInput}:00";
+            $timeStr = $timeInput;
+        } else {
+            $timestamp = $nowWib->format('Y-m-d H:i:s');
+            $timeStr = $nowWib->format('H:i');
+        }
+
+        $device = Device::first();
+        if (! $device) {
+            $device = Device::create([
+                'name' => 'Mesin Fingerprint Utama',
+                'ip_address' => '127.0.0.1',
+                'port' => 4370,
+            ]);
+        }
+        $deviceId = $device->id;
+
+        $students = Student::whereIn('id', $studentIds)->get();
+        $count = $students->count();
+
+        if ($action === 'holiday') {
+            // Hapus log absensi hari ini (masuk & pulang)
+            AttendanceLog::withTrashed()
+                ->whereIn('student_id', $studentIds)
+                ->whereDate('timestamp', $today)
+                ->forceDelete();
+
+            // Set izin libur agar streak tetap terjaga
+            foreach ($students as $student) {
+                StudentPermission::updateOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'date' => $today,
+                    ],
+                    [
+                        'type' => 'Libur',
+                        'notes' => $notes ?: 'Diliburkan secara massal oleh dewan guru / admin.',
+                        'status' => 'disetujui',
+                    ]
+                );
+            }
+
+            $message = "Berhasil mengatur {$count} siswa menjadi LIBUR (Streak aman).";
+
+        } elseif ($action === 'in_school') {
+            // Hapus izin/libur hari ini untuk siswa-siswa ini
+            StudentPermission::whereIn('student_id', $studentIds)->whereDate('date', $today)->delete();
+
+            // Hapus log pulang jika ada
+            AttendanceLog::withTrashed()
+                ->whereIn('student_id', $studentIds)
+                ->whereDate('timestamp', $today)
+                ->where('status_code', 1)
+                ->forceDelete();
+
+            // Cek siswa yang belum punya log masuk
+            $existingMasukIds = AttendanceLog::whereIn('student_id', $studentIds)
+                ->whereDate('timestamp', $today)
+                ->where('status_code', 0)
+                ->pluck('student_id')
+                ->toArray();
+
+            foreach ($students as $student) {
+                if (! in_array($student->id, $existingMasukIds)) {
+                    $deviceUserId = (string) $student->device_user_id;
+                    $log = AttendanceLog::withTrashed()
+                        ->where('device_id', $deviceId)
+                        ->where('device_user_id', $deviceUserId)
+                        ->where('timestamp', $timestamp)
+                        ->first();
+
+                    if ($log) {
+                        if ($log->trashed()) {
+                            $log->restore();
+                        }
+                        $log->update(['student_id' => $student->id, 'status_code' => 0]);
+                    } else {
+                        AttendanceLog::create([
+                            'device_id' => $deviceId,
+                            'device_user_id' => $deviceUserId,
+                            'student_id' => $student->id,
+                            'timestamp' => $timestamp,
+                            'status_code' => 0,
+                        ]);
+                    }
+                }
+            }
+
+            $message = "Berhasil mengubah {$count} siswa menjadi MASUK / HADIR.";
+
+        } elseif ($action === 'reset') {
+            // Hapus izin/libur hari ini
+            StudentPermission::whereIn('student_id', $studentIds)->whereDate('date', $today)->delete();
+
+            // Hapus semua log kehadiran hari ini
+            AttendanceLog::withTrashed()
+                ->whereIn('student_id', $studentIds)
+                ->whereDate('timestamp', $today)
+                ->forceDelete();
+
+            $message = "Berhasil mereset presensi {$count} siswa menjadi BELUM MASUK / ALFA.";
+
+        } elseif ($action === 'departed') {
+            StudentPermission::whereIn('student_id', $studentIds)->whereDate('date', $today)->delete();
+
+            foreach ($students as $student) {
+                $masuk = AttendanceLog::where('student_id', $student->id)
+                    ->whereDate('timestamp', $today)
+                    ->where('status_code', 0)
+                    ->first();
+
+                $deviceUserId = (string) $student->device_user_id;
+
+                if (! $masuk) {
+                    $checkinStart = Setting::get('checkin_start', '06:30');
+                    AttendanceLog::create([
+                        'device_id' => $deviceId,
+                        'device_user_id' => $deviceUserId,
+                        'student_id' => $student->id,
+                        'timestamp' => "{$today} {$checkinStart}:00",
+                        'status_code' => 0,
+                    ]);
+                }
+
+                $existingPulang = AttendanceLog::withTrashed()
+                    ->where('student_id', $student->id)
+                    ->whereDate('timestamp', $today)
+                    ->where('status_code', 1)
+                    ->first();
+
+                if ($existingPulang) {
+                    if ($existingPulang->trashed()) {
+                        $existingPulang->restore();
+                    }
+                    $existingPulang->update(['timestamp' => $timestamp]);
+                } else {
+                    AttendanceLog::create([
+                        'device_id' => $deviceId,
+                        'device_user_id' => $deviceUserId,
+                        'student_id' => $student->id,
+                        'timestamp' => $timestamp,
+                        'status_code' => 1,
+                    ]);
+                }
+            }
+
+            $message = "Berhasil menandai {$count} siswa SUDAH PULANG.";
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'count' => $count,
+                'action' => $action,
+            ]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Format durasi waktu menjadi jam dan menit singkat dan bulat (tanpa desimal panjang)
      */
     private function formatDurationString(Carbon $start, Carbon $end, bool $isActive = false): string
