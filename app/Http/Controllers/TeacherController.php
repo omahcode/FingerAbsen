@@ -296,13 +296,9 @@ class TeacherController extends Controller
         $this->authorizeAccess();
 
         $date = $request->query('date', Carbon::today('Asia/Jakarta')->toDateString());
-        $category = $request->query('category');
+        $statusFilter = $request->query('status'); // 'attended' | 'unattended' | ''
 
-        $teachersQuery = Teacher::orderBy('name');
-        if (! empty($category)) {
-            $teachersQuery->where('category', $category);
-        }
-        $teachers = $teachersQuery->get();
+        $teachers = Teacher::orderBy('name')->get();
 
         // Ambil log absensi guru pada tanggal tersebut
         $logs = AttendanceLog::whereNotNull('teacher_id')
@@ -310,11 +306,6 @@ class TeacherController extends Controller
             ->orderBy('timestamp', 'asc')
             ->get()
             ->groupBy('teacher_id');
-
-        // Kategori list untuk filter
-        $existingCategories = Teacher::distinct()->pluck('category')->filter()->toArray();
-        $categories = array_values(array_unique(array_merge(Teacher::$defaultCategories, $existingCategories)));
-        sort($categories);
 
         $attendedCount = 0;
         $unattendedCount = 0;
@@ -346,11 +337,17 @@ class TeacherController extends Controller
             ];
         });
 
+        // Filter berdasarkan status tap jika dipilih
+        if ($statusFilter === 'attended') {
+            $reportData = $reportData->filter(fn ($r) => $r['has_attended'])->values();
+        } elseif ($statusFilter === 'unattended') {
+            $reportData = $reportData->filter(fn ($r) => ! $r['has_attended'])->values();
+        }
+
         return view('teachers.ceremony', compact(
             'reportData',
             'date',
-            'category',
-            'categories',
+            'statusFilter',
             'attendedCount',
             'unattendedCount',
             'teachers'

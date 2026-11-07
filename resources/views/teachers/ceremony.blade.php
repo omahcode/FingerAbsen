@@ -61,7 +61,7 @@
         </div>
     </div>
 
-    <!-- Filter Tanggal & Kategori -->
+    <!-- Filter Tanggal & Status Kehadiran (Tap) -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
         <form action="{{ route('teachers.ceremony') }}" method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             <!-- Pilihan Tanggal -->
@@ -72,18 +72,15 @@
                 <input type="date" name="date" value="{{ $date }}" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
             </div>
 
-            <!-- Filter Kategori -->
+            <!-- Filter Status Kehadiran (Tap Mesin) -->
             <div class="md:col-span-5">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                    <i class="fas fa-tags text-teal-600 mr-1"></i> Filter Kategori Guru:
+                    <i class="fas fa-fingerprint text-emerald-500 mr-1"></i> Status Kehadiran (Tap Mesin):
                 </label>
-                <select name="category" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
-                    <option value="">-- Semua Kategori Guru --</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}" {{ ($category === $cat) ? 'selected' : '' }}>
-                            {{ $cat }}
-                        </option>
-                    @endforeach
+                <select name="status" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    <option value="" {{ empty($statusFilter) ? 'selected' : '' }}>-- Semua Guru (Sudah & Belum Tap) --</option>
+                    <option value="attended" {{ ($statusFilter === 'attended') ? 'selected' : '' }}>✓ Sudah Tap (Hadir)</option>
+                    <option value="unattended" {{ ($statusFilter === 'unattended') ? 'selected' : '' }}>✕ Belum Tap</option>
                 </select>
             </div>
 
@@ -101,7 +98,7 @@
                 Data Presensi Tanggal: <strong class="text-gray-900 font-bold">{{ \Carbon\Carbon::parse($date)->isoFormat('dddd, D MMMM Y') }}</strong>
             </div>
             <div>
-                Total Guru Terdata: <strong class="text-gray-900 font-bold">{{ $reportData->count() }} Guru</strong>
+                Menampilkan: <strong class="text-gray-900 font-bold">{{ $reportData->count() }} Guru</strong> (Total: {{ $teachers->count() }} Guru)
             </div>
         </div>
     </div>
@@ -139,9 +136,6 @@
                                 </div>
                                 <div>
                                     <span class="font-bold text-gray-900 block">{{ $row['name'] }}</span>
-                                    @if(!empty($row['category']))
-                                        <span class="text-[11px] text-gray-400 font-medium">{{ $row['category'] }}</span>
-                                    @endif
                                 </div>
                             </div>
                         </td>

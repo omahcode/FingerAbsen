@@ -122,7 +122,7 @@ class TeacherFeatureTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Presensi Upacara Dewan Guru');
         $response->assertSee('Bambang Supriyadi, S.Pd');
-        $response->assertSee('GURU MTK');
+        $response->assertSee('Belum Tap');
     }
 
     public function test_admin_can_view_teacher_import_form(): void
