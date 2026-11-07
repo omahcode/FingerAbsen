@@ -68,23 +68,8 @@
     <!-- Filter & Search Bar -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
         <form action="{{ route('teachers.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-            <!-- Filter Kategori -->
-            <div class="md:col-span-4">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                    <i class="fas fa-tags text-teal-600 mr-1"></i> Filter Kategori:
-                </label>
-                <select name="category" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    <option value="">-- Semua Kategori ({{ $totalTeachers }} Guru) --</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}" {{ ($selectedCategory === $cat) ? 'selected' : '' }}>
-                            {{ $cat }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
             <!-- Filter Status Sidik Jari -->
-            <div class="md:col-span-3">
+            <div class="md:col-span-4 lg:col-span-4">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-fingerprint text-emerald-500 mr-1"></i> Status Sidik Jari:
                 </label>
@@ -96,7 +81,7 @@
             </div>
 
             <!-- Pencarian Nama / NIP -->
-            <div class="md:col-span-5">
+            <div class="md:col-span-8 lg:col-span-8">
                 <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
                     <i class="fas fa-search text-blue-500 mr-1"></i> Cari Nama / NIP:
                 </label>
@@ -108,7 +93,7 @@
                     <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition shadow-sm">
                         Cari
                     </button>
-                    @if($selectedCategory || $search || $selectedFingerprint)
+                    @if($search || $selectedFingerprint)
                         <a href="{{ route('teachers.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-2.5 rounded-xl text-sm transition flex items-center gap-1" title="Reset Filter">
                             <i class="fas fa-times"></i>
                         </a>
@@ -121,9 +106,6 @@
         <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between text-xs text-gray-500 gap-2">
             <div>
                 Menampilkan <strong class="text-gray-900 font-bold">{{ $teachers->count() }}</strong> dari total <strong class="text-gray-900 font-bold">{{ $totalTeachers }}</strong> guru
-                @if($selectedCategory)
-                    dalam kategori <span class="bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-200">{{ $selectedCategory }}</span>
-                @endif
             </div>
 
             <div class="flex items-center gap-2">
@@ -134,7 +116,7 @@
         </div>
     </div>
 
-    <!-- Tabel Data Guru: NIP | NAMA GURU | KATEGORI | SIDIK JARI | AKSI -->
+    <!-- Tabel Data Guru: NIP | NAMA GURU | SIDIK JARI | AKSI -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <form id="bulk-delete-form" action="{{ route('teachers.destroyMultiple') }}" method="POST" data-confirm="Hapus seluruh data guru yang dicentang dari database dan mesin fingerprint?" data-title="Hapus Massal Guru" data-danger="true" data-icon="warning">
             @csrf
@@ -147,7 +129,6 @@
                             </th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700">NIP</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700">NAMA GURU</th>
-                            <th class="py-3.5 px-4 font-extrabold text-gray-700">KATEGORI</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700 text-center">SIDIK JARI</th>
                             <th class="py-3.5 px-4 font-extrabold text-gray-700 text-right">AKSI</th>
                         </tr>
@@ -188,29 +169,6 @@
                                 </div>
                             </td>
 
-                            <!-- KATEGORI -->
-                            <td class="py-3.5 px-4">
-                                @php
-                                    $catUpper = strtoupper($t->category);
-                                    $badgeClass = 'bg-teal-50 text-teal-700 border-teal-200';
-                                    if (str_contains($catUpper, 'MTK') || str_contains($catUpper, 'MATEMATIKA')) {
-                                        $badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
-                                    } elseif (str_contains($catUpper, 'JURUSAN') || str_contains($catUpper, 'PRODUKTIF')) {
-                                        $badgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
-                                    } elseif (str_contains($catUpper, 'PPKN') || str_contains($catUpper, 'SEJARAH')) {
-                                        $badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
-                                    } elseif (str_contains($catUpper, 'AGAMA') || str_contains($catUpper, 'PAI')) {
-                                        $badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                                    } elseif (str_contains($catUpper, 'BAHASA')) {
-                                        $badgeClass = 'bg-sky-50 text-sky-700 border-sky-200';
-                                    }
-                                @endphp
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border {{ $badgeClass }}">
-                                    <i class="fas fa-bookmark text-[10px] opacity-75"></i>
-                                    {{ $t->category }}
-                                </span>
-                            </td>
-
                             <!-- SIDIK JARI -->
                             <td class="py-3.5 px-4 text-center">
                                 @if($t->fingerprint_templates_count > 0)
@@ -242,7 +200,7 @@
                             <!-- AKSI -->
                             <td class="py-3.5 px-4 text-right">
                                 <div class="flex items-center justify-end gap-1.5">
-                                    <button type="button" onclick="openEditTeacherModal({{ $t->id }}, '{{ addslashes($t->nip) }}', '{{ addslashes($t->name) }}', '{{ addslashes($t->category) }}', '{{ addslashes($t->device_user_id) }}', '{{ addslashes($t->phone ?? '') }}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Edit Data Guru">
+                                    <button type="button" onclick="openEditTeacherModal({{ $t->id }}, '{{ addslashes($t->nip) }}', '{{ addslashes($t->name) }}', '{{ addslashes($t->category ?? 'GURU UMUM') }}', '{{ addslashes($t->device_user_id) }}', '{{ addslashes($t->phone ?? '') }}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Edit Data Guru">
                                         <i class="fas fa-edit"></i>
                                     </button>
 
@@ -258,7 +216,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="py-14 text-center text-gray-400">
+                            <td colspan="5" class="py-14 text-center text-gray-400">
                                 <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">
                                     <i class="fas fa-chalkboard-teacher"></i>
                                 </div>
