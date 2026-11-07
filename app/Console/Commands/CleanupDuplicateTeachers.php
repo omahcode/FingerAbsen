@@ -189,61 +189,93 @@ class CleanupDuplicateTeachers extends Command
             $nis = trim((string) $student->nis);
             $name = trim((string) $student->name);
 
+            // Cek 18 digit NIP di kolom NAME, NIS, atau DEVICE_USER_ID
+            $isNipName = (strlen($name) === 18 && ctype_digit($name) && (str_starts_with($name, '19') || str_starts_with($name, '20')));
             $isNipPin = (strlen($pin) === 18 && ctype_digit($pin) && (str_starts_with($pin, '19') || str_starts_with($pin, '20')));
             $isNipNis = (strlen($nis) === 18 && ctype_digit($nis) && (str_starts_with($nis, '19') || str_starts_with($nis, '20')));
 
             $lowerName = strtolower($name);
+            $lowerPin = strtolower($pin);
             $hasTeacherTitle = false;
             $titles = ['s.pd', 'm.pd', 's.t', 'm.t', 's.kom', 'm.kom', 's.ag', 'm.ag', 's.si', 'm.si', 'drs.', 'drs ', 'dra.', 'dra '];
             foreach ($titles as $t) {
-                if (str_contains($lowerName, $t)) {
+                if (str_contains($lowerName, $t) || str_contains($lowerPin, $t)) {
                     $hasTeacherTitle = true;
                     break;
                 }
             }
 
-            if ($isNipPin || $isNipNis || $hasTeacherTitle || $pin === 'BOPD') {
-                $nip = $isNipNis ? $nis : ($isNipPin ? $pin : ($nis ?: $pin));
-
-                // Cari apakah guru sudah terdaftar di teachers
-                $targetTeacher = Teacher::where('nip', $nip)
-                    ->orWhere('device_user_id', $pin)
+            // Cek apakah PIN atau NIS atau Name cocok dengan NIP / Nama Guru di tabel teachers
+            $matchedTeacher = null;
+            if ($isNipName) {
+                $nip = $name;
+                $matchedTeacher = Teacher::where('nip', $nip)->first();
+            } elseif ($isNipPin || $isNipNis) {
+                $nip = $isNipPin ? $pin : $nis;
+                $matchedTeacher = Teacher::where('nip', $nip)->first();
+            } else {
+                $nip = null;
+                $matchedTeacher = Teacher::where('nip', $pin)
+                    ->orWhere('nip', $nis)
                     ->orWhere('name', 'like', "%{$name}%")
                     ->first();
+            }
 
-                if (! $targetTeacher) {
-                    $targetTeacher = Teacher::create([
-                        'nip' => $nip,
-                        'name' => $name,
-                        'category' => 'GURU UMUM',
-                        'device_user_id' => $pin ?: $nip,
-                    ]);
-                    $this->info("  * Mendaftarkan Guru baru dari data nyasar: {$targetTeacher->name} (NIP: {$targetTeacher->nip})");
+            // Khusus Cecep & Doni Prayoga
+            if (! $matchedTeacher) {
+                if ($pin === 'BOPD' || str_contains($lowerName, 'doni prayoga')) {
+                    $matchedTeacher = Teacher::where('name', 'like', '%Doni Prayoga%')->first();
+                } elseif (str_contains($lowerName, 'cecep') || str_contains($lowerPin, 'cecep')) {
+                    $matchedTeacher = Teacher::where('name', 'like', '%Cecep%')->first();
+                }
+            }
+
+            $isKnownTeacherName = (str_contains($lowerName, 'cecep') || str_contains($lowerPin, 'cecep') || str_contains($lowerName, 'doni prayoga') || $pin === 'BOPD');
+
+            if ($isNipName || $isNipPin || $isNipNis || $hasTeacherTitle || $matchedTeacher || $isKnownTeacherName) {
+                $extractedNip = $nip ?: ($matchedTeacher ? $matchedTeacher->nip : ($isNipName ? $name : ($isNipPin ? $pin : ($isNipNis ? $nis : ($pin !== '1' ? $pin : 'NIP_'.uniqid())))));
+
+                if (! $matchedTeacher) {
+                    try {
+                        $matchedTeacher = Teacher::create([
+                            'nip' => $extractedNip,
+                            'name' => ($isNipName ? $pin : $name),
+                            'category' => 'GURU UMUM',
+                            'device_user_id' => $pin ?: $extractedNip,
+                        ]);
+                        $this->info("  * Mendaftarkan Guru baru dari data nyasar: {$matchedTeacher->name} (NIP: {$matchedTeacher->nip})");
+                    } catch (\Throwable $e) {
+                        $matchedTeacher = Teacher::where('nip', $extractedNip)->first();
+                    }
                 } else {
-                    $this->warn("  * Mengalihkan siswa nyasar '{$student->name}' (NIP: {$nip}) ke Guru '{$targetTeacher->name}'");
+                    $this->warn("  * Mengalihkan siswa nyasar '{$student->name}' (PIN: {$pin}) ke Guru '{$matchedTeacher->name}' (NIP: {$matchedTeacher->nip})");
                 }
 
-                $teacherPin = (string) ($targetTeacher->device_user_id ?: $targetTeacher->nip);
+                if ($matchedTeacher) {
+                    $teacherPin = (string) ($matchedTeacher->device_user_id ?: $matchedTeacher->nip);
 
-                // Pindahkan template sidik jari
-                $tCount = FingerprintTemplate::where('student_id', $student->id)
-                    ->orWhere('device_user_id', $pin)
-                    ->update([
-                        'student_id' => null,
-                        'teacher_id' => $targetTeacher->id,
-                        'device_user_id' => $teacherPin,
-                    ]);
-                $migratedTemplatesCount += $tCount;
+                    // Pindahkan template sidik jari
+                    $tCount = FingerprintTemplate::where('student_id', $student->id)
+                        ->orWhere('device_user_id', $pin)
+                        ->orWhere('device_user_id', $student->name)
+                        ->update([
+                            'student_id' => null,
+                            'teacher_id' => $matchedTeacher->id,
+                            'device_user_id' => $teacherPin,
+                        ]);
+                    $migratedTemplatesCount += $tCount;
 
-                // Pindahkan attendance logs
-                $lCount = AttendanceLog::where('student_id', $student->id)
-                    ->orWhere('device_user_id', $pin)
-                    ->update([
-                        'student_id' => null,
-                        'teacher_id' => $targetTeacher->id,
-                        'device_user_id' => $teacherPin,
-                    ]);
-                $migratedLogsCount += $lCount;
+                    // Pindahkan attendance logs
+                    $lCount = AttendanceLog::where('student_id', $student->id)
+                        ->orWhere('device_user_id', $pin)
+                        ->orWhere('device_user_id', $student->name)
+                        ->update([
+                            'student_id' => null,
+                            'teacher_id' => $matchedTeacher->id,
+                            'device_user_id' => $teacherPin,
+                        ]);
+                    $migratedLogsCount += $lCount;
+                }
 
                 $student->delete();
                 $cleanedStudentsCount++;

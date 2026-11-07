@@ -189,19 +189,25 @@ class CleanupDuplicateTeachersTest extends TestCase
         $major = Major::create(['name' => 'RPL']);
         $class = SchoolClass::create(['name' => 'X PPLG 1', 'major_id' => $major->id]);
 
-        // Siswa nyasar yang sebenarnya adalah Guru (NIP 18 digit)
+        // Kasus nyata di server: NIP 18 digit tersimpan di kolom name, dan nama tersimpan di device_user_id
         $teacherStudent = Student::create([
-            'name' => 'Joko',
-            'nis' => '196702261990031007',
-            'device_user_id' => '1',
+            'name' => '196702261990031007',
+            'device_user_id' => 'Joko',
             'school_class_id' => $class->id,
             'privilege' => '0',
         ]);
 
-        // Guru nyasar dengan gelar akademik
+        // Guru nyasar Cecep (PIN: 21, Name: Cecep)
+        $cecepStudent = Student::create([
+            'name' => 'Cecep',
+            'device_user_id' => '21',
+            'school_class_id' => $class->id,
+            'privilege' => '0',
+        ]);
+
+        // Guru nyasar dengan gelar akademik Doni Prayoga, S.Pd. (PIN: BOPD)
         $titleTeacherStudent = Student::create([
             'name' => 'Doni Prayoga, S.Pd.',
-            'nis' => 'BOPD',
             'device_user_id' => 'BOPD',
             'school_class_id' => $class->id,
             'privilege' => '0',
@@ -222,6 +228,10 @@ class CleanupDuplicateTeachersTest extends TestCase
         // Guru nyasar harus sudah dihapus dari tabel students
         $this->assertDatabaseMissing('students', [
             'id' => $teacherStudent->id,
+        ]);
+
+        $this->assertDatabaseMissing('students', [
+            'id' => $cecepStudent->id,
         ]);
 
         $this->assertDatabaseMissing('students', [
