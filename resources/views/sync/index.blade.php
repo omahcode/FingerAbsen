@@ -76,13 +76,13 @@
                 Fitur ini menarik sidik jari yang didaftarkan langsung pada sensor mesin masuk ke database server. Setelah tersimpan di database, Anda dapat langsung menyebarkannya ke mesin-mesin lain (replikasi).
             </p>
 
-            <form action="{{ route('sync.pullTemplates') }}" method="POST" data-confirm="Tarik data template sidik jari dari mesin ke database server?" data-title="📥 Tarik Sidik Jari dari Mesin" data-icon="question">
+            <form id="form-pull-direct" action="{{ route('sync.pullTemplates') }}" method="POST" data-confirm="Tarik data template sidik jari dari mesin ke database server?" data-title="📥 Tarik Sidik Jari dari Mesin" data-icon="question">
                 @csrf
                 <div class="mb-4">
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-200 mb-1.5">
                         📡 Pilih Mesin Asal
                     </label>
-                    <select name="device_id" class="w-full bg-slate-800/90 text-white text-sm rounded-xl p-3 border border-slate-700 shadow-sm focus:ring-2 focus:ring-purple-400 focus:outline-none">
+                    <select id="pull-device-select" name="device_id" class="w-full bg-slate-800/90 text-white text-sm rounded-xl p-3 border border-slate-700 shadow-sm focus:ring-2 focus:ring-purple-400 focus:outline-none">
                         <option value="all">🌐 Seluruh Mesin Terdaftar (Tarik Sekaligus)</option>
                         @foreach($devices as $d)
                             <option value="{{ $d->id }}">🖥️ {{ $d->name }} ({{ $d->serial_number ?: $d->ip_address }}) [{{ $d->purpose_label }}]</option>
@@ -93,13 +93,15 @@
                     </p>
                 </div>
 
-                <div class="flex items-center justify-between gap-3 pt-2">
-                    <span class="text-[11px] text-purple-300 flex items-center gap-1">
-                        <i class="fas fa-check-circle text-emerald-400"></i> Hybrid Socket & ADMS
-                    </span>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2">
+                    <button type="button" onclick="openPreviewModalFromSelect()" class="inline-flex items-center justify-center gap-2 bg-indigo-500/30 hover:bg-indigo-500/40 text-purple-200 border border-purple-400/30 font-bold py-2.5 px-4 rounded-xl shadow transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
+                        <i class="fas fa-search"></i>
+                        <span>Cek & Pilih Siapa yang Ditarik</span>
+                    </button>
+
                     <button type="submit" class="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-5 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 text-xs sm:text-sm">
                         <i class="fas fa-download"></i>
-                        <span>Mulai Tarik Sidik Jari</span>
+                        <span>Tarik Semua Sekaligus</span>
                     </button>
                 </div>
             </form>
@@ -247,27 +249,34 @@
             </div>
 
             <!-- Tombol Aksi Cepat 1 per 1 untuk Mesin Ini -->
-            <div class="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
-                <!-- 1. Tarik Sidik Jari dari Mesin Ini -->
-                <form action="{{ route('sync.pullTemplates') }}" method="POST" data-confirm="Tarik seluruh template sidik jari dari mesin {{ $d->name }} ke database server?" data-title="📥 Tarik Sidik Jari" data-icon="question">
-                    @csrf
-                    <input type="hidden" name="device_id" value="{{ $d->id }}">
-                    <button type="submit" class="w-full text-center py-2 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 text-xs font-bold border border-purple-200 transition flex items-center justify-center gap-1.5 shadow-sm" title="Tarik Sidik Jari dari Mesin Ini">
-                        <i class="fas fa-download"></i>
-                        <span>Tarik Sidik Jari</span>
-                    </button>
-                </form>
+            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                <button type="button" onclick="openPreviewModal({{ $d->id }})" class="w-full text-center py-2 px-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm" title="Cek sidik jari siapa saja yang ada di mesin ini sebelum ditarik">
+                    <i class="fas fa-search"></i>
+                    <span>Cek & Pilih Siapa yang Ditarik</span>
+                </button>
 
-                <!-- 2. Sebar Sidik Jari ke Mesin Ini -->
-                <form action="{{ route('sync.pushAll') }}" method="POST" data-confirm="Sebarkan seluruh template sidik jari dari database ke mesin {{ $d->name }}?" data-title="📤 Sebar Sidik Jari" data-icon="question">
-                    @csrf
-                    <input type="hidden" name="device_id" value="{{ $d->id }}">
-                    <input type="hidden" name="content_type" value="templates_only">
-                    <button type="submit" class="w-full text-center py-2 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-bold border border-blue-200 transition flex items-center justify-center gap-1.5 shadow-sm" title="Kirim seluruh template sidik jari ke mesin ini">
-                        <i class="fas fa-upload"></i>
-                        <span>Sebar ke Sini</span>
-                    </button>
-                </form>
+                <div class="grid grid-cols-2 gap-2">
+                    <!-- 1. Tarik Semua Sidik Jari dari Mesin Ini -->
+                    <form action="{{ route('sync.pullTemplates') }}" method="POST" data-confirm="Tarik seluruh template sidik jari dari mesin {{ $d->name }} ke database server?" data-title="📥 Tarik Semua Sidik Jari" data-icon="question">
+                        @csrf
+                        <input type="hidden" name="device_id" value="{{ $d->id }}">
+                        <button type="submit" class="w-full text-center py-1.5 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold border border-purple-200 transition flex items-center justify-center gap-1" title="Tarik Semua Sidik Jari Sekaligus dari Mesin Ini">
+                            <i class="fas fa-download text-[11px]"></i>
+                            <span>Tarik Semua</span>
+                        </button>
+                    </form>
+
+                    <!-- 2. Sebar Sidik Jari ke Mesin Ini -->
+                    <form action="{{ route('sync.pushAll') }}" method="POST" data-confirm="Sebarkan seluruh template sidik jari dari database ke mesin {{ $d->name }}?" data-title="📤 Sebar Sidik Jari" data-icon="question">
+                        @csrf
+                        <input type="hidden" name="device_id" value="{{ $d->id }}">
+                        <input type="hidden" name="content_type" value="templates_only">
+                        <button type="submit" class="w-full text-center py-1.5 px-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition flex items-center justify-center gap-1" title="Kirim seluruh template sidik jari ke mesin ini">
+                            <i class="fas fa-upload text-[11px]"></i>
+                            <span>Sebar ke Sini</span>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
         @empty
@@ -393,4 +402,333 @@
         </table>
     </div>
 </div>
+
+<!-- Modal Cek & Pilih Sidik Jari Mesin Sebelum Ditarik -->
+<div id="modal-preview-templates" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-fadeIn">
+        <!-- Header -->
+        <div class="p-5 bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
+                    <i class="fas fa-fingerprint text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base tracking-wide flex items-center gap-2">
+                        <span>Cek Sidik Jari Mesin Sebelum Ditarik</span>
+                        <span id="preview-source-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                            Memeriksa...
+                        </span>
+                    </h3>
+                    <p class="text-xs text-slate-300" id="preview-device-info">
+                        Mesin: Memuat data...
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closePreviewModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Toolbar Filter & Search -->
+        <div class="p-4 bg-slate-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                <div class="relative w-full max-w-xs">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="preview-search" placeholder="Cari nama atau PIN..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+
+                <div class="flex items-center gap-1 bg-gray-200/60 p-1 rounded-xl text-xs" id="filter-tabs-container">
+                    <button type="button" class="preview-filter-btn px-2.5 py-1 rounded-lg font-bold text-purple-700 bg-white shadow-sm transition" data-filter="all">Semua (<span id="count-all">0</span>)</button>
+                    <button type="button" class="preview-filter-btn px-2.5 py-1 rounded-lg font-bold text-amber-700 hover:bg-white/50 transition" data-filter="unsynced">Belum di Web (<span id="count-unsynced">0</span>)</button>
+                    <button type="button" class="preview-filter-btn px-2.5 py-1 rounded-lg font-bold text-emerald-700 hover:bg-white/50 transition" data-filter="synced">Sudah Ada (<span id="count-synced">0</span>)</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-gray-600" id="preview-selected-counter">0 user dipilih</span>
+                <button type="button" id="btn-select-unsynced" onclick="selectOnlyUnsynced()" class="text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 font-bold py-1.5 px-3 rounded-xl border border-purple-200 transition">
+                    Pilih yang Belum di Web
+                </button>
+            </div>
+        </div>
+
+        <!-- Body Table (Scrollable) -->
+        <div class="overflow-y-auto flex-1 p-4" id="preview-table-container">
+            <!-- Loading state -->
+            <div id="preview-loading" class="text-center py-12">
+                <i class="fas fa-circle-notch fa-spin text-3xl text-purple-600 mb-3"></i>
+                <p class="text-xs text-gray-500 font-medium">Sedang menghubungi mesin dan memeriksa data sidik jari...</p>
+            </div>
+
+            <!-- Table -->
+            <table class="w-full text-left text-xs border-collapse hidden" id="preview-table">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-[10px] tracking-wider font-bold">
+                        <th class="p-2.5 w-10 text-center">
+                            <input type="checkbox" id="check-all-preview" class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer">
+                        </th>
+                        <th class="p-2.5 w-16 text-center">PIN</th>
+                        <th class="p-2.5">Nama Siswa / User</th>
+                        <th class="p-2.5">Kelas / Peran</th>
+                        <th class="p-2.5 text-center">Sidik Jari di Mesin</th>
+                        <th class="p-2.5 text-center">Status di Database Server</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100" id="preview-tbody">
+                    <!-- Dinamis via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between shrink-0">
+            <button type="button" onclick="closePreviewModal()" class="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-200 text-xs font-semibold transition">
+                Tutup
+            </button>
+
+            <form id="form-pull-selected" action="{{ route('sync.pullTemplates') }}" method="POST">
+                @csrf
+                <input type="hidden" name="device_id" id="modal-submit-device-id" value="">
+                <input type="hidden" name="pins" id="modal-submit-pins" value="">
+                <button type="button" onclick="submitPullSelected()" id="btn-submit-pull-selected" class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded-xl shadow transition transform hover:-translate-y-0.5 text-xs sm:text-sm disabled:opacity-50 disabled:pointer-events-none">
+                    <i class="fas fa-download"></i>
+                    <span id="btn-submit-pull-text">Tarik Sidik Jari Terpilih</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPreviewUsers = [];
+    let activePreviewDeviceId = null;
+    let currentPreviewFilter = 'all';
+
+    async function openPreviewModal(deviceId) {
+        activePreviewDeviceId = deviceId;
+        const modal = document.getElementById('modal-preview-templates');
+        const loading = document.getElementById('preview-loading');
+        const table = document.getElementById('preview-table');
+        const tbody = document.getElementById('preview-tbody');
+        const badge = document.getElementById('preview-source-badge');
+        const info = document.getElementById('preview-device-info');
+
+        modal.classList.remove('hidden');
+        loading.classList.remove('hidden');
+        table.classList.add('hidden');
+        tbody.innerHTML = '';
+        document.getElementById('modal-submit-device-id').value = deviceId;
+
+        try {
+            const resp = await fetch(`{{ route('sync.previewTemplates') }}?device_id=${deviceId}`);
+            const data = await resp.json();
+
+            if (resp.ok && data.status === 'success') {
+                currentPreviewUsers = data.users || [];
+                badge.textContent = data.source_label;
+                badge.className = data.source === 'machine_live'
+                    ? 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                    : 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30';
+                info.textContent = `Mesin: ${data.device.name} (IP: ${data.device.ip_address} • SN: ${data.device.serial_number || '-'}) • Total: ${data.total_users} User`;
+
+                updateFilterCounters();
+                renderPreviewTable();
+
+                loading.classList.add('hidden');
+                table.classList.remove('hidden');
+
+                // Otomatis pilih yang belum disinkronkan ke web jika ada
+                selectOnlyUnsynced();
+            } else {
+                alert(data.message || 'Gagal memuat pratinjau mesin.');
+                closePreviewModal();
+            }
+        } catch (e) {
+            alert('Terjadi kesalahan koneksi saat memeriksa data mesin.');
+            closePreviewModal();
+        }
+    }
+
+    function openPreviewModalFromSelect() {
+        const devSelect = document.getElementById('pull-device-select');
+        const devId = devSelect ? devSelect.value : 'all';
+        if (!devId || devId === 'all') {
+            @if($devices->count() > 0)
+                openPreviewModal({{ $devices->first()->id }});
+            @else
+                alert('Belum ada mesin fingerprint terdaftar.');
+            @endif
+        } else {
+            openPreviewModal(devId);
+        }
+    }
+
+    function closePreviewModal() {
+        document.getElementById('modal-preview-templates').classList.add('hidden');
+    }
+
+    function updateFilterCounters() {
+        const total = currentPreviewUsers.length;
+        const unsynced = currentPreviewUsers.filter(u => !u.is_synced).length;
+        const synced = total - unsynced;
+
+        document.getElementById('count-all').textContent = total;
+        document.getElementById('count-unsynced').textContent = unsynced;
+        document.getElementById('count-synced').textContent = synced;
+    }
+
+    function renderPreviewTable() {
+        const tbody = document.getElementById('preview-tbody');
+        const query = (document.getElementById('preview-search')?.value || '').toLowerCase().trim();
+
+        tbody.innerHTML = '';
+
+        const filtered = currentPreviewUsers.filter(u => {
+            const matchesQuery = (u.name || '').toLowerCase().includes(query) || (u.pin || '').toLowerCase().includes(query);
+            let matchesFilter = true;
+            if (currentPreviewFilter === 'unsynced') {
+                matchesFilter = !u.is_synced;
+            } else if (currentPreviewFilter === 'synced') {
+                matchesFilter = u.is_synced;
+            }
+            return matchesQuery && matchesFilter;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">Tidak ada user yang cocok dengan filter atau pencarian saat ini.</td></tr>`;
+            updateSelectionCounter();
+            return;
+        }
+
+        filtered.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-purple-50/50 transition preview-user-row';
+            tr.dataset.pin = u.pin;
+            tr.dataset.synced = u.is_synced ? 'true' : 'false';
+
+            let machineFpHtml = '';
+            if (u.machine_fp_count !== null && u.machine_fp_count !== undefined) {
+                machineFpHtml = u.machine_fp_count > 0
+                    ? `<span class="inline-flex items-center gap-1 font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200"><i class="fas fa-fingerprint"></i> ${u.machine_fp_count} Jari</span>`
+                    : `<span class="text-gray-400 font-mono text-[11px]">- Kosong -</span>`;
+            } else {
+                machineFpHtml = `<span class="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg text-[10px] font-semibold">Tersedia di Mesin</span>`;
+            }
+
+            const dbStatusHtml = u.is_synced
+                ? `<span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200"><i class="fas fa-check-circle"></i> Sudah di Web (${u.db_fp_count} jari)</span>`
+                : `<span class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 animate-pulse"><i class="fas fa-exclamation-circle"></i> Siap Ditarik (${u.db_fp_count} di web)</span>`;
+
+            tr.innerHTML = `
+                <td class="p-2.5 text-center">
+                    <input type="checkbox" class="preview-user-cb w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer" value="${u.pin}">
+                </td>
+                <td class="p-2.5 font-mono font-bold text-gray-700 text-center">${u.pin}</td>
+                <td class="p-2.5 font-bold text-gray-900">${u.name}</td>
+                <td class="p-2.5 text-gray-600">${u.class_name} <span class="text-[10px] text-gray-400 block">${u.role}</span></td>
+                <td class="p-2.5 text-center">${machineFpHtml}</td>
+                <td class="p-2.5 text-center">${dbStatusHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        updateSelectionCounter();
+    }
+
+    function selectOnlyUnsynced() {
+        const cbs = document.querySelectorAll('.preview-user-cb');
+        cbs.forEach(cb => {
+            const row = cb.closest('tr');
+            cb.checked = (row && row.dataset.synced === 'false');
+        });
+        updateSelectionCounter();
+    }
+
+    function updateSelectionCounter() {
+        const checked = document.querySelectorAll('.preview-user-cb:checked');
+        const counterEl = document.getElementById('preview-selected-counter');
+        const submitBtn = document.getElementById('btn-submit-pull-selected');
+        const submitText = document.getElementById('btn-submit-pull-text');
+        const totalVisible = document.querySelectorAll('.preview-user-cb').length;
+        const checkAll = document.getElementById('check-all-preview');
+
+        if (counterEl) counterEl.textContent = `${checked.length} user dipilih`;
+        if (submitText) submitText.textContent = `Tarik Sidik Jari Terpilih (${checked.length} User)`;
+        if (submitBtn) submitBtn.disabled = (checked.length === 0);
+
+        if (checkAll && totalVisible > 0) {
+            checkAll.checked = (checked.length === totalVisible);
+            checkAll.indeterminate = (checked.length > 0 && checked.length < totalVisible);
+        }
+    }
+
+    function submitPullSelected() {
+        const checked = Array.from(document.querySelectorAll('.preview-user-cb:checked')).map(cb => cb.value);
+        if (checked.length === 0) {
+            alert('Silakan pilih minimal satu siswa/user untuk ditarik.');
+            return;
+        }
+
+        const count = checked.length;
+        const confirmText = `Tarik data sidik jari untuk ${count} user terpilih ke database server?`;
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Konfirmasi Tarik Sidik Jari',
+                text: confirmText,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#7c3aed',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Tarik Sekarang',
+                cancelButtonText: 'Batal'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    document.getElementById('modal-submit-pins').value = checked.join(',');
+                    document.getElementById('form-pull-selected').submit();
+                }
+            });
+        } else {
+            if (confirm(confirmText)) {
+                document.getElementById('modal-submit-pins').value = checked.join(',');
+                document.getElementById('form-pull-selected').submit();
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Search handler
+        document.getElementById('preview-search')?.addEventListener('input', () => {
+            renderPreviewTable();
+        });
+
+        // Filter tab handlers
+        document.querySelectorAll('.preview-filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.preview-filter-btn').forEach(b => {
+                    b.classList.remove('bg-white', 'shadow-sm');
+                });
+                btn.classList.add('bg-white', 'shadow-sm');
+                currentPreviewFilter = btn.dataset.filter || 'all';
+                renderPreviewTable();
+            });
+        });
+
+        // Check All handler
+        document.getElementById('check-all-preview')?.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.preview-user-cb').forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateSelectionCounter();
+        });
+
+        // Delegate row cb change
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.classList.contains('preview-user-cb')) {
+                updateSelectionCounter();
+            }
+        });
+    });
+</script>
 @endsection

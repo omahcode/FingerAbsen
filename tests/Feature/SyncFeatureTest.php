@@ -243,4 +243,57 @@ class SyncFeatureTest extends TestCase
         $this->assertNotEmpty($queueDev2);
         $this->assertTrue(collect($queueDev2)->contains(fn ($cmd) => str_contains($cmd, 'PIN=3001') && str_contains($cmd, 'TMP=BASE64_TEMPLATE_DWI')));
     }
+
+    public function test_preview_templates_endpoint_returns_users_and_template_statuses(): void
+    {
+        $student = Student::create([
+            'name' => 'Eka Saputra',
+            'device_user_id' => '4001',
+            'school_class_id' => $this->classA->id,
+            'privilege' => '0',
+        ]);
+
+        FingerprintTemplate::create([
+            'student_id' => $student->id,
+            'device_user_id' => '4001',
+            'finger_index' => 0,
+            'size' => 128,
+            'valid' => 1,
+            'template_data' => 'BASE64_TEMPLATE_EKA',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(route('sync.previewTemplates', ['device_id' => $this->device1->id]));
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'device' => [
+                'id' => $this->device1->id,
+                'name' => 'Mesin Utama',
+            ],
+        ]);
+
+        $users = collect($response->json('users'));
+        $targetUser = $users->firstWhere('pin', '4001');
+        $this->assertNotNull($targetUser);
+        $this->assertEquals('Eka Saputra', $targetUser['name']);
+        $this->assertTrue($targetUser['is_synced']);
+    }
+
+    public function test_pull_templates_with_specific_selected_pins(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('sync.pullTemplates'), [
+            'device_id' => $this->device1->id,
+            'pins' => ['5001', '5002'],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $queueDev1 = Cache::get('adms_queue_DEV1111', []);
+        $this->assertNotEmpty($queueDev1);
+        $this->assertTrue(collect($queueDev1)->contains(fn ($cmd) => str_contains($cmd, 'PIN=5001')));
+        $this->assertTrue(collect($queueDev1)->contains(fn ($cmd) => str_contains($cmd, 'PIN=5002')));
+        $this->assertFalse(collect($queueDev1)->contains(fn ($cmd) => str_contains($cmd, 'PIN=0')));
+    }
 }

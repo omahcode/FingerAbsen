@@ -7,6 +7,7 @@ use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Teacher;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -122,15 +123,158 @@ class SyncController extends Controller
     }
 
     /**
+     * Pratinjau data user & sidik jari dari mesin sebelum dilakukan penarikan.
+     */
+    public function previewTemplates(Request $request): JsonResponse
+    {
+        $deviceId = $request->query('device_id');
+        if (! $deviceId || $deviceId === 'all') {
+            $device = Device::first();
+        } else {
+            $device = Device::find($deviceId);
+        }
+
+        if (! $device) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mesin fingerprint tidak ditemukan.',
+            ], 404);
+        }
+
+        $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+        $machineUsers = [];
+        $machineTemplates = [];
+        $source = 'database_catalog';
+        $isOnlineSocket = false;
+
+        try {
+            $resUsers = Http::timeout(2.5)->post($serviceUrl.'/api/get_users', [
+                'ip_address' => $device->ip_address,
+                'port' => $device->port,
+            ]);
+
+            if ($resUsers->successful() && $resUsers->json('status') === 'success') {
+                $machineUsers = $resUsers->json('users', []);
+                $isOnlineSocket = true;
+            }
+
+            $resTemplates = Http::timeout(3.5)->post($serviceUrl.'/api/get_templates', [
+                'ip_address' => $device->ip_address,
+                'port' => $device->port,
+            ]);
+
+            if ($resTemplates->successful() && $resTemplates->json('status') === 'success') {
+                $machineTemplates = $resTemplates->json('templates', []);
+                $isOnlineSocket = true;
+            }
+        } catch (\Throwable $e) {
+            // Socket python offline atau mesin ADMS via internet
+        }
+
+        $usersList = [];
+
+        if ($isOnlineSocket && ! empty($machineUsers)) {
+            $source = 'machine_live';
+            $fpCountsByPin = collect($machineTemplates)->groupBy('uid')->map->count();
+            $pins = collect($machineUsers)->pluck('user_id')->map(fn ($p) => (string) $p)->filter()->unique()->values();
+
+            $students = Student::with('schoolClass')->whereIn('device_user_id', $pins)->get()->keyBy('device_user_id');
+            $teachers = Teacher::whereIn('device_user_id', $pins)->get()->keyBy('device_user_id');
+            $dbTemplates = FingerprintTemplate::whereIn('device_user_id', $pins)->get()->groupBy('device_user_id');
+
+            foreach ($machineUsers as $u) {
+                $pin = (string) $u['user_id'];
+                if (empty($pin)) {
+                    continue;
+                }
+
+                $student = $students->get($pin);
+                $teacher = $teachers->get($pin);
+
+                $name = $student ? $student->name : ($teacher ? $teacher->name : ($u['name'] ?: 'User '.$pin));
+                $role = $student ? 'Siswa' : ($teacher ? 'Guru' : 'Belum Terdaftar di Web');
+                $className = $student ? ($student->schoolClass->name ?? '-') : ($teacher ? 'Dewan Guru' : '-');
+                $machineFpCount = $fpCountsByPin->get($pin, 0);
+                $dbFpCount = isset($dbTemplates[$pin]) ? $dbTemplates[$pin]->count() : 0;
+
+                $usersList[] = [
+                    'pin' => $pin,
+                    'name' => $name,
+                    'role' => $role,
+                    'class_name' => $className,
+                    'machine_fp_count' => $machineFpCount,
+                    'db_fp_count' => $dbFpCount,
+                    'is_synced' => ($machineFpCount > 0 && $dbFpCount >= $machineFpCount),
+                ];
+            }
+        } else {
+            // Fallback: Data katalog siswa & guru di database web
+            $source = 'database_catalog';
+            $students = Student::with('schoolClass')->orderBy('name')->get();
+            $teachers = Teacher::orderBy('name')->get();
+            $allPins = $students->pluck('device_user_id')->concat($teachers->pluck('device_user_id'))->filter()->unique();
+            $dbTemplates = FingerprintTemplate::whereIn('device_user_id', $allPins)->get()->groupBy('device_user_id');
+
+            foreach ($students as $s) {
+                $pin = (string) $s->device_user_id;
+                $dbFpCount = isset($dbTemplates[$pin]) ? $dbTemplates[$pin]->count() : 0;
+                $usersList[] = [
+                    'pin' => $pin,
+                    'name' => $s->name,
+                    'role' => 'Siswa',
+                    'class_name' => $s->schoolClass->name ?? '-',
+                    'machine_fp_count' => null,
+                    'db_fp_count' => $dbFpCount,
+                    'is_synced' => ($dbFpCount > 0),
+                ];
+            }
+
+            foreach ($teachers as $t) {
+                $pin = (string) $t->device_user_id;
+                $dbFpCount = isset($dbTemplates[$pin]) ? $dbTemplates[$pin]->count() : 0;
+                $usersList[] = [
+                    'pin' => $pin,
+                    'name' => $t->name,
+                    'role' => 'Guru',
+                    'class_name' => 'Dewan Guru',
+                    'machine_fp_count' => null,
+                    'db_fp_count' => $dbFpCount,
+                    'is_synced' => ($dbFpCount > 0),
+                ];
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'device' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'ip_address' => $device->ip_address,
+                'serial_number' => $device->serial_number,
+            ],
+            'source' => $source,
+            'source_label' => ($source === 'machine_live') ? 'Terhubung Langsung ke Mesin (Live)' : 'Katalog Siswa & Guru (Database)',
+            'total_users' => count($usersList),
+            'users' => $usersList,
+        ]);
+    }
+
+    /**
      * Tarik template sidik jari dari mesin ke database web.
      * Mendukung penarikan dari 1 mesin tertentu atau dari seluruh mesin sekaligus.
-     * Menggunakan strategi hybrid:
-     * 1. Direct Socket TCP via service Python jika mesin online di jaringan lokal.
-     * 2. Antrean Query ADMS agar mesin ADMS cloud mengunggah template-nya.
+     * Mendukung penarikan untuk user/PIN tertentu yang dipilih.
      */
     public function pullTemplates(Request $request): RedirectResponse
     {
         $deviceId = $request->input('device_id');
+        $pinsInput = $request->input('pins');
+
+        $selectedPins = [];
+        if (is_array($pinsInput)) {
+            $selectedPins = array_values(array_filter(array_map('strval', $pinsInput)));
+        } elseif (is_string($pinsInput) && strlen(trim($pinsInput)) > 0) {
+            $selectedPins = array_values(array_filter(array_map('trim', explode(',', $pinsInput))));
+        }
 
         $devices = collect();
         if ($deviceId && $deviceId !== 'all') {
@@ -166,12 +310,17 @@ class SyncController extends Controller
                             continue;
                         }
 
-                        $student = Student::where('device_user_id', (string) $t['uid'])->first();
-                        $teacher = Teacher::where('device_user_id', (string) $t['uid'])->first();
+                        $pin = (string) $t['uid'];
+                        if (! empty($selectedPins) && ! in_array($pin, $selectedPins, true)) {
+                            continue;
+                        }
+
+                        $student = Student::where('device_user_id', $pin)->first();
+                        $teacher = Teacher::where('device_user_id', $pin)->first();
 
                         FingerprintTemplate::updateOrCreate(
                             [
-                                'device_user_id' => (string) $t['uid'],
+                                'device_user_id' => $pin,
                                 'finger_index' => (int) ($t['fid'] ?? 0),
                             ],
                             [
@@ -189,31 +338,50 @@ class SyncController extends Controller
                 // Abaikan jika service direct socket offline, lanjutkan antrean ADMS
             }
 
-            // 2. Kirim kumpulan perintah query penarikan ADMS
-            $admsCommands = [
-                'CHECK',
-                'QUERY FINGERTMP PIN=0',
-                'DATA QUERY FINGERTMP PIN=0',
-                'DATA QUERY FINGERTMP',
-                'QUERY BIODATA PIN=0',
-                'DATA QUERY BIODATA',
-                'QUERY USER PIN=0',
-                'DATA QUERY USER PIN=0',
-                'QUERY USERINFO PIN=0',
-                'DATA QUERY USERINFO PIN=0',
-                'DATA QUERY USERINFO',
-            ];
+            // 2. Kirim perintah query ADMS
+            if (! empty($selectedPins)) {
+                $admsCommands = ['CHECK'];
+                foreach ($selectedPins as $pin) {
+                    $admsCommands[] = "QUERY FINGERTMP PIN={$pin}";
+                    $admsCommands[] = "DATA QUERY FINGERTMP PIN={$pin}";
+                    $admsCommands[] = "QUERY BIODATA PIN={$pin}";
+                    $admsCommands[] = "DATA QUERY BIODATA PIN={$pin}";
+                }
+            } else {
+                $admsCommands = [
+                    'CHECK',
+                    'QUERY FINGERTMP PIN=0',
+                    'DATA QUERY FINGERTMP PIN=0',
+                    'DATA QUERY FINGERTMP',
+                    'QUERY BIODATA PIN=0',
+                    'DATA QUERY BIODATA',
+                    'QUERY USER PIN=0',
+                    'DATA QUERY USER PIN=0',
+                    'QUERY USERINFO PIN=0',
+                    'DATA QUERY USERINFO PIN=0',
+                    'DATA QUERY USERINFO',
+                ];
+            }
 
             IclockController::queueCommands($admsCommands, $targetSn, null, null, $d);
         }
 
         $targetLabel = (count($devices) === 1) ? $devices->first()->name : 'Seluruh Mesin ('.count($devices).' mesin)';
 
-        $msg = "Perintah tarik sidik jari telah berhasil dikirim ke {$targetLabel}.";
-        if ($directPulledCount > 0) {
-            $msg .= " Berhasil menarik {$directPulledCount} template sidik jari secara langsung ke database.";
+        if (! empty($selectedPins)) {
+            $msg = 'Perintah tarik sidik jari untuk '.count($selectedPins)." user terpilih telah dikirim ke {$targetLabel}.";
+            if ($directPulledCount > 0) {
+                $msg .= " Berhasil menarik {$directPulledCount} template sidik jari secara langsung ke database.";
+            } else {
+                $msg .= ' Mesin ADMS akan segera mengunggah sidik jari user terpilih saat melakukan kontak / polling.';
+            }
         } else {
-            $msg .= ' Mesin ADMS akan segera mengunggah data sidik jari ke server saat melakukan kontak / polling.';
+            $msg = "Perintah tarik sidik jari telah berhasil dikirim ke {$targetLabel}.";
+            if ($directPulledCount > 0) {
+                $msg .= " Berhasil menarik {$directPulledCount} template sidik jari secara langsung ke database.";
+            } else {
+                $msg .= ' Mesin ADMS akan segera mengunggah data sidik jari ke server saat melakukan kontak / polling.';
+            }
         }
 
         return redirect()->back()->with('success', $msg);
