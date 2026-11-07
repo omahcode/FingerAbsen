@@ -17,9 +17,13 @@ class SyncFeatureTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Device $device1;
+
     private Device $device2;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
 
     protected function setUp(): void
@@ -59,7 +63,7 @@ class SyncFeatureTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('sync.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('Sinkronisasi &amp; Replikasi Multi-Mesin', false);
+        $response->assertSeeText('Sinkronisasi & Replikasi Multi-Mesin');
         $response->assertSee('Mesin Utama');
         $response->assertSee('Mesin Kedua');
         $response->assertSee('1 Perintah Tertunda');
@@ -172,4 +176,3 @@ class SyncFeatureTest extends TestCase
         $this->assertEmpty(Cache::get('adms_queue_DEV2222', []));
     }
 }
-
