@@ -582,6 +582,24 @@ class IclockController extends Controller
             }
 
             if ($pin) {
+                // JANGAN buat sebagai siswa jika user ini adalah Guru atau akun Administrator mesin
+                $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+                if ($teacher) {
+                    if ($name && $teacher->name !== $name && ! str_contains(strtolower($name), 'siswa')) {
+                        $teacher->update(['name' => $name]);
+                    }
+                    self::queueCommand("DATA USER PIN={$pin}\tName=".($teacher->name ?? $name)."\tPri={$pri}\tGrp=1", null, $sn);
+                    $count++;
+
+                    continue;
+                }
+
+                if (in_array(strtolower(trim($name ?? '')), ['admin', 'administrator']) || (int) $pri > 0) {
+                    Log::info("ADMS Skip student creation for administrator/special account PIN {$pin} ({$name})");
+
+                    continue;
+                }
+
                 $defaultClass = SchoolClass::first();
                 $student = Student::firstOrCreate(
                     ['device_user_id' => (string) $pin],

@@ -7,6 +7,7 @@ use App\Imports\StudentsImport;
 use App\Models\Device;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -345,9 +346,16 @@ class StudentController extends Controller
                         continue;
                     }
                     // Hanya tarik user biasa (privilege = 0) sebagai siswa
+                    // Jangan tarik jika user ini sudah terdaftar sebagai Guru atau akun Admin
+                    $pinStr = (string) $u['user_id'];
+                    $nameLower = strtolower(trim($u['name'] ?? ''));
+                    if (in_array($nameLower, ['admin', 'administrator']) || Teacher::where('device_user_id', $pinStr)->exists()) {
+                        continue;
+                    }
+
                     if ($u['privilege'] == 0) {
                         Student::firstOrCreate(
-                            ['device_user_id' => (string) $u['user_id']],
+                            ['device_user_id' => $pinStr],
                             [
                                 'name' => $u['name'] ?: 'Siswa '.$u['user_id'],
                                 'school_class_id' => $request->school_class_id,
