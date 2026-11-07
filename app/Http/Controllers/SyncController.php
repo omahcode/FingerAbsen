@@ -624,6 +624,74 @@ class SyncController extends Controller
     }
 
     /**
+     * Ambil status ketersediaan sidik jari user tertentu di seluruh mesin (API JSON untuk Modal).
+     */
+    public function userDevicesStatus(Request $request): JsonResponse
+    {
+        $pin = trim((string) $request->query('pin'));
+
+        if (empty($pin)) {
+            return response()->json(['status' => 'error', 'message' => 'PIN tidak boleh kosong.'], 400);
+        }
+
+        $student = Student::with('schoolClass')->where('device_user_id', $pin)->first();
+        $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
+
+        $name = $student ? $student->name : ($teacher ? $teacher->name : 'User '.$pin);
+        $role = $student ? 'Siswa' : ($teacher ? 'Guru' : 'User');
+        $className = $student ? ($student->schoolClass->name ?? '-') : ($teacher ? ($teacher->category ?: 'Dewan Guru') : '-');
+
+        $templates = FingerprintTemplate::where('device_user_id', $pin)
+            ->when($teacher, fn ($q) => $q->orWhere('teacher_id', $teacher->id))
+            ->get();
+        $dbCount = $templates->count();
+
+        $devices = Device::orderBy('name')->get();
+
+        $deviceTemplates = DeviceFingerprintTemplate::where('device_user_id', $pin)
+            ->get()
+            ->groupBy('device_id');
+
+        $deviceList = [];
+        $missingDeviceIds = [];
+
+        foreach ($devices as $dev) {
+            $hasInDevice = isset($deviceTemplates[$dev->id]);
+            $countInDevice = $hasInDevice ? $deviceTemplates[$dev->id]->count() : 0;
+
+            if (! $hasInDevice && $dbCount > 0) {
+                $missingDeviceIds[] = $dev->id;
+            }
+
+            $deviceList[] = [
+                'id' => $dev->id,
+                'name' => $dev->name,
+                'ip_address' => $dev->ip_address,
+                'port' => $dev->port,
+                'serial_number' => $dev->serial_number ?: '-',
+                'purpose_label' => $dev->purpose_label,
+                'has_template' => $hasInDevice,
+                'template_count' => $countInDevice,
+                'last_synced_at' => $hasInDevice && $deviceTemplates[$dev->id]->first()->last_synced_at ? $deviceTemplates[$dev->id]->first()->last_synced_at->diffForHumans() : null,
+            ];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'user' => [
+                'pin' => $pin,
+                'name' => $name,
+                'role' => $role,
+                'class_name' => $className,
+                'db_count' => $dbCount,
+            ],
+            'devices' => $deviceList,
+            'is_complete' => ($dbCount > 0) && empty($missingDeviceIds) && $devices->isNotEmpty(),
+            'missing_count' => count($missingDeviceIds),
+        ]);
+    }
+
+    /**
      * Pindai dan periksa ketersediaan sidik jari langsung dari seluruh mesin.
      */
     public function scanDevices(Request $request): RedirectResponse
@@ -724,7 +792,7 @@ class SyncController extends Controller
     /**
      * Sebarkan sidik jari yang belum ada ke mesin-mesin yang belum memilikinya.
      */
-    public function syncMissing(Request $request): RedirectResponse
+    public function syncMissing(Request $request): RedirectResponse|JsonResponse
     {
         $pinsInput = $request->input('pins');
         $targetDeviceId = $request->input('target_device_id');
@@ -803,7 +871,22 @@ class SyncController extends Controller
         }
 
         if ($totalCommandsQueued === 0) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => 'info',
+                    'message' => 'Seluruh sidik jari sudah lengkap dan tersinkron di semua mesin target!',
+                ]);
+            }
+
             return redirect()->back()->with('info', 'Seluruh sidik jari sudah lengkap dan tersinkron di semua mesin target!');
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => "Berhasil menjadwalkan {$totalFpQueued} sidik jari ke antrean mesin target.",
+                'queued_count' => $totalFpQueued,
+            ]);
         }
 
         return redirect()->back()->with(

@@ -158,4 +158,62 @@ class SyncMatrixTest extends TestCase
         $response->assertSee('Drs. Supardi');
         $response->assertSee('198001012005011001');
     }
+
+    public function test_user_devices_status_api_returns_correct_device_mapping(): void
+    {
+        $device1 = Device::create([
+            'name' => 'Mesin 1',
+            'ip_address' => '192.168.1.201',
+            'port' => 4370,
+            'serial_number' => 'SN_01',
+        ]);
+
+        $major = Major::create(['name' => 'RPL']);
+        $class = SchoolClass::create(['name' => 'X RPL 1', 'major_id' => $major->id]);
+
+        $student = Student::create([
+            'name' => 'Ahmad Dani',
+            'device_user_id' => '303',
+            'school_class_id' => $class->id,
+            'privilege' => '0',
+        ]);
+
+        $fp = FingerprintTemplate::create([
+            'student_id' => $student->id,
+            'device_user_id' => '303',
+            'finger_index' => 0,
+            'size' => 128,
+            'valid' => 1,
+            'template_data' => 'TMP_DANI',
+        ]);
+
+        DeviceFingerprintTemplate::create([
+            'device_id' => $device1->id,
+            'device_user_id' => '303',
+            'finger_index' => 0,
+            'fingerprint_template_id' => $fp->id,
+            'status' => 'synced',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(route('sync.userDevicesStatus', ['pin' => '303']));
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status' => 'success',
+            'user' => [
+                'pin' => '303',
+                'name' => 'Ahmad Dani',
+                'role' => 'Siswa',
+                'db_count' => 1,
+            ],
+            'devices' => [
+                [
+                    'id' => $device1->id,
+                    'name' => 'Mesin 1',
+                    'has_template' => true,
+                    'template_count' => 1,
+                ],
+            ],
+        ]);
+    }
 }

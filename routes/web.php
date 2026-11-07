@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
     Route::get('sync/matrix', [SyncController::class, 'matrix'])->name('sync.matrix');
+    Route::get('sync/user-devices-status', [SyncController::class, 'userDevicesStatus'])->name('sync.userDevicesStatus');
     Route::post('sync/scan-devices', [SyncController::class, 'scanDevices'])->name('sync.scanDevices');
     Route::post('sync/sync-missing', [SyncController::class, 'syncMissing'])->name('sync.syncMissing');
     Route::get('sync/preview-templates', [SyncController::class, 'previewTemplates'])->name('sync.previewTemplates');
