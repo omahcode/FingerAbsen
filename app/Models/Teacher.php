@@ -35,6 +35,15 @@ class Teacher extends Model
         'GURU INFORMATIKA',
     ];
 
+    protected static function booted()
+    {
+        static::saving(function ($teacher) {
+            if (empty($teacher->device_user_id) && ! empty($teacher->nip)) {
+                $teacher->device_user_id = (string) $teacher->nip;
+            }
+        });
+    }
+
     public function getPhotoUrlAttribute(): ?string
     {
         if ($this->photo) {
