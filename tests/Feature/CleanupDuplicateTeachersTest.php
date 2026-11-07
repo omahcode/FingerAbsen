@@ -183,4 +183,65 @@ class CleanupDuplicateTeachersTest extends TestCase
         $response->assertSee('Terdaftar');
         $response->assertSee('2');
     }
+
+    public function test_cleanup_automatically_migrates_teachers_with_18_digit_nip_from_student_class(): void
+    {
+        $major = Major::create(['name' => 'RPL']);
+        $class = SchoolClass::create(['name' => 'X PPLG 1', 'major_id' => $major->id]);
+
+        // Siswa nyasar yang sebenarnya adalah Guru (NIP 18 digit)
+        $teacherStudent = Student::create([
+            'name' => 'Joko',
+            'nis' => '196702261990031007',
+            'device_user_id' => '1',
+            'school_class_id' => $class->id,
+            'privilege' => '0',
+        ]);
+
+        // Guru nyasar dengan gelar akademik
+        $titleTeacherStudent = Student::create([
+            'name' => 'Doni Prayoga, S.Pd.',
+            'nis' => 'BOPD',
+            'device_user_id' => 'BOPD',
+            'school_class_id' => $class->id,
+            'privilege' => '0',
+        ]);
+
+        // Siswa asli yang tidak boleh terhapus
+        $realStudent = Student::create([
+            'name' => 'MOH ANJI MASBENOWO',
+            'nis' => '12631923',
+            'device_user_id' => '12631923',
+            'school_class_id' => $class->id,
+            'privilege' => '0',
+        ]);
+
+        $this->artisan('cleanup:duplicate-teachers')
+            ->assertSuccessful();
+
+        // Guru nyasar harus sudah dihapus dari tabel students
+        $this->assertDatabaseMissing('students', [
+            'id' => $teacherStudent->id,
+        ]);
+
+        $this->assertDatabaseMissing('students', [
+            'id' => $titleTeacherStudent->id,
+        ]);
+
+        // Guru harus sudah otomatis masuk ke tabel teachers
+        $this->assertDatabaseHas('teachers', [
+            'nip' => '196702261990031007',
+            'name' => 'Joko',
+        ]);
+
+        $this->assertDatabaseHas('teachers', [
+            'name' => 'Doni Prayoga, S.Pd.',
+        ]);
+
+        // Siswa asli harus tetap ada di tabel students
+        $this->assertDatabaseHas('students', [
+            'id' => $realStudent->id,
+            'name' => 'MOH ANJI MASBENOWO',
+        ]);
+    }
 }

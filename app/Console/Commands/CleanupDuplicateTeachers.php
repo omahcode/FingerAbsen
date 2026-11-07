@@ -180,6 +180,76 @@ class CleanupDuplicateTeachers extends Command
             }
         }
 
+        // 4. Bersihkan siswa nyasar di kelas siswa (seperti X PPLG 1) yang sebenarnya adalah NIP / Gelar Guru
+        $this->info('- Memeriksa data siswa nyasar yang memiliki NIP 18 digit atau gelar guru...');
+        $allStudents = Student::all();
+
+        foreach ($allStudents as $student) {
+            $pin = trim((string) $student->device_user_id);
+            $nis = trim((string) $student->nis);
+            $name = trim((string) $student->name);
+
+            $isNipPin = (strlen($pin) === 18 && ctype_digit($pin) && (str_starts_with($pin, '19') || str_starts_with($pin, '20')));
+            $isNipNis = (strlen($nis) === 18 && ctype_digit($nis) && (str_starts_with($nis, '19') || str_starts_with($nis, '20')));
+
+            $lowerName = strtolower($name);
+            $hasTeacherTitle = false;
+            $titles = ['s.pd', 'm.pd', 's.t', 'm.t', 's.kom', 'm.kom', 's.ag', 'm.ag', 's.si', 'm.si', 'drs.', 'drs ', 'dra.', 'dra '];
+            foreach ($titles as $t) {
+                if (str_contains($lowerName, $t)) {
+                    $hasTeacherTitle = true;
+                    break;
+                }
+            }
+
+            if ($isNipPin || $isNipNis || $hasTeacherTitle || $pin === 'BOPD') {
+                $nip = $isNipNis ? $nis : ($isNipPin ? $pin : ($nis ?: $pin));
+
+                // Cari apakah guru sudah terdaftar di teachers
+                $targetTeacher = Teacher::where('nip', $nip)
+                    ->orWhere('device_user_id', $pin)
+                    ->orWhere('name', 'like', "%{$name}%")
+                    ->first();
+
+                if (! $targetTeacher) {
+                    $targetTeacher = Teacher::create([
+                        'nip' => $nip,
+                        'name' => $name,
+                        'category' => 'GURU UMUM',
+                        'device_user_id' => $pin ?: $nip,
+                    ]);
+                    $this->info("  * Mendaftarkan Guru baru dari data nyasar: {$targetTeacher->name} (NIP: {$targetTeacher->nip})");
+                } else {
+                    $this->warn("  * Mengalihkan siswa nyasar '{$student->name}' (NIP: {$nip}) ke Guru '{$targetTeacher->name}'");
+                }
+
+                $teacherPin = (string) ($targetTeacher->device_user_id ?: $targetTeacher->nip);
+
+                // Pindahkan template sidik jari
+                $tCount = FingerprintTemplate::where('student_id', $student->id)
+                    ->orWhere('device_user_id', $pin)
+                    ->update([
+                        'student_id' => null,
+                        'teacher_id' => $targetTeacher->id,
+                        'device_user_id' => $teacherPin,
+                    ]);
+                $migratedTemplatesCount += $tCount;
+
+                // Pindahkan attendance logs
+                $lCount = AttendanceLog::where('student_id', $student->id)
+                    ->orWhere('device_user_id', $pin)
+                    ->update([
+                        'student_id' => null,
+                        'teacher_id' => $targetTeacher->id,
+                        'device_user_id' => $teacherPin,
+                    ]);
+                $migratedLogsCount += $lCount;
+
+                $student->delete();
+                $cleanedStudentsCount++;
+            }
+        }
+
         // 4. Bersihkan sisa kelas bernama 'admin' jika masih ada
         $adminClasses = SchoolClass::whereRaw('LOWER(name) = ?', ['admin'])->get();
         foreach ($adminClasses as $ac) {

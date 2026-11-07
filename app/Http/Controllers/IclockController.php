@@ -166,6 +166,16 @@ class IclockController extends Controller
             $teacher = Teacher::where('device_user_id', (string) $pin)
                 ->orWhere('nip', (string) $pin)
                 ->first();
+
+            if (! $teacher && self::isTeacherRecord($pin)) {
+                $teacher = Teacher::create([
+                    'nip' => (string) $pin,
+                    'name' => 'Guru '.$pin,
+                    'category' => 'GURU UMUM',
+                    'device_user_id' => (string) $pin,
+                ]);
+            }
+
             $student = null;
             if (! $teacher) {
                 $defaultClass = SchoolClass::first();
@@ -573,6 +583,30 @@ class IclockController extends Controller
         return $savedCount;
     }
 
+    public static function isTeacherRecord(?string $pin, ?string $name = null): bool
+    {
+        $pinStr = trim((string) $pin);
+        $nameStr = trim((string) $name);
+
+        if (strlen($pinStr) === 18 && ctype_digit($pinStr) && (str_starts_with($pinStr, '19') || str_starts_with($pinStr, '20'))) {
+            return true;
+        }
+
+        if ($pinStr === 'BOPD') {
+            return true;
+        }
+
+        $lowerName = strtolower($nameStr);
+        $titles = ['s.pd', 'm.pd', 's.t', 'm.t', 's.kom', 'm.kom', 's.ag', 'm.ag', 's.si', 'm.si', 'drs.', 'drs ', 'dra.', 'dra '];
+        foreach ($titles as $t) {
+            if (str_contains($lowerName, $t)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Parse data pendaftaran User dari mesin dan sebar ke mesin lain
      */
@@ -618,6 +652,19 @@ class IclockController extends Controller
                         $teacher->update(['name' => $name]);
                     }
                     self::queueCommand("DATA USER PIN={$pin}\tName=".($teacher->name ?? $name)."\tPri={$pri}\tGrp=1", null, $sn);
+                    $count++;
+
+                    continue;
+                }
+
+                if (self::isTeacherRecord($pin, $name)) {
+                    $teacher = Teacher::create([
+                        'nip' => (string) $pin,
+                        'name' => $name ?: 'Guru '.$pin,
+                        'category' => 'GURU UMUM',
+                        'device_user_id' => (string) $pin,
+                    ]);
+                    self::queueCommand("DATA USER PIN={$pin}\tName=".($teacher->name)."\tPri={$pri}\tGrp=1", null, $sn);
                     $count++;
 
                     continue;
@@ -717,6 +764,16 @@ class IclockController extends Controller
                 $teacher = Teacher::where('device_user_id', (string) $pin)
                     ->orWhere('nip', (string) $pin)
                     ->first();
+
+                if (! $teacher && self::isTeacherRecord($pin)) {
+                    $teacher = Teacher::create([
+                        'nip' => (string) $pin,
+                        'name' => 'Guru '.$pin,
+                        'category' => 'GURU UMUM',
+                        'device_user_id' => (string) $pin,
+                    ]);
+                }
+
                 $student = null;
                 if (! $teacher) {
                     $defaultClass = SchoolClass::first();
