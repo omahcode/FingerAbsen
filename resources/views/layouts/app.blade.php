@@ -620,11 +620,13 @@
         // ========================================================
         // MODAL CEK KETERSEDIAAN SIDIK JARI DI MESIN (GLOBAL)
         // ========================================================
-        window.showFingerprintDeviceModal = async function(pin, fallbackName = '', fallbackRole = '') {
+        window.showFingerprintDeviceModal = async function(pin = '', fallbackName = '', fallbackRole = '', id = '') {
             const modal = document.getElementById('modal-device-fingerprints');
             if (!modal) return;
 
+            modal.style.display = 'flex';
             modal.classList.remove('hidden');
+
             const loadingBox = document.getElementById('mdf-loading');
             const contentBox = document.getElementById('mdf-content');
             const titleName = document.getElementById('mdf-user-name');
@@ -641,7 +643,12 @@
             subtitleRole.innerText = fallbackRole || '';
 
             try {
-                const res = await fetch(`/sync/user-devices-status?pin=${encodeURIComponent(pin)}`);
+                const params = new URLSearchParams({
+                    pin: pin || '',
+                    id: id || '',
+                    role: fallbackRole || ''
+                });
+                const res = await fetch(`/sync/user-devices-status?${params.toString()}`);
                 const data = await res.json();
 
                 if (data.status !== 'success') {
@@ -652,7 +659,7 @@
                 const devices = data.devices;
 
                 titleName.innerText = user.name;
-                titlePin.innerText = `(PIN: ${user.pin})`;
+                titlePin.innerText = user.pin ? `(PIN: ${user.pin})` : '';
                 subtitleRole.innerText = `${user.role} • ${user.class_name}`;
 
                 if (user.db_count > 0) {
@@ -733,7 +740,10 @@
 
         window.closeFingerprintDeviceModal = function() {
             const modal = document.getElementById('modal-device-fingerprints');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
         };
 
         window.sendFingerprintToSingleDevice = async function(pin, deviceId, deviceName) {
@@ -823,10 +833,41 @@
                 }
             });
         };
+
+        // Delegasi event klik untuk tombol cek sidik jari & backdrop
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('modal-device-fingerprints');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeFingerprintDeviceModal();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeFingerprintDeviceModal();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-check-fingerprint');
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const pin = btn.getAttribute('data-pin') || '';
+                    const name = btn.getAttribute('data-name') || '';
+                    const role = btn.getAttribute('data-role') || '';
+                    const id = btn.getAttribute('data-id') || '';
+                    showFingerprintDeviceModal(pin, name, role, id);
+                }
+            });
+        });
     </script>
 
     <!-- Modal Cek Ketersediaan Mesin (Global) -->
-    <div id="modal-device-fingerprints" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-device-fingerprints" style="display: none;" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-150">
             <!-- Modal Header -->
             <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 p-5 text-white flex items-center justify-between border-b border-indigo-900/50">
@@ -893,6 +934,5 @@
             </div>
         </div>
     </div>
-    </script>
 </body>
 </html>

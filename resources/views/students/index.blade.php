@@ -133,13 +133,25 @@
                     <td class="p-3">{{ $s->schoolClass->major->name ?? '-' }}</td>
                     <td class="p-3 text-center">
                         @if($s->fingerprint_templates_count > 0)
-                            <button type="button" onclick="showFingerprintDeviceModal('{{ $s->device_user_id }}', '{{ addslashes($s->name) }}', 'Siswa')" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300 shadow-2xs transition transform hover:scale-105 active:scale-95 cursor-pointer" title="Klik untuk cek sidik jari ada di mesin mana saja">
+                            <button type="button" 
+                                class="btn-check-fingerprint inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:border-emerald-300 shadow-2xs transition transform hover:scale-105 active:scale-95 cursor-pointer"
+                                data-pin="{{ $s->device_user_id }}"
+                                data-id="{{ $s->id }}"
+                                data-name="{{ $s->name }}"
+                                data-role="Siswa"
+                                title="Klik untuk cek sidik jari ada di mesin mana saja">
                                 <i class="fas fa-fingerprint text-emerald-600 text-sm"></i>
                                 <span>Terdaftar</span>
                                 <span class="bg-emerald-200 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">{{ $s->fingerprint_templates_count }}</span>
                             </button>
                         @else
-                            <button type="button" onclick="showFingerprintDeviceModal('{{ $s->device_user_id }}', '{{ addslashes($s->name) }}', 'Siswa')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition transform hover:scale-105 active:scale-95 cursor-pointer" title="Klik untuk cek status ketersediaan di mesin">
+                            <button type="button" 
+                                class="btn-check-fingerprint inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition transform hover:scale-105 active:scale-95 cursor-pointer"
+                                data-pin="{{ $s->device_user_id }}"
+                                data-id="{{ $s->id }}"
+                                data-name="{{ $s->name }}"
+                                data-role="Siswa"
+                                title="Klik untuk cek status ketersediaan di mesin">
                                 <i class="fas fa-fingerprint text-gray-400"></i>
                                 <span>Belum Ada</span>
                             </button>

@@ -629,28 +629,67 @@ class SyncController extends Controller
     public function userDevicesStatus(Request $request): JsonResponse
     {
         $pin = trim((string) $request->query('pin'));
+        $id = $request->query('id');
+        $role = $request->query('role');
 
-        if (empty($pin)) {
-            return response()->json(['status' => 'error', 'message' => 'PIN tidak boleh kosong.'], 400);
+        $student = null;
+        $teacher = null;
+
+        if (! empty($id)) {
+            if ($role === 'Guru' || $role === 'teachers') {
+                $teacher = Teacher::find($id);
+            } elseif ($role === 'Siswa' || $role === 'students') {
+                $student = Student::with('schoolClass')->find($id);
+            }
         }
 
-        $student = Student::with('schoolClass')->where('device_user_id', $pin)->first();
-        $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
+        if (! $student && ! $teacher && ! empty($pin)) {
+            $student = Student::with('schoolClass')->where('device_user_id', $pin)->first();
+            $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
+        }
 
-        $name = $student ? $student->name : ($teacher ? $teacher->name : 'User '.$pin);
-        $role = $student ? 'Siswa' : ($teacher ? 'Guru' : 'User');
+        if (! $student && ! $teacher && ! empty($id)) {
+            $student = Student::with('schoolClass')->find($id);
+            if (! $student) {
+                $teacher = Teacher::find($id);
+            }
+        }
+
+        $effectivePin = $pin ?: ($student ? ($student->device_user_id ?: $student->nis) : ($teacher ? ($teacher->device_user_id ?: $teacher->nip) : ''));
+        $name = $student ? $student->name : ($teacher ? $teacher->name : ($effectivePin ? 'User '.$effectivePin : 'User'));
+        $userRole = $student ? 'Siswa' : ($teacher ? 'Guru' : ($role ?: 'User'));
         $className = $student ? ($student->schoolClass->name ?? '-') : ($teacher ? ($teacher->category ?: 'Dewan Guru') : '-');
 
-        $templates = FingerprintTemplate::where('device_user_id', $pin)
-            ->when($teacher, fn ($q) => $q->orWhere('teacher_id', $teacher->id))
-            ->get();
+        $templateQuery = FingerprintTemplate::query();
+        if ($student) {
+            $templateQuery->where(function ($q) use ($student, $effectivePin) {
+                $q->where('student_id', $student->id);
+                if (! empty($effectivePin)) {
+                    $q->orWhere('device_user_id', $effectivePin);
+                }
+            });
+        } elseif ($teacher) {
+            $templateQuery->where(function ($q) use ($teacher, $effectivePin) {
+                $q->where('teacher_id', $teacher->id);
+                if (! empty($effectivePin)) {
+                    $q->orWhere('device_user_id', $effectivePin)
+                        ->orWhere('device_user_id', $teacher->nip);
+                }
+            });
+        } elseif (! empty($effectivePin)) {
+            $templateQuery->where('device_user_id', $effectivePin);
+        } else {
+            $templateQuery->whereRaw('1 = 0');
+        }
+
+        $templates = $templateQuery->get();
         $dbCount = $templates->count();
 
         $devices = Device::orderBy('name')->get();
 
-        $deviceTemplates = DeviceFingerprintTemplate::where('device_user_id', $pin)
-            ->get()
-            ->groupBy('device_id');
+        $deviceTemplates = ! empty($effectivePin)
+            ? DeviceFingerprintTemplate::where('device_user_id', $effectivePin)->get()->groupBy('device_id')
+            : collect();
 
         $deviceList = [];
         $missingDeviceIds = [];
@@ -679,9 +718,9 @@ class SyncController extends Controller
         return response()->json([
             'status' => 'success',
             'user' => [
-                'pin' => $pin,
+                'pin' => $effectivePin ?: 'Belum Ada PIN',
                 'name' => $name,
-                'role' => $role,
+                'role' => $userRole,
                 'class_name' => $className,
                 'db_count' => $dbCount,
             ],
