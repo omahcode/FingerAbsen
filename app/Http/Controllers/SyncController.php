@@ -6,9 +6,11 @@ use App\Models\Device;
 use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
 class SyncController extends Controller
@@ -29,10 +31,22 @@ class SyncController extends Controller
         $classes = SchoolClass::with('major')->get();
         $studentsCount = Student::count();
         $templatesCount = FingerprintTemplate::count();
+        $studentsWithFpCount = Student::whereHas('fingerprintTemplates')->count();
+        $studentsWithoutFpCount = max(0, $studentsCount - $studentsWithFpCount);
+
         $admsLogs = Cache::get('adms_recent_logs', []);
         $totalPendingQueue = $devices->sum('pending_queue_count') + count(Cache::get('adms_queue_GLOBAL', []));
 
-        return view('sync.index', compact('devices', 'classes', 'studentsCount', 'templatesCount', 'admsLogs', 'totalPendingQueue'));
+        return view('sync.index', compact(
+            'devices',
+            'classes',
+            'studentsCount',
+            'templatesCount',
+            'studentsWithFpCount',
+            'studentsWithoutFpCount',
+            'admsLogs',
+            'totalPendingQueue'
+        ));
     }
 
     /**
@@ -108,28 +122,109 @@ class SyncController extends Controller
     }
 
     /**
-     * Minta mesin mengirimkan seluruh template sidik jari ke database web.
+     * Tarik template sidik jari dari mesin ke database web.
+     * Mendukung penarikan dari 1 mesin tertentu atau dari seluruh mesin sekaligus.
+     * Menggunakan strategi hybrid:
+     * 1. Direct Socket TCP via service Python jika mesin online di jaringan lokal.
+     * 2. Antrean Query ADMS agar mesin ADMS cloud mengunggah template-nya.
+     */
+    public function pullTemplates(Request $request): RedirectResponse
+    {
+        $deviceId = $request->input('device_id');
+
+        $devices = collect();
+        if ($deviceId && $deviceId !== 'all') {
+            $device = Device::find($deviceId);
+            if (! $device) {
+                return redirect()->back()->with('error', 'Mesin fingerprint yang dipilih tidak ditemukan.');
+            }
+            $devices = collect([$device]);
+        } else {
+            $devices = Device::all();
+            if ($devices->isEmpty()) {
+                return redirect()->back()->with('error', 'Belum ada mesin fingerprint yang terdaftar di database.');
+            }
+        }
+
+        $directPulledCount = 0;
+        $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+
+        foreach ($devices as $d) {
+            $targetSn = $d->serial_number ?: null;
+
+            // 1. Coba tarik langsung via helper service jika aktif
+            try {
+                $response = Http::timeout(3)->post($serviceUrl.'/api/get_templates', [
+                    'ip_address' => $d->ip_address,
+                    'port' => $d->port,
+                ]);
+
+                if ($response->successful() && $response->json('status') === 'success') {
+                    $templates = $response->json('templates', []);
+                    foreach ($templates as $t) {
+                        if (empty($t['uid']) || empty($t['template'])) {
+                            continue;
+                        }
+
+                        $student = Student::where('device_user_id', (string) $t['uid'])->first();
+                        $teacher = Teacher::where('device_user_id', (string) $t['uid'])->first();
+
+                        FingerprintTemplate::updateOrCreate(
+                            [
+                                'device_user_id' => (string) $t['uid'],
+                                'finger_index' => (int) ($t['fid'] ?? 0),
+                            ],
+                            [
+                                'student_id' => $student ? $student->id : null,
+                                'teacher_id' => $teacher ? $teacher->id : null,
+                                'size' => (int) ($t['size'] ?? strlen($t['template'])),
+                                'valid' => (int) ($t['valid'] ?? 1),
+                                'template_data' => $t['template'],
+                            ]
+                        );
+                        $directPulledCount++;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan jika service direct socket offline, lanjutkan antrean ADMS
+            }
+
+            // 2. Kirim kumpulan perintah query penarikan ADMS
+            $admsCommands = [
+                'CHECK',
+                'QUERY FINGERTMP PIN=0',
+                'DATA QUERY FINGERTMP PIN=0',
+                'DATA QUERY FINGERTMP',
+                'QUERY BIODATA PIN=0',
+                'DATA QUERY BIODATA',
+                'QUERY USER PIN=0',
+                'DATA QUERY USER PIN=0',
+                'QUERY USERINFO PIN=0',
+                'DATA QUERY USERINFO PIN=0',
+                'DATA QUERY USERINFO',
+            ];
+
+            IclockController::queueCommands($admsCommands, $targetSn, null, null, $d);
+        }
+
+        $targetLabel = (count($devices) === 1) ? $devices->first()->name : 'Seluruh Mesin ('.count($devices).' mesin)';
+
+        $msg = "Perintah tarik sidik jari telah berhasil dikirim ke {$targetLabel}.";
+        if ($directPulledCount > 0) {
+            $msg .= " Berhasil menarik {$directPulledCount} template sidik jari secara langsung ke database.";
+        } else {
+            $msg .= ' Mesin ADMS akan segera mengunggah data sidik jari ke server saat melakukan kontak / polling.';
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * Kompatibilitas untuk rute lama backupTemplates.
      */
     public function backupTemplates(Request $request): RedirectResponse
     {
-        $deviceId = $request->input('device_id');
-        $device = Device::find($deviceId);
-        $targetSn = $device ? $device->serial_number : null;
-
-        // Kirim semua variasi perintah penarikan sidik jari ADMS
-        IclockController::queueCommand('CHECK', $targetSn);
-        IclockController::queueCommand('QUERY FINGERTMP PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY FINGERTMP PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY FINGERTMP', $targetSn);
-        IclockController::queueCommand('QUERY BIODATA PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY BIODATA', $targetSn);
-        IclockController::queueCommand('QUERY USER PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY USER PIN=0', $targetSn);
-        IclockController::queueCommand('QUERY USERINFO PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY USERINFO PIN=0', $targetSn);
-        IclockController::queueCommand('DATA QUERY USERINFO', $targetSn);
-
-        return redirect()->back()->with('success', 'Perintah backup sidik jari & data siswa telah dikirim ke '.($device->name ?? 'Semua Mesin').'. Mesin akan segera mengunggah data ke server.');
+        return $this->pullTemplates($request);
     }
 
     /**

@@ -175,4 +175,72 @@ class SyncFeatureTest extends TestCase
         $responseAll->assertRedirect();
         $this->assertEmpty(Cache::get('adms_queue_DEV2222', []));
     }
+
+    public function test_pull_templates_for_all_devices(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('sync.pullTemplates'), [
+            'device_id' => 'all',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $queueDev1 = Cache::get('adms_queue_DEV1111', []);
+        $queueDev2 = Cache::get('adms_queue_DEV2222', []);
+
+        $this->assertNotEmpty($queueDev1);
+        $this->assertNotEmpty($queueDev2);
+        $this->assertTrue(collect($queueDev1)->contains(fn ($cmd) => str_contains($cmd, 'QUERY FINGERTMP')));
+        $this->assertTrue(collect($queueDev2)->contains(fn ($cmd) => str_contains($cmd, 'QUERY FINGERTMP')));
+    }
+
+    public function test_pull_templates_for_specific_device_only(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('sync.pullTemplates'), [
+            'device_id' => $this->device1->id,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $queueDev1 = Cache::get('adms_queue_DEV1111', []);
+        $queueDev2 = Cache::get('adms_queue_DEV2222', []);
+
+        $this->assertNotEmpty($queueDev1);
+        $this->assertEmpty($queueDev2);
+        $this->assertTrue(collect($queueDev1)->contains(fn ($cmd) => str_contains($cmd, 'QUERY FINGERTMP')));
+    }
+
+    public function test_pull_and_push_workflow_replicates_fingerprint_to_other_devices(): void
+    {
+        // 1. Simulasikan template sidik jari ditarik dan masuk ke database
+        $student = Student::create([
+            'name' => 'Dwi Prasetyo',
+            'device_user_id' => '3001',
+            'school_class_id' => $this->classA->id,
+            'privilege' => '0',
+        ]);
+
+        FingerprintTemplate::create([
+            'student_id' => $student->id,
+            'device_user_id' => '3001',
+            'finger_index' => 0,
+            'size' => 128,
+            'valid' => 1,
+            'template_data' => 'BASE64_TEMPLATE_DWI',
+        ]);
+
+        // 2. Sebar template sidik jari khusus ke Mesin Kedua (device 2)
+        $pushResponse = $this->actingAs($this->admin)->post(route('sync.pushAll'), [
+            'device_id' => $this->device2->id,
+            'content_type' => 'templates_only',
+        ]);
+
+        $pushResponse->assertRedirect();
+        $pushResponse->assertSessionHas('success');
+
+        $queueDev2 = Cache::get('adms_queue_DEV2222', []);
+        $this->assertNotEmpty($queueDev2);
+        $this->assertTrue(collect($queueDev2)->contains(fn ($cmd) => str_contains($cmd, 'PIN=3001') && str_contains($cmd, 'TMP=BASE64_TEMPLATE_DWI')));
+    }
 }
