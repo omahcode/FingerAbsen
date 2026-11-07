@@ -24,6 +24,7 @@
         <thead>
             <tr class="bg-gray-50 border-b text-gray-700 text-sm">
                 <th class="py-3 px-6 font-semibold">Nama Mesin</th>
+                <th class="py-3 px-6 font-semibold">Fungsi / Peruntukan</th>
                 <th class="py-3 px-6 font-semibold">IP & Port</th>
                 <th class="py-3 px-6 font-semibold">Status</th>
                 <th class="py-3 px-6 font-semibold">Terakhir Aktif</th>
@@ -44,6 +45,24 @@
                         </div>
                     </div>
                 </td>
+                <td class="py-3.5 px-6">
+                    @if($device->isForTeachers())
+                        <span class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 py-1 px-2.5 rounded-lg text-xs font-bold" title="Khusus presensi upacara guru. Tap siswa otomatis ditolak.">
+                            <i class="fas fa-flag text-rose-500"></i>
+                            Khusus Upacara Guru
+                        </span>
+                    @elseif($device->isForStudents())
+                        <span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-700 border border-sky-200 py-1 px-2.5 rounded-lg text-xs font-bold">
+                            <i class="fas fa-user-graduate text-sky-500"></i>
+                            Khusus Siswa
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 border border-gray-200 py-1 px-2.5 rounded-lg text-xs font-medium">
+                            <i class="fas fa-users text-gray-400"></i>
+                            Umum (Siswa & Guru)
+                        </span>
+                    @endif
+                </td>
                 <td class="py-3.5 px-6 font-mono text-xs text-gray-600">{{ $device->ip_address }}:{{ $device->port }}</td>
                 <td class="py-3.5 px-6">
                     @if($device->status == 'online')
@@ -63,6 +82,9 @@
                 </td>
                 <td class="py-3.5 px-6 text-center">
                     <div class="flex justify-center space-x-1.5">
+                        <a href="{{ route('devices.edit', $device->id) }}" class="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs py-1.5 px-2.5 rounded font-medium shadow-sm transition inline-flex items-center" title="Edit Pengaturan Mesin">
+                            <i class="fas fa-edit mr-0.5"></i> Edit
+                        </a>
                         <form action="{{ route('devices.check', $device->id) }}" method="POST">
                             @csrf
                             <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs py-1.5 px-2.5 rounded font-medium shadow-sm transition">
@@ -93,7 +115,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="5" class="py-6 px-6 text-center text-gray-400">Belum ada mesin yang ditambahkan.</td>
+                <td colspan="6" class="py-6 px-6 text-center text-gray-400">Belum ada mesin yang ditambahkan.</td>
             </tr>
             @endforelse
         </tbody>

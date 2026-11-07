@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SchoolClass;
+use App\Models\SchoolEvent;
 use App\Models\Setting;
 use App\Models\Student;
 use Illuminate\Http\Request;
@@ -52,7 +54,11 @@ class SettingController extends Controller
             ? Student::with('schoolClass')->where('manual_streak', '>', 0)->orderBy('manual_streak', 'desc')->get()
             : collect();
 
-        return view('settings.index', compact('settings', 'students', 'manualStreakStudents'));
+        // Hari Khusus, Kegiatan Kemah / Ekspram, dan Libur Sekolah
+        $schoolEvents = SchoolEvent::with('schoolClass')->orderBy('start_date', 'desc')->get();
+        $classes = SchoolClass::orderBy('name', 'asc')->get();
+
+        return view('settings.index', compact('settings', 'students', 'manualStreakStudents', 'schoolEvents', 'classes'));
     }
 
     /**

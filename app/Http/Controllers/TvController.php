@@ -40,10 +40,10 @@ class TvController extends Controller
         // 2. Data Harian (Daily) - HANYA Siswa (Bukan Admin) & HANYA Absen Masuk (WIB)
         $today = Carbon::today('Asia/Jakarta')->toDateString();
         $isSchoolDay = Setting::isSchoolDay($today);
-        $tvSettings['is_weekend_mode'] = !$isSchoolDay;
+        $tvSettings['is_weekend_mode'] = ! $isSchoolDay;
 
         // Jika hari ini libur / akhir pekan, ganti running text otomatis menjadi ucapan santai akhir pekan
-        if (!$isSchoolDay) {
+        if (! $isSchoolDay) {
             $weekendText = Setting::get('tv_weekend_text', 'Selamat Berakhir Pekan! Manfaatkan waktu istirahat bersama keluarga dan tetap jaga kesehatan untuk menyambut hari Senin dengan semangat baru.');
             $tvSettings['tv_running_text'] = $weekendText;
         }
@@ -117,8 +117,8 @@ class TvController extends Controller
             'late_count' => $lateCount,
             'percentage' => $attendancePercentage,
             'active_date' => $activeDate,
-            'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y') . (!$isSchoolDay ? ' (Rekap Hari Terakhir)' : ''),
-            'is_weekend' => !$isSchoolDay,
+            'active_date_label' => Carbon::parse($activeDate)->translatedFormat('l, d F Y').(! $isSchoolDay ? ' (Rekap Hari Terakhir)' : ''),
+            'is_weekend' => ! $isSchoolDay,
         ];
 
         // 4. Hitung Peringkat Mingguan (Weekly) - Sinkron dengan activeDate agar tidak kosong jika baru pergantian minggu

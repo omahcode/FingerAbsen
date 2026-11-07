@@ -293,4 +293,169 @@ class StudentDepartureMonitoringTest extends TestCase
             'deleted_at' => null,
         ]);
     }
+
+    public function test_user_can_manually_set_student_status_to_holiday_and_preserve_streak(): void
+    {
+        $today = Carbon::today('Asia/Jakarta')->format('Y-m-d');
+
+        // Buat log hadir
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => "{$today} 06:15:00",
+            'status_code' => 0,
+        ]);
+
+        // Ubah manual ke holiday (Libur)
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'holiday',
+            'notes' => 'Dispensasi Lomba Robotik',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'holiday',
+        ]);
+
+        // Attendance logs hari ini harus bersih
+        $this->assertDatabaseMissing('attendance_logs', [
+            'student_id' => $this->student->id,
+            'deleted_at' => null,
+        ]);
+
+        // StudentPermission harus tercatat dengan type Libur
+        $this->assertDatabaseHas('student_permissions', [
+            'student_id' => $this->student->id,
+            'type' => 'Libur',
+            'status' => 'disetujui',
+        ]);
+
+        // Cek data JSON monitoring kepulangan
+        $jsonCheck = $this->actingAs($this->admin)->getJson(route('monitoring.kepulangan.data'));
+        $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
+        $this->assertEquals('holiday', $target['status_code']);
+        $this->assertEquals('Libur', $target['status_label']);
+    }
+
+    public function test_user_can_manually_set_student_status_to_in_school_hadir(): void
+    {
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status', $this->student), [
+            'action' => 'in_school',
+            'time' => '06:15',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'in_school',
+        ]);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'student_id' => $this->student->id,
+            'status_code' => 0,
+            'deleted_at' => null,
+        ]);
+
+        $jsonCheck = $this->actingAs($this->admin)->getJson(route('monitoring.kepulangan.data'));
+        $target = collect($jsonCheck->json('students'))->firstWhere('id', $this->student->id);
+        $this->assertEquals('in_school', $target['status_code']);
+        $this->assertEquals('06:15', $target['jam_masuk']);
+    }
+
+    public function test_user_can_bulk_set_status_to_holiday(): void
+    {
+        $student2 = Student::create([
+            'name' => 'Budi Santoso',
+            'school_class_id' => $this->class->id,
+            'device_user_id' => '102',
+            'privilege' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status_bulk'), [
+            'action' => 'holiday',
+            'student_ids' => [$this->student->id, $student2->id],
+            'notes' => 'Libur massal',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'holiday',
+        ]);
+
+        $this->assertDatabaseHas('student_permissions', [
+            'student_id' => $this->student->id,
+            'type' => 'Libur',
+            'status' => 'disetujui',
+        ]);
+        $this->assertDatabaseHas('student_permissions', [
+            'student_id' => $student2->id,
+            'type' => 'Libur',
+            'status' => 'disetujui',
+        ]);
+    }
+
+    public function test_user_can_bulk_set_status_to_in_school_hadir(): void
+    {
+        $student2 = Student::create([
+            'name' => 'Citra Lestari',
+            'school_class_id' => $this->class->id,
+            'device_user_id' => '103',
+            'privilege' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status_bulk'), [
+            'action' => 'in_school',
+            'student_ids' => [$this->student->id, $student2->id],
+            'time' => '06:45',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'in_school',
+        ]);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'student_id' => $this->student->id,
+            'status_code' => 0,
+            'deleted_at' => null,
+        ]);
+        $this->assertDatabaseHas('attendance_logs', [
+            'student_id' => $student2->id,
+            'status_code' => 0,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_user_can_bulk_reset_status(): void
+    {
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+
+        AttendanceLog::create([
+            'device_id' => $this->device->id,
+            'device_user_id' => $this->student->device_user_id,
+            'student_id' => $this->student->id,
+            'timestamp' => "{$today} 06:30:00",
+            'status_code' => 0,
+        ]);
+
+        $response = $this->actingAs($this->admin)->postJson(route('monitoring.kepulangan.update_status_bulk'), [
+            'action' => 'reset',
+            'student_ids' => [$this->student->id],
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'action' => 'reset',
+        ]);
+
+        $this->assertDatabaseMissing('attendance_logs', [
+            'student_id' => $this->student->id,
+            'deleted_at' => null,
+        ]);
+    }
 }

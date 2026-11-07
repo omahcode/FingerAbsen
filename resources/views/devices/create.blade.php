@@ -24,9 +24,23 @@
             <label class="block text-gray-700 text-sm font-bold mb-2">IP Address</label>
             <input type="text" name="ip_address" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="192.168.16.179" value="{{ old('ip_address') }}" required>
         </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Serial Number (SN Mesin)</label>
+            <input type="text" name="serial_number" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Contoh: DEV-DEMO-001 (Lihat stiker di belakang mesin)" value="{{ old('serial_number') }}">
+            <p class="text-[11px] text-gray-400 mt-1">Opsional, akan terisi otomatis saat mesin terhubung via ADMS.</p>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Peruntukan Mesin (Fungsi)</label>
+            <select name="purpose" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="all" {{ old('purpose') === 'all' ? 'selected' : '' }}>Umum (Siswa & Dewan Guru)</option>
+                <option value="teachers" {{ old('purpose') === 'teachers' ? 'selected' : '' }}>Khusus Upacara Guru (Tap Siswa Ditolak)</option>
+                <option value="students" {{ old('purpose') === 'students' ? 'selected' : '' }}>Khusus Siswa (Presensi Masuk & Pulang)</option>
+            </select>
+            <p class="text-[11px] text-gray-500 mt-1">Pilih <strong>Khusus Upacara Guru</strong> jika mesin ini hanya digunakan di lapangan/ruang guru saat upacara agar data siswa tidak masuk ke mesin ini.</p>
+        </div>
         <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2">Port</label>
-            <input type="number" name="port" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="4370" required>
+            <input type="number" name="port" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="{{ old('port', 4370) }}" required>
         </div>
         <div class="flex items-center justify-between">
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">

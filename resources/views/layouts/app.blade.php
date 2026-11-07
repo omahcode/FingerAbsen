@@ -172,6 +172,25 @@
                             <span class="sidebar-text truncate">Log & Rekap Absensi</span>
                         </a>
                         @endif
+
+                        @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
+                        <a href="{{ route('teachers.ceremony') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.ceremony*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Presensi Guru (Upacara & Acara)">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-flag w-5 text-center shrink-0 {{ request()->routeIs('teachers.ceremony*') ? 'text-white' : 'text-rose-400' }}"></i>
+                                <span class="sidebar-text truncate">Presensi Upacara Guru</span>
+                            </div>
+                            <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                                Guru
+                            </span>
+                        </a>
+                        @endif
+
+                        @if(Auth::user()->isKepalaSekolah())
+                        <a href="{{ route('teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.index*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Guru (User Mesin)">
+                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('teachers.index*') ? 'text-white' : 'text-emerald-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Guru</span>
+                        </a>
+                        @endif
                     </nav>
                 </div>
 
@@ -246,17 +265,28 @@
                             <span class="sidebar-text truncate">Data Siswa</span>
                         </a>
 
-                        <a href="{{ route('admin.teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.teachers.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Kelola Akun Guru">
-                            <i class="fas fa-user-tie w-5 text-center shrink-0 {{ request()->routeIs('admin.teachers.*') ? 'text-white' : 'text-cyan-400' }}"></i>
-                            <span class="sidebar-text truncate">Kelola Akun Guru</span>
+                        <a href="{{ route('teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.index*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Guru (User Mesin)">
+                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('teachers.index*') ? 'text-white' : 'text-emerald-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Guru</span>
+                        </a>
+
+                        <a href="{{ route('admin.users.index') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('admin.users.*') || request()->routeIs('users.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Manajemen Pengguna (Guru, Kepsek, Admin)">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-users-cog w-5 text-center shrink-0 {{ request()->routeIs('admin.users.*') || request()->routeIs('users.*') ? 'text-white' : 'text-amber-400' }}"></i>
+                                <span class="sidebar-text truncate">Manajemen Users</span>
+                            </div>
+                            <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                                Baru
+                            </span>
                         </a>
                     </nav>
                 </div>
 
-                <!-- SECTION 4: SISTEM & LAPORAN (ADMIN ONLY) -->
+                <!-- SECTION 4: SISTEM & LAPORAN -->
+                @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
                 <div>
                     <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
-                        Sistem & Laporan
+                        {{ Auth::user()->isAdmin() ? 'Sistem & Laporan' : 'Laporan Sekolah' }}
                     </div>
                     <nav class="space-y-1">
                         <a href="{{ route('reports.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('reports.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Rekap & Ekspor PDF">
@@ -264,6 +294,7 @@
                             <span class="sidebar-text truncate">Rekap & PDF</span>
                         </a>
 
+                        @if(Auth::user()->isAdmin())
                         <a href="{{ route('sync.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('sync.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Sinkronisasi ADMS Mesin">
                             <i class="fas fa-sync-alt w-5 text-center shrink-0 {{ request()->routeIs('sync.*') ? 'text-white' : 'text-yellow-400' }}"></i>
                             <span class="sidebar-text truncate">Sinkronisasi ADMS</span>
@@ -278,8 +309,10 @@
                             <i class="fas fa-flask w-5 text-center shrink-0 text-purple-400"></i>
                             <span class="sidebar-text truncate">Simulasi Absensi</span>
                         </a>
+                        @endif
                     </nav>
                 </div>
+                @endif
                 @endif
                 @endauth
 
@@ -290,13 +323,13 @@
             <div class="p-3 border-t border-slate-800/80 bg-slate-950 shrink-0">
                 <div class="sidebar-user-card flex items-center justify-between p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                     <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-bold flex items-center justify-center shrink-0 text-xs">
+                        <div class="w-8 h-8 rounded-lg {{ Auth::user()->isKepalaSekolah() ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40' : (Auth::user()->isGuru() ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40' : 'bg-indigo-600/30 text-indigo-400 border border-indigo-500/40') }} font-bold flex items-center justify-center shrink-0 text-xs">
                             {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                         </div>
                         <div class="sidebar-user-info overflow-hidden">
                             <div class="font-bold text-white text-xs truncate max-w-[100px] xl:max-w-[120px]">{{ Auth::user()->name }}</div>
-                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1 py-0.2 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40' }}">
-                                {{ Auth::user()->isGuru() ? 'Wali Kelas' : 'Admin' }}
+                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded {{ Auth::user()->isGuru() ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40' : (Auth::user()->isKepalaSekolah() ? 'bg-amber-950 text-amber-300 border border-amber-600/40' : 'bg-blue-950 text-blue-400 border border-blue-800/40') }}">
+                                {{ Auth::user()->isGuru() ? 'Wali Kelas' : (Auth::user()->isKepalaSekolah() ? 'Kepala Sekolah' : 'Admin') }}
                             </span>
                         </div>
                     </div>
@@ -583,6 +616,333 @@
                 });
             });
         });
+
+        // ========================================================
+        // MODAL CEK KETERSEDIAAN SIDIK JARI DI MESIN (GLOBAL)
+        // ========================================================
+        window.showFingerprintDeviceModal = async function(pin = '', fallbackName = '', fallbackRole = '', id = '') {
+            const modal = document.getElementById('modal-device-fingerprints');
+            if (!modal) return;
+
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+
+            const loadingBox = document.getElementById('mdf-loading');
+            const contentBox = document.getElementById('mdf-content');
+            const titleName = document.getElementById('mdf-user-name');
+            const titlePin = document.getElementById('mdf-user-pin');
+            const subtitleRole = document.getElementById('mdf-user-role');
+            const dbCountBadge = document.getElementById('mdf-db-count');
+            const deviceListEl = document.getElementById('mdf-device-list');
+            const btnSyncAllMissing = document.getElementById('mdf-btn-sync-all');
+
+            loadingBox.classList.remove('hidden');
+            contentBox.classList.add('hidden');
+            titleName.innerText = fallbackName || 'Memuat...';
+            titlePin.innerText = pin ? `(PIN: ${pin})` : '';
+            subtitleRole.innerText = fallbackRole || '';
+
+            try {
+                const params = new URLSearchParams({
+                    pin: pin || '',
+                    id: id || '',
+                    role: fallbackRole || ''
+                });
+                const res = await fetch(`/sync/user-devices-status?${params.toString()}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    throw new Error('Gagal memproses data server (Format tidak sesuai). Pastikan migrasi database sudah dijalankan.');
+                }
+
+                if (!res.ok || data.status !== 'success') {
+                    throw new Error(data.message || `Gagal mengambil data mesin (Kode: ${res.status}).`);
+                }
+
+                const user = data.user;
+                const devices = data.devices;
+
+                titleName.innerText = user.name;
+                titlePin.innerText = user.pin ? `(PIN: ${user.pin})` : '';
+                subtitleRole.innerText = `${user.role} • ${user.class_name}`;
+
+                if (user.db_count > 0) {
+                    dbCountBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <i class="fas fa-check-circle text-emerald-600"></i> Tersimpan di Database Server (${user.db_count} Jari)
+                    </span>`;
+                } else {
+                    dbCountBadge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-300">
+                        <i class="fas fa-times-circle text-gray-400"></i> Belum Ada Rekaman Sidik Jari di Database Server
+                    </span>`;
+                }
+
+                // Render Daftar Mesin
+                if (!devices || devices.length === 0) {
+                    deviceListEl.innerHTML = `<div class="p-6 text-center text-gray-400 text-xs">Belum ada mesin fingerprint yang terdaftar di database.</div>`;
+                    btnSyncAllMissing.classList.add('hidden');
+                } else {
+                    let html = '';
+                    let hasMissing = false;
+
+                    devices.forEach(dev => {
+                        const hasTemplate = dev.has_template;
+                        if (!hasTemplate && user.db_count > 0) hasMissing = true;
+
+                        html += `
+                        <div class="p-3.5 rounded-2xl border ${hasTemplate ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/30'} flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl ${hasTemplate ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'} flex items-center justify-center text-base shrink-0">
+                                    <i class="fas ${hasTemplate ? 'fa-check' : 'fa-times'}"></i>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-gray-900 text-sm leading-tight flex items-center gap-1.5">
+                                        <span>${dev.name}</span>
+                                        <span class="text-[10px] font-normal px-2 py-0.2 rounded-md bg-gray-100 text-gray-600 border border-gray-200">${dev.purpose_label}</span>
+                                    </h5>
+                                    <p class="text-[11px] text-gray-500 font-mono mt-0.5">IP: ${dev.ip_address}:${dev.port} • SN: ${dev.serial_number}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 self-end sm:self-center">
+                                ${hasTemplate ? `
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
+                                        <i class="fas fa-fingerprint text-emerald-600"></i>
+                                        <span>Ada di Mesin Ini (${dev.template_count} Jari)</span>
+                                    </span>
+                                ` : (user.db_count > 0 ? `
+                                    <button type="button" onclick="sendFingerprintToSingleDevice('${user.pin}', ${dev.id}, '${dev.name}')" class="inline-flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs py-1.5 px-3.5 rounded-xl shadow-xs transition transform hover:scale-105 active:scale-95">
+                                        <i class="fas fa-paper-plane text-[10px]"></i>
+                                        <span>Kirim ke Mesin Ini</span>
+                                    </button>
+                                ` : `
+                                    <span class="text-xs text-gray-400 font-semibold px-2 py-1">Belum Ada FP di Web</span>
+                                `)}
+                            </div>
+                        </div>
+                        `;
+                    });
+
+                    deviceListEl.innerHTML = html;
+
+                    if (hasMissing && user.db_count > 0) {
+                        btnSyncAllMissing.classList.remove('hidden');
+                        btnSyncAllMissing.onclick = () => sendFingerprintToAllMissing(user.pin);
+                    } else {
+                        btnSyncAllMissing.classList.add('hidden');
+                    }
+                }
+
+                loadingBox.classList.add('hidden');
+                contentBox.classList.remove('hidden');
+            } catch (err) {
+                loadingBox.innerHTML = `<div class="p-6 text-center text-rose-500 font-semibold text-xs">
+                    <i class="fas fa-exclamation-triangle text-2xl mb-2 text-rose-400"></i><br>
+                    ${err.message || 'Terjadi kesalahan saat memuat data.'}
+                </div>`;
+            }
+        };
+
+        window.closeFingerprintDeviceModal = function() {
+            const modal = document.getElementById('modal-device-fingerprints');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.sendFingerprintToSingleDevice = async function(pin, deviceId, deviceName) {
+            Swal.fire({
+                title: 'Kirim ke Mesin',
+                text: `Kirim sidik jari PIN ${pin} ke mesin ${deviceName}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Kirim Sekarang',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#4f46e5',
+                showLoaderOnConfirm: true,
+                preConfirm: async () => {
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    try {
+                        const res = await fetch("{{ route('sync.syncMissing') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                pins: [pin],
+                                target_device_id: deviceId
+                            })
+                        });
+                        const data = await res.json();
+                        return data;
+                    } catch (e) {
+                        Swal.showValidationMessage('Gagal mengirim ke antrean mesin.');
+                    }
+                }
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil Dijadwalkan!',
+                        text: `Sidik jari berhasil dijadwalkan ke antrean mesin ${deviceName}. Mesin akan otomatis mengunduh saat kontak ADMS.`,
+                        confirmButtonColor: '#4f46e5'
+                    });
+                    // Refresh modal
+                    showFingerprintDeviceModal(pin);
+                }
+            });
+        };
+
+        window.sendFingerprintToAllMissing = async function(pin) {
+            Swal.fire({
+                title: 'Sebar ke Semua Mesin',
+                text: `Sebarkan sidik jari PIN ${pin} ke seluruh mesin yang belum memilikinya?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Sebar Sekarang',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#7c3aed',
+                showLoaderOnConfirm: true,
+                preConfirm: async () => {
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    try {
+                        const res = await fetch("{{ route('sync.syncMissing') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                pins: [pin]
+                            })
+                        });
+                        const data = await res.json();
+                        return data;
+                    } catch (e) {
+                        Swal.showValidationMessage('Gagal mengirim ke antrean mesin.');
+                    }
+                }
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil Dijadwalkan!',
+                        text: `Sidik jari berhasil disebarkan ke antrean seluruh mesin yang belum memilikinya.`,
+                        confirmButtonColor: '#7c3aed'
+                    });
+                    showFingerprintDeviceModal(pin);
+                }
+            });
+        };
+
+        // Delegasi event klik untuk tombol cek sidik jari & backdrop
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('modal-device-fingerprints');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeFingerprintDeviceModal();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeFingerprintDeviceModal();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-check-fingerprint');
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const pin = btn.getAttribute('data-pin') || '';
+                    const name = btn.getAttribute('data-name') || '';
+                    const role = btn.getAttribute('data-role') || '';
+                    const id = btn.getAttribute('data-id') || '';
+                    showFingerprintDeviceModal(pin, name, role, id);
+                }
+            });
+        });
     </script>
+
+    <!-- Modal Cek Ketersediaan Mesin (Global) -->
+    <div id="modal-device-fingerprints" style="display: none;" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-150">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 p-5 text-white flex items-center justify-between border-b border-indigo-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-400/30 flex items-center justify-center text-lg shrink-0">
+                        <i class="fas fa-fingerprint"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-base text-white flex items-center gap-2">
+                            <span id="mdf-user-name">Nama User</span>
+                            <span class="text-xs font-mono text-purple-200" id="mdf-user-pin">(PIN: -)</span>
+                        </h4>
+                        <p class="text-xs text-purple-200/80 mt-0.5" id="mdf-user-role">Siswa • Kelas -</p>
+                    </div>
+                </div>
+
+                <button type="button" onclick="closeFingerprintDeviceModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6">
+                <!-- Loading State -->
+                <div id="mdf-loading" class="py-12 text-center text-gray-400">
+                    <div class="inline-block animate-spin w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full mb-3"></div>
+                    <p class="text-xs font-semibold text-gray-500">Memeriksa ketersediaan sidik jari di seluruh mesin...</p>
+                </div>
+
+                <!-- Content State -->
+                <div id="mdf-content" class="hidden space-y-4">
+                    <!-- Status Database Server -->
+                    <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-gray-100">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                            Status Database Server:
+                        </span>
+                        <div id="mdf-db-count">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Judul Ketersediaan Mesin -->
+                    <div>
+                        <h5 class="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2.5 flex items-center gap-1.5">
+                            <i class="fas fa-server text-indigo-500"></i> Ketersediaan di Mesin-Mesin Fingerprint:
+                        </h5>
+                        <div id="mdf-device-list" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-gray-50/80 px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" id="mdf-btn-sync-all" class="hidden inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-xl text-xs shadow-sm transition">
+                    <i class="fas fa-share-alt"></i>
+                    <span>Sebar ke Seluruh Mesin yang Belum Memiliki</span>
+                </button>
+
+                <button type="button" onclick="closeFingerprintDeviceModal()" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-xl text-xs transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

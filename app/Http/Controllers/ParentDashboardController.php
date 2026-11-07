@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendanceLog;
 use App\Models\ParentPushSubscription;
-use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentPermission;
@@ -25,9 +24,7 @@ class ParentDashboardController extends Controller
         $studentId = session('parent_student_id');
 
         if (! $studentId) {
-            $classes = SchoolClass::orderBy('name')->get();
-
-            return view('parent.login', compact('classes'));
+            return view('parent.login');
         }
 
         $student = Student::with(['schoolClass.major'])->find($studentId);
@@ -270,24 +267,58 @@ class ParentDashboardController extends Controller
     }
 
     /**
-     * Memvalidasi kombinasi NIS, Nama Lengkap, dan Kelas siswa untuk autentikasi orang tua.
+     * Cek data siswa berdasarkan NIS secara real-time untuk tampilan login wali murid.
+     */
+    public function checkNis(Request $request): JsonResponse
+    {
+        $nisInput = trim((string) $request->query('nis', ''));
+
+        if ($nisInput === '') {
+            return response()->json([
+                'found' => false,
+                'message' => 'NIS belum diisi.',
+            ]);
+        }
+
+        $student = Student::with(['schoolClass.major'])
+            ->where(function ($q) use ($nisInput) {
+                $q->where('nis', $nisInput)
+                    ->orWhere('device_user_id', $nisInput);
+            })
+            ->first();
+
+        if (! $student) {
+            return response()->json([
+                'found' => false,
+                'message' => 'Siswa dengan NIS tersebut tidak ditemukan.',
+            ]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'student' => [
+                'id' => $student->id,
+                'nis' => $student->nis,
+                'name' => $student->name,
+                'class_name' => $student->schoolClass?->name ?? 'Belum ada kelas',
+                'major_name' => $student->schoolClass?->major?->name ?? null,
+                'photo_url' => $student->photo_url,
+            ],
+        ]);
+    }
+
+    /**
+     * Memvalidasi NIS siswa untuk autentikasi orang tua.
      */
     public function selectStudent(Request $request): RedirectResponse
     {
         $request->validate([
             'nis' => 'required|string',
-            'name' => 'required|string',
-            'school_class_id' => 'required|exists:school_classes,id',
         ], [
             'nis.required' => 'Nomor Induk Siswa (NIS) wajib diisi.',
-            'name.required' => 'Nama lengkap siswa wajib diisi.',
-            'school_class_id.required' => 'Pilih kelas siswa.',
-            'school_class_id.exists' => 'Kelas yang dipilih tidak valid.',
         ]);
 
         $nisInput = trim($request->input('nis'));
-        $nameInput = strtolower(trim($request->input('name')));
-        $classIdInput = (int) $request->input('school_class_id');
 
         // Pencarian berdasarkan NIS (atau device_user_id sebagai fallback)
         $studentWithNis = Student::where(function ($q) use ($nisInput) {
@@ -297,14 +328,6 @@ class ParentDashboardController extends Controller
 
         if (! $studentWithNis) {
             return back()->withInput()->withErrors(['nis' => 'Nomor Induk Siswa (NIS) tidak ditemukan dalam basis data sekolah.']);
-        }
-
-        if (strtolower(trim($studentWithNis->name)) !== $nameInput) {
-            return back()->withInput()->withErrors(['name' => 'Nama lengkap siswa tidak cocok dengan data NIS yang dimasukkan.']);
-        }
-
-        if ((int) $studentWithNis->school_class_id !== $classIdInput) {
-            return back()->withInput()->withErrors(['school_class_id' => 'Pilihan kelas tidak sesuai dengan kelas siswa terdaftar.']);
         }
 
         // Login Berhasil

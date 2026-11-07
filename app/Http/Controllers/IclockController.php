@@ -6,10 +6,12 @@ use App\Events\AttendanceCreated;
 use App\Jobs\SendWhatsAppAttendanceJob;
 use App\Models\AttendanceLog;
 use App\Models\Device;
+use App\Models\DeviceFingerprintTemplate;
 use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -161,28 +163,63 @@ class IclockController extends Controller
             $size = $request->query('size', strlen($body));
             $tmp = base64_encode($body);
 
-            $defaultClass = SchoolClass::first();
-            $student = Student::firstOrCreate(
-                ['device_user_id' => (string) $pin],
-                [
-                    'name' => 'Siswa '.$pin,
-                    'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                    'privilege' => '0',
-                ]
-            );
+            $teacher = Teacher::where('device_user_id', (string) $pin)
+                ->orWhere('nip', (string) $pin)
+                ->first();
 
-            FingerprintTemplate::updateOrCreate(
+            if (! $teacher && self::isTeacherRecord($pin)) {
+                $teacher = Teacher::create([
+                    'nip' => (string) $pin,
+                    'name' => 'Guru '.$pin,
+                    'category' => 'GURU UMUM',
+                    'device_user_id' => (string) $pin,
+                ]);
+            }
+
+            $student = null;
+            if (! $teacher) {
+                $defaultClass = SchoolClass::first();
+                $student = Student::firstOrCreate(
+                    ['device_user_id' => (string) $pin],
+                    [
+                        'name' => 'Siswa '.$pin,
+                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                        'privilege' => '0',
+                    ]
+                );
+            }
+
+            $savedFp = FingerprintTemplate::updateOrCreate(
                 [
                     'device_user_id' => (string) $pin,
                     'finger_index' => (int) $fid,
                 ],
                 [
-                    'student_id' => $student->id,
+                    'student_id' => $student ? $student->id : null,
+                    'teacher_id' => $teacher ? $teacher->id : null,
                     'size' => (int) $size,
                     'valid' => 1,
                     'template_data' => $tmp,
                 ]
             );
+
+            if ($sn) {
+                $originDevice = Device::where('serial_number', $sn)->first();
+                if ($originDevice) {
+                    DeviceFingerprintTemplate::updateOrCreate(
+                        [
+                            'device_id' => $originDevice->id,
+                            'device_user_id' => (string) $pin,
+                            'finger_index' => (int) $fid,
+                        ],
+                        [
+                            'fingerprint_template_id' => $savedFp->id,
+                            'status' => 'synced',
+                            'last_synced_at' => now(),
+                        ]
+                    );
+                }
+            }
 
             self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
             self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
@@ -222,20 +259,35 @@ class IclockController extends Controller
     }
 
     /**
-     * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
+     * Helper untuk menambahkan kumpulan perintah sekaligus ke antrean ADMS tiap mesin (Batching)
      */
-    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null)
+    public static function queueCommands(array $commands, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null, ?Device $targetDevice = null): void
     {
-        $devices = Device::all();
+        if (empty($commands)) {
+            return;
+        }
 
-        if ($targetSn) {
-            $queueKey = 'adms_queue_'.$targetSn;
-            $queue = Cache::get($queueKey, []);
-            $queue[] = $command;
-            Cache::put($queueKey, $queue, now()->addDays(2));
+        // Jika target mesin spesifik ditentukan
+        if ($targetSn || $targetDevice) {
+            $key = null;
+            if ($targetSn) {
+                $key = 'adms_queue_'.$targetSn;
+            } elseif ($targetDevice) {
+                $key = ! empty($targetDevice->serial_number)
+                    ? 'adms_queue_'.$targetDevice->serial_number
+                    : 'adms_queue_DEVICE_'.$targetDevice->id;
+            }
+
+            if ($key) {
+                $queue = Cache::get($key, []);
+                $queue = array_merge($queue, $commands);
+                Cache::put($key, $queue, now()->addDays(2));
+            }
 
             return;
         }
+
+        $devices = Device::all();
 
         // Broadcast ke setiap mesin secara independen
         if ($devices->isNotEmpty()) {
@@ -244,25 +296,39 @@ class IclockController extends Controller
                     continue;
                 }
 
-                $keys = [];
-                if (! empty($device->serial_number)) {
-                    $keys[] = 'adms_queue_'.$device->serial_number;
+                // Jangan kirim data siswa ke mesin khusus upacara guru
+                if ($forRole === 'students' && $device->isForTeachers()) {
+                    continue;
                 }
-                $keys[] = 'adms_queue_DEVICE_'.$device->id;
 
-                foreach ($keys as $k) {
-                    $q = Cache::get($k, []);
-                    $q[] = $command;
-                    Cache::put($k, $q, now()->addDays(2));
+                // Jangan kirim data guru ke mesin khusus siswa
+                if ($forRole === 'teachers' && $device->isForStudents()) {
+                    continue;
                 }
+
+                $key = ! empty($device->serial_number)
+                    ? 'adms_queue_'.$device->serial_number
+                    : 'adms_queue_DEVICE_'.$device->id;
+
+                $q = Cache::get($key, []);
+                $q = array_merge($q, $commands);
+                Cache::put($key, $q, now()->addDays(2));
             }
+        } else {
+            // Antrean global fallback hanya jika belum ada device terdaftar di database
+            $globalKey = 'adms_queue_GLOBAL';
+            $globalQueue = Cache::get($globalKey, []);
+            $globalQueue = array_merge($globalQueue, $commands);
+            Cache::put($globalKey, $globalQueue, now()->addDays(2));
         }
+    }
 
-        // Antrean global fallback
-        $globalKey = 'adms_queue_GLOBAL';
-        $globalQueue = Cache::get($globalKey, []);
-        $globalQueue[] = $command;
-        Cache::put($globalKey, $globalQueue, now()->addDays(2));
+    /**
+     * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
+     */
+    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null): void
+    {
+        self::queueCommands([$command], $targetSn, $excludeSn, $forRole);
     }
 
     /**
@@ -403,11 +469,58 @@ class IclockController extends Controller
                 $status = 1;
             }
 
-            $student = Student::where('device_user_id', (string) $userId)->first();
+            // Cek isolasi peruntukan mesin (Device Purpose Isolation)
+            if ($device->isForTeachers()) {
+                // Mesin ini KHUSUS UPACARA GURU!
+                // Cek apakah user yang tap adalah Guru terdaftar
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
+                if (! $teacher) {
+                    Log::warning("ADMS Skip: Tap dari User {$userId} pada mesin '{$device->name}' (Khusus Upacara Guru) ditolak karena bukan Guru terdaftar.");
+                    self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus upacara guru, User {$userId} bukan guru");
+
+                    continue;
+                }
+                $student = null;
+            } elseif ($device->isForStudents()) {
+                // Mesin ini KHUSUS SISWA!
+                $student = Student::where('device_user_id', (string) $userId)->first();
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
+                if ($teacher || ! $student) {
+                    Log::warning("ADMS Skip: Tap dari Guru/User non-siswa {$userId} pada mesin '{$device->name}' (Khusus Siswa) diabaikan.");
+                    self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus siswa, User {$userId} tidak diproses");
+
+                    continue;
+                }
+            } else {
+                // Mesin Umum (Siswa & Guru)
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
+                $student = $teacher ? null : Student::where('device_user_id', (string) $userId)->first();
+            }
+
             $isStrict = env('STRICT_ATTENDANCE', true);
 
-            if ($isStrict && $student) {
-                // Anti-duplikat harian per status
+            if ($teacher) {
+                // Anti-duplikat harian untuk guru (presensi upacara dewan guru)
+                $date = substr($timestamp, 0, 10);
+                $exists = AttendanceLog::withTrashed()
+                    ->where('teacher_id', $teacher->id)
+                    ->whereDate('timestamp', $date)
+                    ->exists();
+
+                if ($exists) {
+                    Log::info("ADMS Skip: Guru {$teacher->name} sudah absen hari ini.");
+                    $savedCount++;
+
+                    continue;
+                }
+            } elseif ($isStrict && $student) {
+                // Anti-duplikat harian per status untuk siswa
                 $date = substr($timestamp, 0, 10);
                 $exists = AttendanceLog::withTrashed()
                     ->where('student_id', $student->id)
@@ -442,27 +555,56 @@ class IclockController extends Controller
                 'device_user_id' => (string) $userId,
                 'timestamp' => $timestamp,
                 'student_id' => $student ? $student->id : null,
+                'teacher_id' => $teacher ? $teacher->id : null,
                 'status_code' => $status,
             ]);
 
-            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Siswa: ".($student->name ?? 'Belum terdaftar').')');
+            $userName = $teacher ? "Guru {$teacher->name}" : ($student ? "Siswa {$student->name}" : 'Belum terdaftar');
+            Log::info("ADMS Success: Log absensi berhasil disimpan (ID: {$log->id}, User: {$userId}, Nama: {$userName})");
 
-            // Masukkan pengiriman notifikasi WhatsApp ke antrean antrean (Queue)
-            if ($student && ! empty($student->parent_phone)) {
-                SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
-            }
+            // HANYA JIKA PRESENSI SISWA: Kirim notifikasi WA orang tua & Broadcast ke TV
+            // Data tap guru SAMA SEKALI TIDAK BOLEH masuk ke TV ataupun notifikasi siswa
+            if ($student && ! $teacher) {
+                if (! empty($student->parent_phone)) {
+                    SendWhatsAppAttendanceJob::dispatch($student, $timestamp, $status, $device ? $device->name : null);
+                }
 
-            // Broadcast event websocket / realtime jika ada
-            try {
-                broadcast(new AttendanceCreated($log));
-            } catch (\Exception $e) {
-                // Abaikan jika broadcast driver lokal tidak aktif
+                // Broadcast event websocket / realtime jika ada
+                try {
+                    broadcast(new AttendanceCreated($log));
+                } catch (\Exception $e) {
+                    // Abaikan jika broadcast driver lokal tidak aktif
+                }
             }
 
             $savedCount++;
         }
 
         return $savedCount;
+    }
+
+    public static function isTeacherRecord(?string $pin, ?string $name = null): bool
+    {
+        $pinStr = trim((string) $pin);
+        $nameStr = trim((string) $name);
+
+        if (strlen($pinStr) === 18 && ctype_digit($pinStr) && (str_starts_with($pinStr, '19') || str_starts_with($pinStr, '20'))) {
+            return true;
+        }
+
+        if ($pinStr === 'BOPD') {
+            return true;
+        }
+
+        $lowerName = strtolower($nameStr);
+        $titles = ['s.pd', 'm.pd', 's.t', 'm.t', 's.kom', 'm.kom', 's.ag', 'm.ag', 's.si', 'm.si', 'drs.', 'drs ', 'dra.', 'dra '];
+        foreach ($titles as $t) {
+            if (str_contains($lowerName, $t)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -501,6 +643,39 @@ class IclockController extends Controller
             }
 
             if ($pin) {
+                // JANGAN buat sebagai siswa jika user ini adalah Guru atau akun Administrator mesin
+                $teacher = Teacher::where('device_user_id', (string) $pin)
+                    ->orWhere('nip', (string) $pin)
+                    ->first();
+                if ($teacher) {
+                    if ($name && $teacher->name !== $name && ! str_contains(strtolower($name), 'siswa')) {
+                        $teacher->update(['name' => $name]);
+                    }
+                    self::queueCommand("DATA USER PIN={$pin}\tName=".($teacher->name ?? $name)."\tPri={$pri}\tGrp=1", null, $sn);
+                    $count++;
+
+                    continue;
+                }
+
+                if (self::isTeacherRecord($pin, $name)) {
+                    $teacher = Teacher::create([
+                        'nip' => (string) $pin,
+                        'name' => $name ?: 'Guru '.$pin,
+                        'category' => 'GURU UMUM',
+                        'device_user_id' => (string) $pin,
+                    ]);
+                    self::queueCommand("DATA USER PIN={$pin}\tName=".($teacher->name)."\tPri={$pri}\tGrp=1", null, $sn);
+                    $count++;
+
+                    continue;
+                }
+
+                if (in_array(strtolower(trim($name ?? '')), ['admin', 'administrator']) || (int) $pri > 0) {
+                    Log::info("ADMS Skip student creation for administrator/special account PIN {$pin} ({$name})");
+
+                    continue;
+                }
+
                 $defaultClass = SchoolClass::first();
                 $student = Student::firstOrCreate(
                     ['device_user_id' => (string) $pin],
@@ -586,28 +761,63 @@ class IclockController extends Controller
 
             if ($pin && $tmp) {
                 $fid = $fid ?? 0;
-                $defaultClass = SchoolClass::first();
-                $student = Student::firstOrCreate(
-                    ['device_user_id' => (string) $pin],
-                    [
-                        'name' => 'Siswa '.$pin,
-                        'school_class_id' => $defaultClass ? $defaultClass->id : 1,
-                        'privilege' => '0',
-                    ]
-                );
+                $teacher = Teacher::where('device_user_id', (string) $pin)
+                    ->orWhere('nip', (string) $pin)
+                    ->first();
 
-                FingerprintTemplate::updateOrCreate(
+                if (! $teacher && self::isTeacherRecord($pin)) {
+                    $teacher = Teacher::create([
+                        'nip' => (string) $pin,
+                        'name' => 'Guru '.$pin,
+                        'category' => 'GURU UMUM',
+                        'device_user_id' => (string) $pin,
+                    ]);
+                }
+
+                $student = null;
+                if (! $teacher) {
+                    $defaultClass = SchoolClass::first();
+                    $student = Student::firstOrCreate(
+                        ['device_user_id' => (string) $pin],
+                        [
+                            'name' => 'Siswa '.$pin,
+                            'school_class_id' => $defaultClass ? $defaultClass->id : 1,
+                            'privilege' => '0',
+                        ]
+                    );
+                }
+
+                $savedFp = FingerprintTemplate::updateOrCreate(
                     [
                         'device_user_id' => (string) $pin,
                         'finger_index' => (int) $fid,
                     ],
                     [
-                        'student_id' => $student->id,
+                        'student_id' => $student ? $student->id : null,
+                        'teacher_id' => $teacher ? $teacher->id : null,
                         'size' => (int) $size ?: strlen($tmp),
                         'valid' => 1,
                         'template_data' => $tmp,
                     ]
                 );
+
+                if ($sn) {
+                    $originDevice = Device::where('serial_number', $sn)->first();
+                    if ($originDevice) {
+                        DeviceFingerprintTemplate::updateOrCreate(
+                            [
+                                'device_id' => $originDevice->id,
+                                'device_user_id' => (string) $pin,
+                                'finger_index' => (int) $fid,
+                            ],
+                            [
+                                'fingerprint_template_id' => $savedFp->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
+                            ]
+                        );
+                    }
+                }
 
                 Log::info("ADMS Template Saved: PIN {$pin}, Finger {$fid}, Size: ".strlen($tmp));
 
