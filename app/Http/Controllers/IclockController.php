@@ -162,7 +162,9 @@ class IclockController extends Controller
             $size = $request->query('size', strlen($body));
             $tmp = base64_encode($body);
 
-            $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+            $teacher = Teacher::where('device_user_id', (string) $pin)
+                ->orWhere('nip', (string) $pin)
+                ->first();
             $student = null;
             if (! $teacher) {
                 $defaultClass = SchoolClass::first();
@@ -442,7 +444,9 @@ class IclockController extends Controller
             if ($device->isForTeachers()) {
                 // Mesin ini KHUSUS UPACARA GURU!
                 // Cek apakah user yang tap adalah Guru terdaftar
-                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
                 if (! $teacher) {
                     Log::warning("ADMS Skip: Tap dari User {$userId} pada mesin '{$device->name}' (Khusus Upacara Guru) ditolak karena bukan Guru terdaftar.");
                     self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus upacara guru, User {$userId} bukan guru");
@@ -453,7 +457,9 @@ class IclockController extends Controller
             } elseif ($device->isForStudents()) {
                 // Mesin ini KHUSUS SISWA!
                 $student = Student::where('device_user_id', (string) $userId)->first();
-                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
                 if ($teacher || ! $student) {
                     Log::warning("ADMS Skip: Tap dari Guru/User non-siswa {$userId} pada mesin '{$device->name}' (Khusus Siswa) diabaikan.");
                     self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Mesin khusus siswa, User {$userId} tidak diproses");
@@ -462,7 +468,9 @@ class IclockController extends Controller
                 }
             } else {
                 // Mesin Umum (Siswa & Guru)
-                $teacher = Teacher::where('device_user_id', (string) $userId)->first();
+                $teacher = Teacher::where('device_user_id', (string) $userId)
+                    ->orWhere('nip', (string) $userId)
+                    ->first();
                 $student = $teacher ? null : Student::where('device_user_id', (string) $userId)->first();
             }
 
@@ -583,7 +591,9 @@ class IclockController extends Controller
 
             if ($pin) {
                 // JANGAN buat sebagai siswa jika user ini adalah Guru atau akun Administrator mesin
-                $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+                $teacher = Teacher::where('device_user_id', (string) $pin)
+                    ->orWhere('nip', (string) $pin)
+                    ->first();
                 if ($teacher) {
                     if ($name && $teacher->name !== $name && ! str_contains(strtolower($name), 'siswa')) {
                         $teacher->update(['name' => $name]);
@@ -685,7 +695,9 @@ class IclockController extends Controller
 
             if ($pin && $tmp) {
                 $fid = $fid ?? 0;
-                $teacher = Teacher::where('device_user_id', (string) $pin)->first();
+                $teacher = Teacher::where('device_user_id', (string) $pin)
+                    ->orWhere('nip', (string) $pin)
+                    ->first();
                 $student = null;
                 if (! $teacher) {
                     $defaultClass = SchoolClass::first();

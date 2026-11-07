@@ -29,7 +29,80 @@ class CleanupDuplicateTeachers extends Command
     {
         $this->info('Memulai pembersihan data duplikat guru & siswa...');
 
-        // 1. Pastikan seluruh Guru memiliki device_user_id (jika null atau kosong, samakan dengan NIP)
+        $cleanedStudentsCount = 0;
+        $migratedTemplatesCount = 0;
+        $migratedLogsCount = 0;
+
+        // 1. Tangani kasus khusus Pak Agus Triwidiyanto (NIP: 197808222010011015, PIN Mesin: 1, Student ID: 239)
+        $pakAgus = Teacher::where('nip', '197808222010011015')
+            ->orWhere('name', 'like', '%Agus Triwidiyanto%')
+            ->first();
+
+        if ($pakAgus) {
+            $this->info("- Memeriksa data Guru: {$pakAgus->name} (NIP: {$pakAgus->nip})...");
+
+            // Cek apakah ada student dengan ID 239, nama 'Agus', atau PIN '1'
+            $agusStudents = Student::where('id', 239)
+                ->orWhere(function ($q) {
+                    $q->where('name', 'like', '%Agus%')
+                        ->where(function ($sq) {
+                            $sq->where('device_user_id', '1')
+                                ->orWhere('device_user_id', '197808222010011015')
+                                ->orWhere('nis', '197808222010011015');
+                        });
+                })->get();
+
+            foreach ($agusStudents as $as) {
+                $this->warn("  * Menghubungkan siswa duplikat {$as->name} (ID: {$as->id}, PIN: {$as->device_user_id}) ke Guru {$pakAgus->name}");
+                $asPin = (string) ($as->device_user_id ?: '1');
+
+                // Pindahkan template
+                $tCount = FingerprintTemplate::where('student_id', $as->id)
+                    ->orWhere('device_user_id', $asPin)
+                    ->update([
+                        'student_id' => null,
+                        'teacher_id' => $pakAgus->id,
+                        'device_user_id' => $asPin,
+                    ]);
+                $migratedTemplatesCount += $tCount;
+
+                // Pindahkan log presensi
+                $lCount = AttendanceLog::where('student_id', $as->id)
+                    ->orWhere('device_user_id', $asPin)
+                    ->update([
+                        'student_id' => null,
+                        'teacher_id' => $pakAgus->id,
+                        'device_user_id' => $asPin,
+                    ]);
+                $migratedLogsCount += $lCount;
+
+                $as->delete();
+                $cleanedStudentsCount++;
+            }
+
+            // Cek template sidik jari lepas pada PIN '1' atau '197808222010011015'
+            $agusTemplates = FingerprintTemplate::whereIn('device_user_id', ['1', '197808222010011015'])
+                ->get();
+
+            if ($agusTemplates->isNotEmpty()) {
+                $chosenPin = $agusTemplates->first()->device_user_id; // Biasanya '1' dari mesin
+                foreach ($agusTemplates as $at) {
+                    $at->update([
+                        'student_id' => null,
+                        'teacher_id' => $pakAgus->id,
+                    ]);
+                    $migratedTemplatesCount++;
+                }
+
+                // Update PIN mesin guru Pak Agus sesuai PIN fisiknya di mesin
+                $pakAgus->update(['device_user_id' => $chosenPin]);
+                $this->info("  * Berhasil menautkan {$agusTemplates->count()} sidik jari ke Guru {$pakAgus->name} (PIN Mesin: {$chosenPin})");
+            } elseif (empty($pakAgus->device_user_id)) {
+                $pakAgus->update(['device_user_id' => (string) $pakAgus->nip]);
+            }
+        }
+
+        // 2. Pastikan seluruh Guru lainnya memiliki device_user_id
         $teachersWithoutPin = Teacher::whereNull('device_user_id')
             ->orWhere('device_user_id', '')
             ->get();
@@ -39,27 +112,28 @@ class CleanupDuplicateTeachers extends Command
             $this->info("- Mengisi PIN Guru {$t->name} dengan NIP: {$t->nip}");
         }
 
+        // 3. Periksa semua guru untuk student duplikat dan template lepas
         $allTeachers = Teacher::all();
-        $cleanedStudentsCount = 0;
-        $migratedTemplatesCount = 0;
-        $migratedLogsCount = 0;
 
         foreach ($allTeachers as $teacher) {
             $nip = (string) $teacher->nip;
             $pin = (string) ($teacher->device_user_id ?: $teacher->nip);
 
-            // 2. Cari data siswa nyasar yang memiliki PIN / NIS sama dengan NIP atau PIN guru ini
-            $duplicateStudents = Student::where(function ($q) use ($nip, $pin) {
+            // Cari data siswa nyasar yang memiliki PIN / NIS sama dengan NIP atau PIN guru ini
+            $duplicateStudents = Student::where(function ($q) use ($nip, $pin, $teacher) {
                 $q->where('device_user_id', $pin)
                     ->orWhere('device_user_id', $nip)
                     ->orWhere('nis', $nip)
-                    ->orWhere('nis', $pin);
+                    ->orWhere('nis', $pin)
+                    ->orWhere(function ($nameQ) use ($teacher) {
+                        $nameQ->where('name', $teacher->name)
+                            ->orWhere('name', 'like', "%{$teacher->name}%");
+                    });
             })->get();
 
             foreach ($duplicateStudents as $student) {
                 $this->warn("- Menemukan siswa duplikat: {$student->name} (PIN: {$student->device_user_id}) yang sebenarnya adalah Guru {$teacher->name} (NIP: {$teacher->nip})");
 
-                // Pindahkan seluruh template sidik jari siswa ini ke Guru
                 $templates = FingerprintTemplate::where('student_id', $student->id)
                     ->orWhere('device_user_id', $student->device_user_id)
                     ->get();
@@ -73,7 +147,6 @@ class CleanupDuplicateTeachers extends Command
                     $migratedTemplatesCount++;
                 }
 
-                // Pindahkan log presensi siswa ini ke Guru
                 $logs = AttendanceLog::where('student_id', $student->id)
                     ->orWhere('device_user_id', $student->device_user_id)
                     ->get();
@@ -91,7 +164,7 @@ class CleanupDuplicateTeachers extends Command
                 $cleanedStudentsCount++;
             }
 
-            // 3. Cek jika ada template sidik jari lepas yang cocok dengan NIP / PIN guru tapi belum ditautkan ke teacher_id
+            // Tautkan template lepas yang cocok dengan PIN / NIP guru
             $orphanTemplates = FingerprintTemplate::where(function ($q) use ($nip, $pin) {
                 $q->where('device_user_id', $pin)
                     ->orWhere('device_user_id', $nip);
@@ -107,12 +180,11 @@ class CleanupDuplicateTeachers extends Command
             }
         }
 
-        // 4. Cari siswa yang berada di kelas bernama 'admin'
+        // 4. Bersihkan sisa kelas bernama 'admin' jika masih ada
         $adminClasses = SchoolClass::whereRaw('LOWER(name) = ?', ['admin'])->get();
         foreach ($adminClasses as $ac) {
             $studentsInAdminClass = Student::where('school_class_id', $ac->id)->get();
             foreach ($studentsInAdminClass as $sAdmin) {
-                // Cek apakah ada guru yang cocok
                 $matchedTeacher = Teacher::where('nip', $sAdmin->device_user_id)
                     ->orWhere('device_user_id', $sAdmin->device_user_id)
                     ->orWhere('name', 'like', "%{$sAdmin->name}%")
@@ -141,7 +213,7 @@ class CleanupDuplicateTeachers extends Command
             $ac->delete();
         }
 
-        // 5. Cari jurusan bernama 'admin'
+        // 5. Bersihkan sisa jurusan bernama 'admin' jika masih ada
         $adminMajors = Major::whereRaw('LOWER(name) = ?', ['admin'])->get();
         foreach ($adminMajors as $am) {
             $am->schoolClasses()->each(fn ($c) => $c->students()->delete());

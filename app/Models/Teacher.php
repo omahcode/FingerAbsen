@@ -65,11 +65,21 @@ class Teacher extends Model
 
     public function fingerprintTemplates()
     {
+        return $this->hasMany(FingerprintTemplate::class, 'teacher_id');
+    }
+
+    public function fingerprintTemplatesByPin()
+    {
         return $this->hasMany(FingerprintTemplate::class, 'device_user_id', 'device_user_id');
     }
 
     public function getHasFingerprintAttribute(): bool
     {
-        return ($this->fingerprint_templates_count ?? $this->fingerprintTemplates()->count()) > 0;
+        if (isset($this->fingerprint_templates_count)) {
+            return $this->fingerprint_templates_count > 0;
+        }
+
+        return $this->fingerprintTemplates()->count() > 0
+            || (! empty($this->device_user_id) && FingerprintTemplate::where('device_user_id', $this->device_user_id)->count() > 0);
     }
 }

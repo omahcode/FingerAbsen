@@ -6,6 +6,7 @@ use App\Exports\TeacherTemplateExport;
 use App\Imports\TeachersImport;
 use App\Models\AttendanceLog;
 use App\Models\Device;
+use App\Models\FingerprintTemplate;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,7 +32,20 @@ class TeacherController extends Controller
     {
         $this->authorizeAccess();
 
-        $query = Teacher::withCount('fingerprintTemplates');
+        $query = Teacher::query()
+            ->select('teachers.*')
+            ->selectSub(function ($q) {
+                $q->from('fingerprint_templates')
+                    ->selectRaw('count(*)')
+                    ->where(function ($sub) {
+                        $sub->whereColumn('fingerprint_templates.teacher_id', 'teachers.id')
+                            ->orWhere(function ($pinMatch) {
+                                $pinMatch->whereNotNull('teachers.device_user_id')
+                                    ->where('teachers.device_user_id', '!=', '')
+                                    ->whereColumn('fingerprint_templates.device_user_id', 'teachers.device_user_id');
+                            });
+                    });
+            }, 'fingerprint_templates_count');
 
         // Filter Kategori (GURU MTK, GURU PPKN, GURU SEJARAH, GURU INFORMATIKA, dll)
         $selectedCategory = $request->query('category');
@@ -42,9 +56,9 @@ class TeacherController extends Controller
         // Filter Status Sidik Jari
         $selectedFingerprint = $request->query('fingerprint');
         if ($selectedFingerprint === 'registered') {
-            $query->has('fingerprintTemplates');
+            $query->having('fingerprint_templates_count', '>', 0);
         } elseif ($selectedFingerprint === 'unregistered') {
-            $query->doesntHave('fingerprintTemplates');
+            $query->having('fingerprint_templates_count', '=', 0);
         }
 
         // Pencarian Nama / NIP
@@ -65,7 +79,14 @@ class TeacherController extends Controller
         sort($categories);
 
         $totalTeachers = Teacher::count();
-        $registeredFpCount = Teacher::has('fingerprintTemplates')->count();
+        $registeredFpCount = Teacher::where(function ($q) {
+            $q->whereHas('fingerprintTemplates')
+                ->orWhere(function ($sub) {
+                    $sub->whereNotNull('device_user_id')
+                        ->where('device_user_id', '!=', '')
+                        ->whereIn('device_user_id', FingerprintTemplate::select('device_user_id'));
+                });
+        })->count();
         $unregisteredFpCount = $totalTeachers - $registeredFpCount;
 
         // Presensi Guru Hari Ini (khusus Upacara / Tap Mesin)
@@ -115,6 +136,15 @@ class TeacherController extends Controller
             'phone' => $validated['phone'] ?? null,
         ]);
 
+        // Jika sudah ada template sidik jari atau log presensi dengan PIN ini, tautkan ke guru baru
+        FingerprintTemplate::where('device_user_id', $pin)
+            ->whereNull('teacher_id')
+            ->update(['teacher_id' => $teacher->id, 'student_id' => null]);
+
+        AttendanceLog::where('device_user_id', $pin)
+            ->whereNull('teacher_id')
+            ->update(['teacher_id' => $teacher->id, 'student_id' => null]);
+
         // Kirim perintah registrasi nama guru ke semua mesin fingerprint aktif
         try {
             IclockController::queueCommand("DATA USER PIN={$pin}\tName={$teacher->name}\tPri=0\tGrp=1");
@@ -151,6 +181,25 @@ class TeacherController extends Controller
             'device_user_id' => $newPin,
             'phone' => $validated['phone'] ?? null,
         ]);
+
+        // Sinkronkan template sidik jari dan log jika PIN berubah atau jika ada template lepas di PIN baru
+        if ($oldPin !== $newPin && ! empty($oldPin)) {
+            FingerprintTemplate::where('teacher_id', $teacher->id)
+                ->orWhere('device_user_id', $oldPin)
+                ->update(['device_user_id' => $newPin, 'teacher_id' => $teacher->id, 'student_id' => null]);
+
+            AttendanceLog::where('teacher_id', $teacher->id)
+                ->orWhere('device_user_id', $oldPin)
+                ->update(['device_user_id' => $newPin, 'teacher_id' => $teacher->id, 'student_id' => null]);
+        }
+
+        FingerprintTemplate::where('device_user_id', $newPin)
+            ->whereNull('teacher_id')
+            ->update(['teacher_id' => $teacher->id, 'student_id' => null]);
+
+        AttendanceLog::where('device_user_id', $newPin)
+            ->whereNull('teacher_id')
+            ->update(['teacher_id' => $teacher->id, 'student_id' => null]);
 
         // Sinkronkan update ke mesin
         try {
