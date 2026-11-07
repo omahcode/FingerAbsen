@@ -228,20 +228,35 @@ class IclockController extends Controller
     }
 
     /**
-     * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
+     * Helper untuk menambahkan kumpulan perintah sekaligus ke antrean ADMS tiap mesin (Batching)
      */
-    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null)
+    public static function queueCommands(array $commands, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null, ?Device $targetDevice = null): void
     {
-        $devices = Device::all();
+        if (empty($commands)) {
+            return;
+        }
 
-        if ($targetSn) {
-            $queueKey = 'adms_queue_'.$targetSn;
-            $queue = Cache::get($queueKey, []);
-            $queue[] = $command;
-            Cache::put($queueKey, $queue, now()->addDays(2));
+        // Jika target mesin spesifik ditentukan
+        if ($targetSn || $targetDevice) {
+            $key = null;
+            if ($targetSn) {
+                $key = 'adms_queue_'.$targetSn;
+            } elseif ($targetDevice) {
+                $key = ! empty($targetDevice->serial_number)
+                    ? 'adms_queue_'.$targetDevice->serial_number
+                    : 'adms_queue_DEVICE_'.$targetDevice->id;
+            }
+
+            if ($key) {
+                $queue = Cache::get($key, []);
+                $queue = array_merge($queue, $commands);
+                Cache::put($key, $queue, now()->addDays(2));
+            }
 
             return;
         }
+
+        $devices = Device::all();
 
         // Broadcast ke setiap mesin secara independen
         if ($devices->isNotEmpty()) {
@@ -260,25 +275,29 @@ class IclockController extends Controller
                     continue;
                 }
 
-                $keys = [];
-                if (! empty($device->serial_number)) {
-                    $keys[] = 'adms_queue_'.$device->serial_number;
-                }
-                $keys[] = 'adms_queue_DEVICE_'.$device->id;
+                $key = ! empty($device->serial_number)
+                    ? 'adms_queue_'.$device->serial_number
+                    : 'adms_queue_DEVICE_'.$device->id;
 
-                foreach ($keys as $k) {
-                    $q = Cache::get($k, []);
-                    $q[] = $command;
-                    Cache::put($k, $q, now()->addDays(2));
-                }
+                $q = Cache::get($key, []);
+                $q = array_merge($q, $commands);
+                Cache::put($key, $q, now()->addDays(2));
             }
+        } else {
+            // Antrean global fallback hanya jika belum ada device terdaftar di database
+            $globalKey = 'adms_queue_GLOBAL';
+            $globalQueue = Cache::get($globalKey, []);
+            $globalQueue = array_merge($globalQueue, $commands);
+            Cache::put($globalKey, $globalQueue, now()->addDays(2));
         }
+    }
 
-        // Antrean global fallback
-        $globalKey = 'adms_queue_GLOBAL';
-        $globalQueue = Cache::get($globalKey, []);
-        $globalQueue[] = $command;
-        Cache::put($globalKey, $globalQueue, now()->addDays(2));
+    /**
+     * Helper untuk menambahkan perintah ke antrean ADMS tiap mesin
+     */
+    public static function queueCommand(string $command, ?string $targetSn = null, ?string $excludeSn = null, ?string $forRole = null): void
+    {
+        self::queueCommands([$command], $targetSn, $excludeSn, $forRole);
     }
 
     /**

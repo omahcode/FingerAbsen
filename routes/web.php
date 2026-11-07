@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
     Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
+    Route::post('sync/clear-queue', [SyncController::class, 'clearQueue'])->name('sync.clearQueue');
     Route::post('sync/backup-templates', [SyncController::class, 'backupTemplates'])->name('sync.backupTemplates');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
