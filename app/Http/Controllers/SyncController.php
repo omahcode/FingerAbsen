@@ -14,6 +14,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class SyncController extends Controller
@@ -628,106 +630,122 @@ class SyncController extends Controller
      */
     public function userDevicesStatus(Request $request): JsonResponse
     {
-        $pin = trim((string) $request->query('pin'));
-        $id = $request->query('id');
-        $role = $request->query('role');
+        try {
+            $pin = trim((string) $request->query('pin'));
+            $id = $request->query('id');
+            $role = $request->query('role');
 
-        $student = null;
-        $teacher = null;
+            $student = null;
+            $teacher = null;
 
-        if (! empty($id)) {
-            if ($role === 'Guru' || $role === 'teachers') {
-                $teacher = Teacher::find($id);
-            } elseif ($role === 'Siswa' || $role === 'students') {
+            if (! empty($id)) {
+                if ($role === 'Guru' || $role === 'teachers') {
+                    $teacher = Teacher::find($id);
+                } elseif ($role === 'Siswa' || $role === 'students') {
+                    $student = Student::with('schoolClass')->find($id);
+                }
+            }
+
+            if (! $student && ! $teacher && ! empty($pin)) {
+                $student = Student::with('schoolClass')->where('device_user_id', $pin)->first();
+                $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
+            }
+
+            if (! $student && ! $teacher && ! empty($id)) {
                 $student = Student::with('schoolClass')->find($id);
-            }
-        }
-
-        if (! $student && ! $teacher && ! empty($pin)) {
-            $student = Student::with('schoolClass')->where('device_user_id', $pin)->first();
-            $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
-        }
-
-        if (! $student && ! $teacher && ! empty($id)) {
-            $student = Student::with('schoolClass')->find($id);
-            if (! $student) {
-                $teacher = Teacher::find($id);
-            }
-        }
-
-        $effectivePin = $pin ?: ($student ? ($student->device_user_id ?: $student->nis) : ($teacher ? ($teacher->device_user_id ?: $teacher->nip) : ''));
-        $name = $student ? $student->name : ($teacher ? $teacher->name : ($effectivePin ? 'User '.$effectivePin : 'User'));
-        $userRole = $student ? 'Siswa' : ($teacher ? 'Guru' : ($role ?: 'User'));
-        $className = $student ? ($student->schoolClass->name ?? '-') : ($teacher ? ($teacher->category ?: 'Dewan Guru') : '-');
-
-        $templateQuery = FingerprintTemplate::query();
-        if ($student) {
-            $templateQuery->where(function ($q) use ($student, $effectivePin) {
-                $q->where('student_id', $student->id);
-                if (! empty($effectivePin)) {
-                    $q->orWhere('device_user_id', $effectivePin);
+                if (! $student) {
+                    $teacher = Teacher::find($id);
                 }
-            });
-        } elseif ($teacher) {
-            $templateQuery->where(function ($q) use ($teacher, $effectivePin) {
-                $q->where('teacher_id', $teacher->id);
-                if (! empty($effectivePin)) {
-                    $q->orWhere('device_user_id', $effectivePin)
-                        ->orWhere('device_user_id', $teacher->nip);
-                }
-            });
-        } elseif (! empty($effectivePin)) {
-            $templateQuery->where('device_user_id', $effectivePin);
-        } else {
-            $templateQuery->whereRaw('1 = 0');
-        }
-
-        $templates = $templateQuery->get();
-        $dbCount = $templates->count();
-
-        $devices = Device::orderBy('name')->get();
-
-        $deviceTemplates = ! empty($effectivePin)
-            ? DeviceFingerprintTemplate::where('device_user_id', $effectivePin)->get()->groupBy('device_id')
-            : collect();
-
-        $deviceList = [];
-        $missingDeviceIds = [];
-
-        foreach ($devices as $dev) {
-            $hasInDevice = isset($deviceTemplates[$dev->id]);
-            $countInDevice = $hasInDevice ? $deviceTemplates[$dev->id]->count() : 0;
-
-            if (! $hasInDevice && $dbCount > 0) {
-                $missingDeviceIds[] = $dev->id;
             }
 
-            $deviceList[] = [
-                'id' => $dev->id,
-                'name' => $dev->name,
-                'ip_address' => $dev->ip_address,
-                'port' => $dev->port,
-                'serial_number' => $dev->serial_number ?: '-',
-                'purpose_label' => $dev->purpose_label,
-                'has_template' => $hasInDevice,
-                'template_count' => $countInDevice,
-                'last_synced_at' => $hasInDevice && $deviceTemplates[$dev->id]->first()->last_synced_at ? $deviceTemplates[$dev->id]->first()->last_synced_at->diffForHumans() : null,
-            ];
-        }
+            $effectivePin = $pin ?: ($student ? ($student->device_user_id ?: $student->nis) : ($teacher ? ($teacher->device_user_id ?: $teacher->nip) : ''));
+            $name = $student ? $student->name : ($teacher ? $teacher->name : ($effectivePin ? 'User '.$effectivePin : 'User'));
+            $userRole = $student ? 'Siswa' : ($teacher ? 'Guru' : ($role ?: 'User'));
+            $className = $student ? ($student->schoolClass->name ?? '-') : ($teacher ? ($teacher->category ?: 'Dewan Guru') : '-');
 
-        return response()->json([
-            'status' => 'success',
-            'user' => [
-                'pin' => $effectivePin ?: 'Belum Ada PIN',
-                'name' => $name,
-                'role' => $userRole,
-                'class_name' => $className,
-                'db_count' => $dbCount,
-            ],
-            'devices' => $deviceList,
-            'is_complete' => ($dbCount > 0) && empty($missingDeviceIds) && $devices->isNotEmpty(),
-            'missing_count' => count($missingDeviceIds),
-        ]);
+            $templateQuery = FingerprintTemplate::query();
+            if ($student) {
+                $templateQuery->where(function ($q) use ($student, $effectivePin) {
+                    $q->where('student_id', $student->id);
+                    if (! empty($effectivePin)) {
+                        $q->orWhere('device_user_id', $effectivePin);
+                    }
+                });
+            } elseif ($teacher) {
+                $templateQuery->where(function ($q) use ($teacher, $effectivePin) {
+                    $q->where('teacher_id', $teacher->id);
+                    if (! empty($effectivePin)) {
+                        $q->orWhere('device_user_id', $effectivePin)
+                            ->orWhere('device_user_id', $teacher->nip);
+                    }
+                });
+            } elseif (! empty($effectivePin)) {
+                $templateQuery->where('device_user_id', $effectivePin);
+            } else {
+                $templateQuery->whereRaw('1 = 0');
+            }
+
+            $templates = $templateQuery->get();
+            $dbCount = $templates->count();
+
+            $devices = Device::orderBy('name')->get();
+
+            $deviceTemplates = collect();
+            if (! empty($effectivePin)) {
+                try {
+                    if (Schema::hasTable('device_fingerprint_templates')) {
+                        $deviceTemplates = DeviceFingerprintTemplate::where('device_user_id', $effectivePin)->get()->groupBy('device_id');
+                    }
+                } catch (\Throwable $t) {
+                    Log::warning('DeviceFingerprintTemplate query skipped: '.$t->getMessage());
+                }
+            }
+
+            $deviceList = [];
+            $missingDeviceIds = [];
+
+            foreach ($devices as $dev) {
+                $hasInDevice = isset($deviceTemplates[$dev->id]);
+                $countInDevice = $hasInDevice ? $deviceTemplates[$dev->id]->count() : 0;
+
+                if (! $hasInDevice && $dbCount > 0) {
+                    $missingDeviceIds[] = $dev->id;
+                }
+
+                $deviceList[] = [
+                    'id' => $dev->id,
+                    'name' => $dev->name,
+                    'ip_address' => $dev->ip_address,
+                    'port' => $dev->port,
+                    'serial_number' => $dev->serial_number ?: '-',
+                    'purpose_label' => $dev->purpose_label,
+                    'has_template' => $hasInDevice,
+                    'template_count' => $countInDevice,
+                    'last_synced_at' => $hasInDevice && $deviceTemplates[$dev->id]->first()->last_synced_at ? $deviceTemplates[$dev->id]->first()->last_synced_at->diffForHumans() : null,
+                ];
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'user' => [
+                    'pin' => $effectivePin ?: 'Belum Ada PIN',
+                    'name' => $name,
+                    'role' => $userRole,
+                    'class_name' => $className,
+                    'db_count' => $dbCount,
+                ],
+                'devices' => $deviceList,
+                'is_complete' => ($dbCount > 0) && empty($missingDeviceIds) && $devices->isNotEmpty(),
+                'missing_count' => count($missingDeviceIds),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error in userDevicesStatus: '.$e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan di server: '.$e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

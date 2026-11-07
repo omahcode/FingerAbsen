@@ -648,11 +648,21 @@
                     id: id || '',
                     role: fallbackRole || ''
                 });
-                const res = await fetch(`/sync/user-devices-status?${params.toString()}`);
-                const data = await res.json();
+                const res = await fetch(`/sync/user-devices-status?${params.toString()}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
 
-                if (data.status !== 'success') {
-                    throw new Error(data.message || 'Gagal mengambil data mesin.');
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    throw new Error('Gagal memproses data server (Format tidak sesuai). Pastikan migrasi database sudah dijalankan.');
+                }
+
+                if (!res.ok || data.status !== 'success') {
+                    throw new Error(data.message || `Gagal mengambil data mesin (Kode: ${res.status}).`);
                 }
 
                 const user = data.user;
