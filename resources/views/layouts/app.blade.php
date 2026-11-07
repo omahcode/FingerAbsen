@@ -140,7 +140,31 @@
             <div class="flex-1 overflow-y-auto sidebar-scroll px-3 py-4 space-y-6">
                 
                 @auth
-                <!-- SECTION 1: MONITORING & PRESENSI -->
+                @if(Auth::user()->isKepalaSekolah())
+                <!-- KHUSUS KEPALA SEKOLAH: HANYA PRESENSI UPACARA GURU & DATA GURU -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
+                        Menu Kepala Sekolah
+                    </div>
+                    <nav class="space-y-1.5">
+                        <a href="{{ route('teachers.ceremony') }}" class="sidebar-link flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.ceremony*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Presensi Guru (Upacara & Acara)">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <i class="fas fa-flag w-5 text-center shrink-0 {{ request()->routeIs('teachers.ceremony*') ? 'text-white' : 'text-rose-400' }}"></i>
+                                <span class="sidebar-text truncate">Presensi Upacara Guru</span>
+                            </div>
+                            <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                                Guru
+                            </span>
+                        </a>
+
+                        <a href="{{ route('teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.index*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Guru (User Mesin)">
+                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('teachers.index*') ? 'text-white' : 'text-emerald-400' }}"></i>
+                            <span class="sidebar-text truncate">Data Guru</span>
+                        </a>
+                    </nav>
+                </div>
+                @else
+                <!-- SECTION 1: MONITORING & PRESENSI (ADMIN & GURU) -->
                 <div>
                     <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
                         Monitoring & Presensi
@@ -171,9 +195,7 @@
                             <i class="fas fa-clipboard-check w-5 text-center shrink-0 {{ request()->routeIs('attendance.index') ? 'text-white' : 'text-emerald-400' }}"></i>
                             <span class="sidebar-text truncate">Log & Rekap Absensi</span>
                         </a>
-                        @endif
 
-                        @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
                         <a href="{{ route('teachers.ceremony') }}" class="sidebar-link flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.ceremony*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Presensi Guru (Upacara & Acara)">
                             <div class="flex items-center gap-3 overflow-hidden">
                                 <i class="fas fa-flag w-5 text-center shrink-0 {{ request()->routeIs('teachers.ceremony*') ? 'text-white' : 'text-rose-400' }}"></i>
@@ -182,13 +204,6 @@
                             <span class="sidebar-badge inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-black rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
                                 Guru
                             </span>
-                        </a>
-                        @endif
-
-                        @if(Auth::user()->isKepalaSekolah())
-                        <a href="{{ route('teachers.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('teachers.index*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Data Guru (User Mesin)">
-                            <i class="fas fa-chalkboard-teacher w-5 text-center shrink-0 {{ request()->routeIs('teachers.index*') ? 'text-white' : 'text-emerald-400' }}"></i>
-                            <span class="sidebar-text truncate">Data Guru</span>
                         </a>
                         @endif
                     </nav>
@@ -283,10 +298,9 @@
                 </div>
 
                 <!-- SECTION 4: SISTEM & LAPORAN -->
-                @if(Auth::user()->isAdmin() || Auth::user()->isKepalaSekolah())
                 <div>
                     <div class="px-3 mb-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sidebar-section-title">
-                        {{ Auth::user()->isAdmin() ? 'Sistem & Laporan' : 'Laporan Sekolah' }}
+                        Sistem & Laporan
                     </div>
                     <nav class="space-y-1">
                         <a href="{{ route('reports.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('reports.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Rekap & Ekspor PDF">
@@ -294,7 +308,6 @@
                             <span class="sidebar-text truncate">Rekap & PDF</span>
                         </a>
 
-                        @if(Auth::user()->isAdmin())
                         <a href="{{ route('sync.index') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition {{ request()->routeIs('sync.*') ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}" title="Sinkronisasi ADMS Mesin">
                             <i class="fas fa-sync-alt w-5 text-center shrink-0 {{ request()->routeIs('sync.*') ? 'text-white' : 'text-yellow-400' }}"></i>
                             <span class="sidebar-text truncate">Sinkronisasi ADMS</span>
@@ -309,7 +322,6 @@
                             <i class="fas fa-flask w-5 text-center shrink-0 text-purple-400"></i>
                             <span class="sidebar-text truncate">Simulasi Absensi</span>
                         </a>
-                        @endif
                     </nav>
                 </div>
                 @endif
@@ -412,11 +424,13 @@
                 <!-- Right Quick Actions -->
                 <div class="flex items-center gap-2 sm:gap-3">
                     <!-- Mode TV Quick Button -->
+                    @if(!Auth::user() || !Auth::user()->isKepalaSekolah())
                     <a href="{{ route('tv.index') }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs border border-emerald-200 shadow-sm transition">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                         <i class="fas fa-tv text-xs"></i>
                         <span class="hidden sm:inline">Layar TV</span>
                     </a>
+                    @endif
 
                     @auth
                     <!-- User Avatar Pill -->
