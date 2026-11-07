@@ -130,6 +130,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
 
     Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
+    Route::get('sync/matrix', [SyncController::class, 'matrix'])->name('sync.matrix');
+    Route::post('sync/scan-devices', [SyncController::class, 'scanDevices'])->name('sync.scanDevices');
+    Route::post('sync/sync-missing', [SyncController::class, 'syncMissing'])->name('sync.syncMissing');
     Route::get('sync/preview-templates', [SyncController::class, 'previewTemplates'])->name('sync.previewTemplates');
     Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
     Route::post('sync/pull-templates', [SyncController::class, 'pullTemplates'])->name('sync.pullTemplates');

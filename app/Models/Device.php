@@ -8,6 +8,11 @@ class Device extends Model
 {
     protected $fillable = ['name', 'serial_number', 'ip_address', 'port', 'status', 'purpose', 'last_seen_at'];
 
+    public function deviceTemplates()
+    {
+        return $this->hasMany(DeviceFingerprintTemplate::class);
+    }
+
     public function isForTeachers(): bool
     {
         return $this->purpose === 'teachers';

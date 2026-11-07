@@ -6,6 +6,7 @@ use App\Events\AttendanceCreated;
 use App\Jobs\SendWhatsAppAttendanceJob;
 use App\Models\AttendanceLog;
 use App\Models\Device;
+use App\Models\DeviceFingerprintTemplate;
 use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Setting;
@@ -178,7 +179,7 @@ class IclockController extends Controller
                 );
             }
 
-            FingerprintTemplate::updateOrCreate(
+            $savedFp = FingerprintTemplate::updateOrCreate(
                 [
                     'device_user_id' => (string) $pin,
                     'finger_index' => (int) $fid,
@@ -191,6 +192,24 @@ class IclockController extends Controller
                     'template_data' => $tmp,
                 ]
             );
+
+            if ($sn) {
+                $originDevice = Device::where('serial_number', $sn)->first();
+                if ($originDevice) {
+                    DeviceFingerprintTemplate::updateOrCreate(
+                        [
+                            'device_id' => $originDevice->id,
+                            'device_user_id' => (string) $pin,
+                            'finger_index' => (int) $fid,
+                        ],
+                        [
+                            'fingerprint_template_id' => $savedFp->id,
+                            'status' => 'synced',
+                            'last_synced_at' => now(),
+                        ]
+                    );
+                }
+            }
 
             self::queueCommand("DATA FP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
             self::queueCommand("DATA UPDATE FINGERTMP PIN={$pin}\tFID={$fid}\tSize={$size}\tValid=1\tTMP={$tmp}", null, $sn);
@@ -711,7 +730,7 @@ class IclockController extends Controller
                     );
                 }
 
-                FingerprintTemplate::updateOrCreate(
+                $savedFp = FingerprintTemplate::updateOrCreate(
                     [
                         'device_user_id' => (string) $pin,
                         'finger_index' => (int) $fid,
@@ -724,6 +743,24 @@ class IclockController extends Controller
                         'template_data' => $tmp,
                     ]
                 );
+
+                if ($sn) {
+                    $originDevice = Device::where('serial_number', $sn)->first();
+                    if ($originDevice) {
+                        DeviceFingerprintTemplate::updateOrCreate(
+                            [
+                                'device_id' => $originDevice->id,
+                                'device_user_id' => (string) $pin,
+                                'finger_index' => (int) $fid,
+                            ],
+                            [
+                                'fingerprint_template_id' => $savedFp->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
+                            ]
+                        );
+                    }
+                }
 
                 Log::info("ADMS Template Saved: PIN {$pin}, Finger {$fid}, Size: ".strlen($tmp));
 

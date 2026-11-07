@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceLog;
 use App\Models\Device;
+use App\Models\DeviceFingerprintTemplate;
 use App\Models\FingerprintTemplate;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -112,6 +114,25 @@ class SyncController extends Controller
         }
 
         IclockController::queueCommands($commands, $targetSn, null, 'students', $targetDevice);
+
+        // Catat distribusi template ke tabel device_fingerprint_templates
+        $targetDevices = $targetDevice ? collect([$targetDevice]) : Device::all();
+        foreach ($targetDevices as $dev) {
+            foreach ($templates as $t) {
+                DeviceFingerprintTemplate::updateOrCreate(
+                    [
+                        'device_id' => $dev->id,
+                        'device_user_id' => (string) $t->device_user_id,
+                        'finger_index' => (int) $t->finger_index,
+                    ],
+                    [
+                        'fingerprint_template_id' => $t->id,
+                        'status' => 'synced',
+                        'last_synced_at' => now(),
+                    ]
+                );
+            }
+        }
 
         $targetName = $targetDevice ? $targetDevice->name : 'Seluruh Mesin';
         $filterName = $classId ? ('Kelas '.optional(SchoolClass::find($classId))->name) : 'Semua Kelas';
@@ -318,7 +339,7 @@ class SyncController extends Controller
                         $student = Student::where('device_user_id', $pin)->first();
                         $teacher = Teacher::where('device_user_id', $pin)->first();
 
-                        FingerprintTemplate::updateOrCreate(
+                        $savedT = FingerprintTemplate::updateOrCreate(
                             [
                                 'device_user_id' => $pin,
                                 'finger_index' => (int) ($t['fid'] ?? 0),
@@ -329,6 +350,19 @@ class SyncController extends Controller
                                 'size' => (int) ($t['size'] ?? strlen($t['template'])),
                                 'valid' => (int) ($t['valid'] ?? 1),
                                 'template_data' => $t['template'],
+                            ]
+                        );
+
+                        DeviceFingerprintTemplate::updateOrCreate(
+                            [
+                                'device_id' => $d->id,
+                                'device_user_id' => $pin,
+                                'finger_index' => (int) ($t['fid'] ?? 0),
+                            ],
+                            [
+                                'fingerprint_template_id' => $savedT->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
                             ]
                         );
                         $directPulledCount++;
@@ -424,5 +458,357 @@ class SyncController extends Controller
         Cache::forget('adms_queue_GLOBAL');
 
         return redirect()->back()->with('success', 'Seluruh antrean sinkronisasi perintah mesin berhasil dikosongkan.');
+    }
+
+    /**
+     * Tampilkan matriks audit & ketersediaan sidik jari per mesin (cek sidik jari ada di mesin mana saja).
+     */
+    public function matrix(Request $request): View
+    {
+        $devices = Device::orderBy('name')->get();
+        $classes = SchoolClass::with('major')->orderBy('name')->get();
+
+        $search = $request->query('search');
+        $role = $request->query('role', 'all');
+        $classId = $request->query('school_class_id');
+        $statusFilter = $request->query('status', 'all');
+        $targetDeviceId = $request->query('target_device_id');
+
+        // Ambil seluruh template di database web
+        $allDbTemplates = FingerprintTemplate::all()->groupBy('device_user_id');
+
+        // Ambil template yang tercatat per mesin
+        $allDeviceTemplates = DeviceFingerprintTemplate::all()
+            ->groupBy('device_user_id')
+            ->map(fn ($items) => $items->groupBy('device_id'));
+
+        // Query Siswa
+        $students = collect();
+        if ($role === 'all' || $role === 'students') {
+            $studentQuery = Student::with('schoolClass.major');
+            if ($classId) {
+                $studentQuery->where('school_class_id', $classId);
+            }
+            if ($search) {
+                $studentQuery->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('device_user_id', 'like', "%{$search}%")
+                        ->orWhere('nis', 'like', "%{$search}%");
+                });
+            }
+            $students = $studentQuery->orderBy('name')->get();
+        }
+
+        // Query Guru
+        $teachers = collect();
+        if (($role === 'all' || $role === 'teachers') && empty($classId)) {
+            $teacherQuery = Teacher::query();
+            if ($search) {
+                $teacherQuery->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('device_user_id', 'like', "%{$search}%")
+                        ->orWhere('nip', 'like', "%{$search}%");
+                });
+            }
+            $teachers = $teacherQuery->orderBy('name')->get();
+        }
+
+        // Susun baris matriks
+        $rows = collect();
+
+        foreach ($students as $s) {
+            $pin = (string) $s->device_user_id;
+            $dbCount = isset($allDbTemplates[$pin]) ? $allDbTemplates[$pin]->count() : 0;
+            $userDeviceMaps = $allDeviceTemplates->get($pin, collect());
+
+            $deviceStatuses = [];
+            $missingInDeviceIds = [];
+
+            foreach ($devices as $dev) {
+                $devTemplates = $userDeviceMaps->get($dev->id, collect());
+                $devCount = $devTemplates->count();
+                $hasInDevice = $devCount > 0;
+
+                if (! $hasInDevice && $dbCount > 0) {
+                    $missingInDeviceIds[] = $dev->id;
+                }
+
+                $deviceStatuses[$dev->id] = [
+                    'has_template' => $hasInDevice,
+                    'count' => $devCount,
+                ];
+            }
+
+            $isComplete = ($dbCount > 0) && empty($missingInDeviceIds) && $devices->isNotEmpty();
+
+            $rows->push([
+                'id' => $s->id,
+                'pin' => $pin,
+                'name' => $s->name,
+                'role' => 'Siswa',
+                'class_name' => $s->schoolClass->name ?? '-',
+                'photo_url' => $s->photo_url,
+                'db_count' => $dbCount,
+                'devices' => $deviceStatuses,
+                'is_complete' => $isComplete,
+                'missing_device_ids' => $missingInDeviceIds,
+            ]);
+        }
+
+        foreach ($teachers as $t) {
+            $pin = (string) $t->device_user_id;
+            $dbCount = isset($allDbTemplates[$pin]) ? $allDbTemplates[$pin]->count() : 0;
+            $userDeviceMaps = $allDeviceTemplates->get($pin, collect());
+
+            $deviceStatuses = [];
+            $missingInDeviceIds = [];
+
+            foreach ($devices as $dev) {
+                $devTemplates = $userDeviceMaps->get($dev->id, collect());
+                $devCount = $devTemplates->count();
+                $hasInDevice = $devCount > 0;
+
+                if (! $hasInDevice && $dbCount > 0) {
+                    $missingInDeviceIds[] = $dev->id;
+                }
+
+                $deviceStatuses[$dev->id] = [
+                    'has_template' => $hasInDevice,
+                    'count' => $devCount,
+                ];
+            }
+
+            $isComplete = ($dbCount > 0) && empty($missingInDeviceIds) && $devices->isNotEmpty();
+
+            $rows->push([
+                'id' => $t->id,
+                'pin' => $pin,
+                'name' => $t->name,
+                'role' => 'Guru',
+                'class_name' => $t->category ?: 'Dewan Guru',
+                'photo_url' => $t->photo_url,
+                'db_count' => $dbCount,
+                'devices' => $deviceStatuses,
+                'is_complete' => $isComplete,
+                'missing_device_ids' => $missingInDeviceIds,
+            ]);
+        }
+
+        // Filter status sebaran
+        if ($statusFilter === 'complete') {
+            $rows = $rows->filter(fn ($r) => $r['is_complete']);
+        } elseif ($statusFilter === 'incomplete') {
+            $rows = $rows->filter(fn ($r) => $r['db_count'] > 0 && ! $r['is_complete']);
+        } elseif ($statusFilter === 'missing_on_device' && $targetDeviceId) {
+            $rows = $rows->filter(fn ($r) => in_array((int) $targetDeviceId, $r['missing_device_ids']));
+        }
+
+        // Statistik
+        $totalRegisteredWithFp = $rows->filter(fn ($r) => $r['db_count'] > 0)->count();
+        $completeCount = $rows->filter(fn ($r) => $r['is_complete'])->count();
+        $incompleteCount = max(0, $totalRegisteredWithFp - $completeCount);
+
+        return view('sync.matrix', compact(
+            'devices',
+            'classes',
+            'rows',
+            'search',
+            'role',
+            'classId',
+            'statusFilter',
+            'targetDeviceId',
+            'totalRegisteredWithFp',
+            'completeCount',
+            'incompleteCount'
+        ));
+    }
+
+    /**
+     * Pindai dan periksa ketersediaan sidik jari langsung dari seluruh mesin.
+     */
+    public function scanDevices(Request $request): RedirectResponse
+    {
+        $devices = Device::all();
+        $serviceUrl = env('FINGERPRINT_SERVICE_URL', 'http://127.0.0.1:5000');
+        $foundCount = 0;
+
+        foreach ($devices as $d) {
+            $isLive = false;
+            try {
+                $response = Http::timeout(3)->post($serviceUrl.'/api/get_templates', [
+                    'ip_address' => $d->ip_address,
+                    'port' => $d->port,
+                ]);
+
+                if ($response->successful() && $response->json('status') === 'success') {
+                    $templates = $response->json('templates', []);
+                    $isLive = true;
+
+                    foreach ($templates as $t) {
+                        if (empty($t['uid']) || empty($t['template'])) {
+                            continue;
+                        }
+
+                        $pin = (string) $t['uid'];
+                        $fid = (int) ($t['fid'] ?? 0);
+
+                        $student = Student::where('device_user_id', $pin)->first();
+                        $teacher = Teacher::where('device_user_id', $pin)->orWhere('nip', $pin)->first();
+
+                        $dbFp = FingerprintTemplate::updateOrCreate(
+                            [
+                                'device_user_id' => $pin,
+                                'finger_index' => $fid,
+                            ],
+                            [
+                                'student_id' => $student ? $student->id : null,
+                                'teacher_id' => $teacher ? $teacher->id : null,
+                                'size' => (int) ($t['size'] ?? strlen($t['template'])),
+                                'valid' => (int) ($t['valid'] ?? 1),
+                                'template_data' => $t['template'],
+                            ]
+                        );
+
+                        DeviceFingerprintTemplate::updateOrCreate(
+                            [
+                                'device_id' => $d->id,
+                                'device_user_id' => $pin,
+                                'finger_index' => $fid,
+                            ],
+                            [
+                                'fingerprint_template_id' => $dbFp->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
+                            ]
+                        );
+                        $foundCount++;
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            // Fallback: Jika socket offline, gunakan log kehadiran untuk mengenali user yang pernah tap di mesin ini
+            if (! $isLive) {
+                $userPinsWithAttendance = AttendanceLog::where('device_id', $d->id)
+                    ->distinct()
+                    ->pluck('device_user_id')
+                    ->filter();
+
+                foreach ($userPinsWithAttendance as $pin) {
+                    $dbTemplates = FingerprintTemplate::where('device_user_id', (string) $pin)->get();
+                    foreach ($dbTemplates as $dt) {
+                        DeviceFingerprintTemplate::firstOrCreate(
+                            [
+                                'device_id' => $d->id,
+                                'device_user_id' => (string) $pin,
+                                'finger_index' => $dt->finger_index,
+                            ],
+                            [
+                                'fingerprint_template_id' => $dt->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
+                            ]
+                        );
+                        $foundCount++;
+                    }
+                }
+            }
+        }
+
+        return redirect()->back()->with(
+            'success',
+            "Pemeriksaan mesin selesai! Berhasil memetakan {$foundCount} template sidik jari pada mesin-mesin terdaftar."
+        );
+    }
+
+    /**
+     * Sebarkan sidik jari yang belum ada ke mesin-mesin yang belum memilikinya.
+     */
+    public function syncMissing(Request $request): RedirectResponse
+    {
+        $pinsInput = $request->input('pins');
+        $targetDeviceId = $request->input('target_device_id');
+
+        $selectedPins = [];
+        if (is_array($pinsInput)) {
+            $selectedPins = array_values(array_filter(array_map('strval', $pinsInput)));
+        }
+
+        $devices = Device::all();
+        if ($devices->isEmpty()) {
+            return redirect()->back()->with('error', 'Belum ada mesin fingerprint terdaftar.');
+        }
+
+        $targetDevices = $targetDeviceId ? Device::where('id', $targetDeviceId)->get() : $devices;
+
+        // Ambil template di database web
+        $templateQuery = FingerprintTemplate::query();
+        if (! empty($selectedPins)) {
+            $templateQuery->whereIn('device_user_id', $selectedPins);
+        }
+        $templates = $templateQuery->get()->groupBy('device_user_id');
+
+        if ($templates->isEmpty()) {
+            return redirect()->back()->with('error', 'Tidak ada data sidik jari di database untuk disebarkan.');
+        }
+
+        $allDeviceTemplates = DeviceFingerprintTemplate::all()
+            ->groupBy('device_user_id')
+            ->map(fn ($items) => $items->groupBy('device_id'));
+
+        $totalCommandsQueued = 0;
+        $totalFpQueued = 0;
+
+        foreach ($targetDevices as $dev) {
+            $commands = [];
+            $targetSn = $dev->serial_number ?: null;
+
+            foreach ($templates as $pin => $userTemplates) {
+                $hasInThisDevice = isset($allDeviceTemplates[$pin][$dev->id]);
+
+                // Jika belum ada di mesin ini atau jika user memilih PIN secara spesifik
+                if (! $hasInThisDevice || ! empty($selectedPins)) {
+                    $student = Student::where('device_user_id', $pin)->first();
+                    $teacher = Teacher::where('device_user_id', $pin)->first();
+                    $name = $student ? $student->name : ($teacher ? $teacher->name : 'User '.$pin);
+
+                    $commands[] = "DATA USER PIN={$pin}\tName={$name}\tPri=0\tGrp=1";
+                    $commands[] = "DATA UPDATE USER PIN={$pin}\tName={$name}\tPri=0\tGrp=1";
+
+                    foreach ($userTemplates as $t) {
+                        $commands[] = "DATA FP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}";
+                        $commands[] = "DATA UPDATE FINGERTMP PIN={$t->device_user_id}\tFID={$t->finger_index}\tSize={$t->size}\tValid=1\tTMP={$t->template_data}";
+                        $totalFpQueued++;
+
+                        DeviceFingerprintTemplate::updateOrCreate(
+                            [
+                                'device_id' => $dev->id,
+                                'device_user_id' => (string) $pin,
+                                'finger_index' => (int) $t->finger_index,
+                            ],
+                            [
+                                'fingerprint_template_id' => $t->id,
+                                'status' => 'synced',
+                                'last_synced_at' => now(),
+                            ]
+                        );
+                    }
+                }
+            }
+
+            if (! empty($commands)) {
+                IclockController::queueCommands($commands, $targetSn, null, null, $dev);
+                $totalCommandsQueued += count($commands);
+            }
+        }
+
+        if ($totalCommandsQueued === 0) {
+            return redirect()->back()->with('info', 'Seluruh sidik jari sudah lengkap dan tersinkron di semua mesin target!');
+        }
+
+        return redirect()->back()->with(
+            'success',
+            "Berhasil menjadwalkan {$totalFpQueued} sidik jari ke antrean mesin yang belum memilikinya. Data akan terunduh otomatis secara bertahap."
+        );
     }
 }

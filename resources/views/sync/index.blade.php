@@ -5,10 +5,14 @@
         <h2 class="text-2xl font-bold text-gray-800">Sinkronisasi & Replikasi Multi-Mesin</h2>
         <p class="text-gray-600 text-sm mt-1">Tarik sidik jari dari satu mesin atau seluruh mesin sekaligus, dan sebarkan ke mesin-mesin lain via antrean bertahap (anti-overload).</p>
     </div>
-    <div class="flex items-center gap-2">
-        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold {{ ($totalPendingQueue ?? 0) > 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300' }}">
+    <div class="flex items-center gap-2.5">
+        <a href="{{ route('sync.matrix') }}" class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md transition transform hover:-translate-y-0.5">
+            <i class="fas fa-th-list"></i>
+            <span>🔍 Cek Sebaran Sidik Jari Antar Mesin</span>
+        </a>
+        <span class="inline-flex items-center px-3 py-2 rounded-xl text-xs font-semibold {{ ($totalPendingQueue ?? 0) > 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300' }}">
             <span class="w-2 h-2 rounded-full mr-2 {{ ($totalPendingQueue ?? 0) > 0 ? 'bg-amber-500 animate-ping' : 'bg-emerald-500' }}"></span>
-            Total Antrean Pending: {{ $totalPendingQueue ?? 0 }} Perintah
+            Antrean: {{ $totalPendingQueue ?? 0 }}
         </span>
     </div>
 </div>
@@ -56,7 +60,25 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+<!-- Banner Fitur Cek Sebaran Sidik Jari -->
+<div class="mb-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-md border border-purple-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-400/30 flex items-center justify-center text-xl shrink-0">
+            <i class="fas fa-network-wired"></i>
+        </div>
+        <div>
+            <h4 class="font-bold text-base text-white flex items-center gap-2">
+                <span>Fitur Baru: Audit & Cek Sebaran Sidik Jari Antar Mesin</span>
+                <span class="bg-purple-500 text-white text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">Baru</span>
+            </h4>
+            <p class="text-xs text-purple-200 mt-0.5">Lihat secara transparan sidik jari setiap siswa dan guru sudah ada di mesin mana saja, serta sebar langsung ke mesin yang belum memilikinya.</p>
+        </div>
+    </div>
+    <a href="{{ route('sync.matrix') }}" class="inline-flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-400 text-white font-bold py-2.5 px-5 rounded-xl shadow transition transform hover:-translate-y-0.5 text-xs sm:text-sm shrink-0">
+        <i class="fas fa-th"></i>
+        <span>Buka Matriks Sebaran</span>
+    </a>
+</div>
     <!-- Card 1: TARIK SIDIK JARI DARI MESIN KE SERVER -->
     <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between border border-slate-800 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
