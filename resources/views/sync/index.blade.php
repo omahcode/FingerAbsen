@@ -79,6 +79,8 @@
         <span>Buka Matriks Sebaran</span>
     </a>
 </div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <!-- Card 1: TARIK SIDIK JARI DARI MESIN KE SERVER -->
     <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between border border-slate-800 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
