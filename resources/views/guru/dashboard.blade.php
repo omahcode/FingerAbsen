@@ -200,23 +200,57 @@
         </div>
     </div>
 
-    <!-- Student Attendance List (Tanpa WhatsApp) -->
+    <!-- Student Attendance List (Dengan Aksi Massal / Sekaligus) -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <!-- Bulk Action Toolbar -->
+        <div class="p-3.5 sm:p-4 bg-slate-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <i class="fas fa-layer-group text-blue-600"></i> Aksi Sekaligus:
+                </span>
+                <span class="text-[11px] text-gray-500 hidden sm:inline">(Terapkan ke siswa terpilih atau seluruh kelas)</span>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="executeGuruBulkAction('in_school')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Tandai Hadir sekaligus">
+                    <i class="fas fa-check-double"></i>
+                    <span>Semua Hadir</span>
+                </button>
+
+                <button type="button" onclick="executeGuruBulkAction('holiday')" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Atur Libur sekaligus (streak aman)">
+                    <i class="fas fa-umbrella-beach"></i>
+                    <span>Semua Libur</span>
+                </button>
+
+                <button type="button" onclick="executeGuruBulkAction('reset')" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition transform hover:-translate-y-0.5" title="Reset presensi sekaligus ke Belum Masuk / Alfa">
+                    <i class="far fa-circle"></i>
+                    <span>Semua Belum Masuk / Alfa</span>
+                </button>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse" id="students-table">
                 <thead>
                     <tr class="bg-gray-50/80 border-b border-gray-100 text-xs font-bold uppercase tracking-wider text-gray-500">
-                        <th class="py-3.5 px-4 w-12 text-center">No</th>
+                        <th class="py-3.5 px-3 w-10 text-center">
+                            <input type="checkbox" id="check-all-guru" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" title="Pilih Semua Siswa">
+                        </th>
+                        <th class="py-3.5 px-3 w-10 text-center">No</th>
                         <th class="py-3.5 px-4">Siswa</th>
                         <th class="py-3.5 px-4 text-center">Status Kehadiran</th>
                         <th class="py-3.5 px-4 text-center">Waktu Presensi</th>
                         <th class="py-3.5 px-4">Keterangan / Alasan</th>
+                        <th class="py-3.5 px-4 text-center">Aksi / Atur Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
                     @forelse($studentsData as $idx => $s)
-                    <tr class="student-row hover:bg-gray-50/80 transition" data-status="{{ $s['status'] }}" data-name="{{ strtolower($s['name']) }}">
-                        <td class="py-3.5 px-4 text-center font-semibold text-gray-400">
+                    <tr class="student-row hover:bg-gray-50/80 transition" data-status="{{ $s['status'] }}" data-name="{{ strtolower($s['name']) }}" data-student-id="{{ $s['id'] }}">
+                        <td class="py-3.5 px-3 text-center">
+                            <input type="checkbox" class="guru-student-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" value="{{ $s['id'] }}">
+                        </td>
+                        <td class="py-3.5 px-3 text-center font-semibold text-gray-400">
                             {{ $idx + 1 }}
                         </td>
                         <td class="py-3.5 px-4">
@@ -249,7 +283,7 @@
                             </span>
                             @elseif($s['status'] === 'holiday')
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                <i class="fas fa-umbrella-beach text-indigo-500"></i> Libur Akhir Pekan
+                                <i class="fas fa-umbrella-beach text-indigo-500"></i> {{ $s['status_label'] }}
                             </span>
                             @else
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
@@ -268,14 +302,44 @@
                                     <i class="fas fa-check-double text-[9px]"></i> Disampaikan Ortu
                                 </span>
                             </div>
+                            @elseif(!empty($s['notes']))
+                            <div>
+                                <span class="font-semibold text-gray-800">{{ $s['notes'] }}</span>
+                            </div>
                             @else
                             <span class="text-gray-400">-</span>
                             @endif
                         </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                @if($s['status'] === 'absent')
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'in_school', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-xs font-bold transition border border-emerald-200" title="Tandai Hadir">
+                                    <i class="fas fa-check"></i> Hadir
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'holiday', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 text-xs font-bold transition border border-purple-200" title="Atur Libur">
+                                    <i class="fas fa-umbrella-beach"></i> Libur
+                                </button>
+                                @elseif($s['status'] === 'holiday')
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'in_school', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-xs font-bold transition border border-emerald-200" title="Tandai Hadir">
+                                    <i class="fas fa-check"></i> Hadir
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'reset', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 text-xs font-bold transition border border-slate-200" title="Kembalikan ke Belum Masuk">
+                                    <i class="far fa-circle"></i> Belum Masuk
+                                </button>
+                                @else
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'holiday', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-600 hover:text-white text-purple-700 text-xs font-bold transition border border-purple-200" title="Atur Libur">
+                                    <i class="fas fa-umbrella-beach"></i> Libur
+                                </button>
+                                <button type="button" onclick="changeGuruStudentStatus({{ $s['id'] }}, 'reset', '{{ addslashes($s['name']) }}')" class="px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-600 hover:text-white text-slate-700 text-xs font-bold transition border border-slate-200" title="Reset ke Belum Masuk">
+                                    <i class="far fa-circle"></i> Belum Masuk
+                                </button>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="py-8 text-center text-gray-400">
+                        <td colspan="7" class="py-8 text-center text-gray-400">
                             Belum ada siswa yang terdaftar di kelas ini.
                         </td>
                     </tr>
@@ -335,6 +399,168 @@
                 filterList();
             });
         });
+
+        // Check All guru logic
+        const checkAllGuru = document.getElementById('check-all-guru');
+        if (checkAllGuru) {
+            checkAllGuru.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                const visibleRows = Array.from(document.querySelectorAll('.student-row'))
+                    .filter(r => r.style.display !== 'none');
+                visibleRows.forEach(row => {
+                    const cb = row.querySelector('.guru-student-checkbox');
+                    if (cb) cb.checked = isChecked;
+                });
+            });
+        }
     });
+
+    function getSelectedGuruStudentIds() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.guru-student-checkbox:checked'));
+        if (checkedBoxes.length > 0) {
+            return checkedBoxes.map(cb => parseInt(cb.value)).filter(Boolean);
+        }
+
+        // Jika tidak ada checkbox yang dipilih, pilih semua siswa yang sedang tampil di daftar kelas ini
+        const visibleRows = Array.from(document.querySelectorAll('.student-row'))
+            .filter(r => r.style.display !== 'none');
+        return visibleRows.map(r => parseInt(r.dataset.studentId)).filter(Boolean);
+    }
+
+    async function executeGuruBulkAction(action) {
+        const targetIds = getSelectedGuruStudentIds();
+        if (targetIds.length === 0) {
+            alert('Tidak ada siswa yang dipilih atau tersedia pada daftar.');
+            return;
+        }
+
+        const count = targetIds.length;
+        let actionLabel = '';
+        let confirmColor = '#4f46e5';
+
+        if (action === 'holiday') {
+            actionLabel = `mengatur ${count} siswa menjadi LIBUR (streak absensi tetap aman)`;
+            confirmColor = '#7c3aed';
+        } else if (action === 'in_school') {
+            actionLabel = `menandai ${count} siswa menjadi HADIR (Masuk Sekolah)`;
+            confirmColor = '#059669';
+        } else if (action === 'reset') {
+            actionLabel = `mereset presensi ${count} siswa menjadi BELUM MASUK / ALFA`;
+            confirmColor = '#334155';
+        }
+
+        const confirmText = `Apakah Anda yakin ingin ${actionLabel}? Tindakan ini akan diterapkan ke ${count} siswa terpilih / terfilter di kelas ini.`;
+
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: 'Konfirmasi Aksi Sekaligus',
+                text: confirmText,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Jalankan',
+                cancelButtonText: 'Batal'
+            });
+            if (!res.isConfirmed) return;
+        } else {
+            if (!confirm(confirmText)) return;
+        }
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            const resp = await fetch('{{ route('monitoring.kepulangan.update_status_bulk') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    action: action,
+                    student_ids: targetIds
+                })
+            });
+
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                if (typeof Swal !== 'undefined') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(data.message);
+                }
+                window.location.reload();
+            } else {
+                alert(data.message || 'Gagal mengubah status massal.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Terjadi kesalahan koneksi.');
+        }
+    }
+
+    // Fungsi Ubah Status Siswa Cepat (Hadir, Belum Masuk, Libur)
+    async function changeGuruStudentStatus(studentId, action, studentName) {
+        let title = '';
+        let confirmColor = '#4f46e5';
+        if (action === 'in_school') {
+            title = `Tandai siswa ${studentName} HADIR hari ini?`;
+            confirmColor = '#059669';
+        } else if (action === 'holiday') {
+            title = `Atur siswa ${studentName} menjadi LIBUR hari ini? (Streak kehadiran tetap aman)`;
+            confirmColor = '#7c3aed';
+        } else if (action === 'reset') {
+            title = `Reset presensi ${studentName} menjadi BELUM MASUK?`;
+            confirmColor = '#64748b';
+        }
+
+        if (typeof Swal !== 'undefined') {
+            const res = await Swal.fire({
+                title: 'Konfirmasi Atur Status',
+                text: title,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: confirmColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Lanjutkan',
+                cancelButtonText: 'Batal'
+            });
+            if (!res.isConfirmed) return;
+        } else {
+            if (!confirm(title)) return;
+        }
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const resp = await fetch(`/monitoring/kepulangan/${studentId}/update-status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ action: action })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.status === 'success') {
+                if (typeof Toast !== 'undefined') {
+                    Toast.fire({ icon: 'success', title: data.message });
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, timer: 1500, showConfirmButton: false });
+                }
+                setTimeout(() => window.location.reload(), 700);
+            } else {
+                alert(data.message || 'Gagal mengubah status');
+            }
+        } catch (e) {
+            alert('Terjadi kesalahan koneksi saat memperbarui status.');
+        }
+    }
 </script>
 @endsection

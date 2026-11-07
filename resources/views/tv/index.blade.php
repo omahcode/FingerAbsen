@@ -2278,6 +2278,11 @@
                 if (log.id > maxTvLogId) maxTvLogId = log.id;
             }
 
+            // Abaikan jika log milik guru (teacher_id) atau bukan data siswa terdaftar
+            if (log.teacher_id || !log.student_id || !log.student) {
+                return;
+            }
+
             const student = log.student;
             const studentName = student ? student.name : ('Siswa ' + (log.device_user_id || ''));
 

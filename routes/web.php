@@ -10,29 +10,33 @@ use App\Http\Controllers\MajorMonitoringController;
 use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SchoolClassController;
+use App\Http\Controllers\SchoolEventController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentDepartureMonitoringController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TeacherDashboardController;
 use App\Http\Controllers\TeacherManagementController;
 use App\Http\Controllers\TvController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Rute Autentikasi
 Route::get('login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('login', [AuthController::class, 'login'])->middleware('throttle:15,1')->name('login.post');
+Route::post('login', [AuthController::class, 'login'])->name('login.post');
 Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 // Halaman Publik (Mode TV & API Realtime Polling Terproteksi)
 Route::get('tv', [TvController::class, 'index'])->name('tv.index');
-Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:60,1')->name('attendance.latest');
+Route::get('attendance/latest', [AttendanceController::class, 'latest'])->middleware('throttle:300,1')->name('attendance.latest');
 
 // ====================================================
 // PORTAL ORANG TUA / WALI MURID
 // ====================================================
 Route::get('orang-tua', [ParentDashboardController::class, 'index'])->name('parent.index');
+Route::get('orang-tua/cek-nis', [ParentDashboardController::class, 'checkNis'])->name('parent.check-nis');
 Route::post('orang-tua/pilih', [ParentDashboardController::class, 'selectStudent'])->name('parent.select');
 Route::post('orang-tua/keluar', [ParentDashboardController::class, 'clear'])->name('parent.clear');
 Route::get('orang-tua/data', [ParentDashboardController::class, 'data'])->name('parent.data');
@@ -46,6 +50,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function () {
         if (Auth::user()->isGuru()) {
             return redirect()->route('guru.dashboard');
+        }
+
+        if (Auth::user()->isKepalaSekolah()) {
+            return redirect()->route('teachers.ceremony');
         }
 
         return redirect()->route('devices.index');
@@ -63,6 +71,7 @@ Route::middleware('auth')->group(function () {
     // Fitur Monitoring Status Kepulangan Siswa (Realtime & Direct Page)
     Route::get('monitoring/kepulangan', [StudentDepartureMonitoringController::class, 'index'])->name('monitoring.kepulangan');
     Route::get('monitoring/kepulangan/data', [StudentDepartureMonitoringController::class, 'data'])->name('monitoring.kepulangan.data');
+    Route::post('monitoring/kepulangan/update-status-bulk', [StudentDepartureMonitoringController::class, 'updateStatusBulk'])->name('monitoring.kepulangan.update_status_bulk');
     Route::post('monitoring/kepulangan/{student}/update-status', [StudentDepartureMonitoringController::class, 'updateStatus'])->name('monitoring.kepulangan.update_status');
     Route::get('monitoring-pulang', fn () => redirect()->route('monitoring.kepulangan'))->name('monitoring.pulang');
 
@@ -80,7 +89,12 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/announcements/{id}/reject', [AnnouncementController::class, 'reject'])->name('admin.announcements.reject');
     Route::delete('admin/announcements/{id}', [AnnouncementController::class, 'adminDestroy'])->name('admin.announcements.destroy');
 
-    // Manajemen Akun Guru (Admin)
+    // Manajemen Seluruh Akun Pengguna (Users: Guru, Kepala Sekolah, Admin)
+    Route::post('admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset_password');
+    Route::resource('admin/users', UserController::class)->names('admin.users')->except(['create', 'show', 'edit']);
+    Route::get('users', fn () => redirect()->route('admin.users.index'))->name('users.index');
+
+    // Manajemen Akun Guru (Admin) - Kompatibilitas rute lama
     Route::resource('admin/teachers', TeacherManagementController::class)->names('admin.teachers')->except(['create', 'show', 'edit']);
 
     // Manajemen Mesin & Master Data
@@ -100,6 +114,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('students', StudentController::class)->except(['show']);
     Route::post('students/sync', [StudentController::class, 'sync'])->name('students.sync');
 
+    // Master Data Guru (User Mesin & Fingerprint)
+    Route::get('teachers/download-template', [TeacherController::class, 'downloadTemplate'])->name('teachers.downloadTemplate');
+    Route::get('teachers/import', [TeacherController::class, 'importForm'])->name('teachers.importForm');
+    Route::post('teachers/import', [TeacherController::class, 'importExcel'])->name('teachers.importExcel');
+    Route::get('teachers/ceremony', [TeacherController::class, 'ceremonyAttendance'])->name('teachers.ceremony');
+    Route::post('teachers/sync-all', [TeacherController::class, 'syncAll'])->name('teachers.sync_all');
+    Route::post('teachers/delete-multiple', [TeacherController::class, 'destroyMultiple'])->name('teachers.destroyMultiple');
+    Route::resource('teachers', TeacherController::class)->except(['create', 'show', 'edit']);
+
     Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('attendance/sync', [AttendanceController::class, 'sync'])->name('attendance.sync');
     Route::post('attendance/delete-multiple', [AttendanceController::class, 'destroyMultiple'])->name('attendance.destroyMultiple');
@@ -107,8 +130,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('attendance/{id}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
 
     Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
+    Route::get('sync/matrix', [SyncController::class, 'matrix'])->name('sync.matrix');
+    Route::post('sync/scan-devices', [SyncController::class, 'scanDevices'])->name('sync.scanDevices');
+    Route::post('sync/sync-missing', [SyncController::class, 'syncMissing'])->name('sync.syncMissing');
+    Route::get('sync/preview-templates', [SyncController::class, 'previewTemplates'])->name('sync.previewTemplates');
     Route::post('sync/push-all', [SyncController::class, 'pushAll'])->name('sync.pushAll');
-    Route::post('sync/backup-templates', [SyncController::class, 'backupTemplates'])->name('sync.backupTemplates');
+    Route::post('sync/pull-templates', [SyncController::class, 'pullTemplates'])->name('sync.pullTemplates');
+    Route::post('sync/clear-queue', [SyncController::class, 'clearQueue'])->name('sync.clearQueue');
+    Route::post('sync/backup-templates', [SyncController::class, 'pullTemplates'])->name('sync.backupTemplates');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
@@ -119,6 +148,10 @@ Route::middleware('auth')->group(function () {
     Route::post('settings/manual-streak', [SettingController::class, 'updateManualStreak'])->name('settings.manual_streak.update');
     Route::post('settings/manual-streak/reset', [SettingController::class, 'resetManualStreak'])->name('settings.manual_streak.reset');
     Route::post('settings/manual-streak/simulate-top3', [SettingController::class, 'simulateTop3Streak'])->name('settings.manual_streak.simulate_top3');
+
+    // Manajemen Hari Khusus / Kemah / Libur Sekolah (Streak Protection)
+    Route::post('school-events', [SchoolEventController::class, 'store'])->name('school-events.store');
+    Route::delete('school-events/{schoolEvent}', [SchoolEventController::class, 'destroy'])->name('school-events.destroy');
 
     // Rute Simulasi Absensi (Hanya dapat diakses setelah login)
     Route::match(['get', 'post'], 'attendance/simulate', [AttendanceController::class, 'simulate'])->name('attendance.simulate');

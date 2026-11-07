@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -58,13 +59,27 @@ class Setting extends Model
     }
 
     /**
-     * Cek apakah suatu tanggal adalah hari sekolah aktif (bukan hari libur mingguan)
+     * Cek apakah suatu tanggal adalah hari sekolah aktif (bukan hari libur mingguan & bukan libur sekolah)
      */
     public static function isSchoolDay($date = null): bool
     {
-        $carbon = $date ? \Carbon\Carbon::parse($date, 'Asia/Jakarta') : \Carbon\Carbon::now('Asia/Jakarta');
+        $carbon = $date ? Carbon::parse($date, 'Asia/Jakarta') : Carbon::now('Asia/Jakarta');
         $dayOfWeek = (int) $carbon->dayOfWeek; // 0=Sunday, 1=Monday, ..., 6=Saturday
-        return in_array($dayOfWeek, self::getSchoolDays(), true);
+
+        if (! in_array($dayOfWeek, self::getSchoolDays(), true)) {
+            return false;
+        }
+
+        // Cek apakah ada libur umum seluruh sekolah (misal libur 1-2 minggu / libur nasional)
+        try {
+            if (SchoolEvent::isGeneralHoliday($carbon)) {
+                return false;
+            }
+        } catch (\Throwable $e) {
+            // Abaikan jika tabel belum ada saat migrasi awal
+        }
+
+        return true;
     }
 
     /**
@@ -72,6 +87,6 @@ class Setting extends Model
      */
     public static function isHolidayOrWeekend($date = null): bool
     {
-        return !self::isSchoolDay($date);
+        return ! self::isSchoolDay($date);
     }
 }

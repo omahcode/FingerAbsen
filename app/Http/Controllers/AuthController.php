@@ -16,9 +16,15 @@ class AuthController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return Auth::user()->isGuru()
-                ? redirect()->route('guru.dashboard')
-                : redirect()->route('devices.index');
+            $user = Auth::user();
+            if ($user->isGuru()) {
+                return redirect()->route('guru.dashboard');
+            }
+            if ($user->isKepalaSekolah()) {
+                return redirect()->route('teachers.ceremony');
+            }
+
+            return redirect()->route('devices.index');
         }
 
         // Cek apakah user perlu verifikasi anti-bot captcha (setelah 2x percobaan gagal)
@@ -120,7 +126,13 @@ class AuthController extends Controller
 
             Log::info("Login berhasil untuk user: {$user->name} ({$user->email}), Role: {$user->role}, IP: {$ip}");
 
-            $targetRoute = $user->isGuru() ? route('guru.dashboard') : route('devices.index');
+            if ($user->isGuru()) {
+                $targetRoute = route('guru.dashboard');
+            } elseif ($user->isKepalaSekolah()) {
+                $targetRoute = route('teachers.ceremony');
+            } else {
+                $targetRoute = route('devices.index');
+            }
 
             return redirect()->intended($targetRoute)->with('success', 'Selamat datang kembali, '.$user->name.'!');
         }

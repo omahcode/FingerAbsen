@@ -6,6 +6,7 @@ use App\Models\AttendanceLog;
 use App\Models\Device;
 use App\Models\FingerprintTemplate;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,11 +31,32 @@ Route::middleware(['throttle:120,1', RestrictInternalApiAccess::class])->group(f
             return response()->json(['error' => 'Device not found'], 404);
         }
 
-        $student = Student::where('device_user_id', (string) $uid)->first();
+        $teacher = Teacher::where('device_user_id', (string) $uid)->first();
+        $student = $teacher ? null : Student::where('device_user_id', (string) $uid)->first();
+
+        // Isolasi peruntukan mesin
+        if ($device->isForTeachers() && ! $teacher) {
+            return response()->json(['status' => 'skipped', 'message' => 'Machine dedicated for teacher ceremony'], 403);
+        }
+        if ($device->isForStudents() && $teacher) {
+            return response()->json(['status' => 'skipped', 'message' => 'Machine dedicated for students'], 403);
+        }
+
         $isStrict = env('STRICT_ATTENDANCE', true);
 
-        if ($isStrict && $student) {
-            // Strict Mode (Anti-Duplikat Harian)
+        if ($teacher) {
+            // Anti-duplikat guru
+            $date = substr($timestamp, 0, 10);
+            $existingLog = AttendanceLog::withTrashed()
+                ->where('teacher_id', $teacher->id)
+                ->whereDate('timestamp', $date)
+                ->first();
+
+            if ($existingLog) {
+                return response()->json(['status' => 'skipped', 'message' => 'Teacher already attended today']);
+            }
+        } elseif ($isStrict && $student) {
+            // Strict Mode (Anti-Duplikat Harian Siswa)
             $date = substr($timestamp, 0, 10);
             $existingLog = AttendanceLog::withTrashed()
                 ->where('student_id', $student->id)
@@ -65,11 +87,14 @@ Route::middleware(['throttle:120,1', RestrictInternalApiAccess::class])->group(f
             'device_user_id' => (string) $uid,
             'timestamp' => $timestamp,
             'student_id' => $student ? $student->id : null,
+            'teacher_id' => $teacher ? $teacher->id : null,
             'status_code' => $status,
         ]);
 
-        // Siarkan ke layar TV
-        broadcast(new AttendanceCreated($log));
+        // Siarkan ke layar TV HANYA JIKA SISWA (Bukan Guru)
+        if ($student && ! $teacher) {
+            broadcast(new AttendanceCreated($log));
+        }
 
         return response()->json(['status' => 'success']);
     });

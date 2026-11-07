@@ -476,16 +476,297 @@
                 </div>
             </div>
 
-            <!-- Tombol Simpan Pengaturan Utama -->
-            <div class="flex justify-end pt-2">
-                <button 
-                    type="submit" 
-                    class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow transition flex items-center text-sm"
-                >
-                    <i class="fas fa-save mr-2"></i> Simpan Semua Pengaturan
+            </div>
+        </div>
+    </form>
+
+    <!-- Card Terpisah: Hari Khusus, Kegiatan Kemah / Ekspram & Libur Panjang Sekolah -->
+    <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-emerald-100 border-l-4 border-l-emerald-500">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+            <div>
+                <h3 class="text-base font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-campground text-emerald-600 mr-2"></i> Hari Khusus, Kegiatan Kemah / Ekspram & Libur Sekolah
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    Atur kegiatan khusus per tingkat kelas (seperti <strong>Kelas 10 sedang Kemah/Ekspram</strong> sementara kelas 11/12 masuk) atau <strong>Libur Panjang (1–2 Minggu)</strong>. 
+                    <span class="text-emerald-700 font-semibold">Streak kehadiran siswa yang bersangkutan otomatis terlindungi dan tidak akan putus!</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Tombol Preset Cepat (Quick Actions) -->
+        <div class="mb-4 bg-emerald-50/70 border border-emerald-200/80 p-3.5 rounded-xl">
+            <span class="text-xs font-bold text-emerald-900 block mb-2 flex items-center">
+                <i class="fas fa-bolt text-emerald-600 mr-1.5"></i> Preset Tombol Cepat:
+            </span>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="fillEventPreset('kemah_10')" class="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-300 shadow-sm transition flex items-center gap-1.5">
+                    🏕️ Kemah Kelas 10 (3 Hari)
+                </button>
+                <button type="button" onclick="fillEventPreset('kemah_11')" class="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-300 shadow-sm transition flex items-center gap-1.5">
+                    🏕️ Kemah Kelas 11 (3 Hari)
+                </button>
+                <button type="button" onclick="fillEventPreset('libur_1w')" class="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-teal-100 text-teal-800 rounded-lg border border-teal-300 shadow-sm transition flex items-center gap-1.5">
+                    🏖️ Libur Sekolah 1 Minggu (Semua Kelas)
+                </button>
+                <button type="button" onclick="fillEventPreset('libur_2w')" class="text-xs font-semibold px-3 py-1.5 bg-white hover:bg-teal-100 text-teal-800 rounded-lg border border-teal-300 shadow-sm transition flex items-center gap-1.5">
+                    🏖️ Libur Sekolah 2 Minggu (Semua Kelas)
                 </button>
             </div>
-    </form>
+        </div>
+
+        <!-- Form Tambah Hari Khusus / Libur -->
+        <form action="{{ route('school-events.store') }}" method="POST" id="form-school-event" class="space-y-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <!-- Judul Kegiatan / Libur -->
+                <div class="md:col-span-5">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-tag text-emerald-600 mr-1"></i> Nama Kegiatan / Libur:
+                    </label>
+                    <input 
+                        type="text" 
+                        name="title" 
+                        id="event_title" 
+                        required 
+                        placeholder="Contoh: Kemah Blok Pramuka Kelas 10" 
+                        class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    >
+                </div>
+
+                <!-- Jenis / Tipe -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-info-circle text-blue-500 mr-1"></i> Jenis Acara:
+                    </label>
+                    <select name="type" id="event_type" required class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="event">🏕️ Kegiatan / Kemah / Ekspram</option>
+                        <option value="holiday">🏖️ Libur Sekolah</option>
+                        <option value="dispensation">📋 Dispensasi Khusus</option>
+                    </select>
+                </div>
+
+                <!-- Sasaran / Target -->
+                <div class="md:col-span-4">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-users text-indigo-500 mr-1"></i> Berlaku Untuk:
+                    </label>
+                    <select name="target_type" id="event_target_type" required onchange="handleTargetTypeChange(this.value)" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="grade">Khusus Tingkat Kelas (10, 11, atau 12)</option>
+                        <option value="all">Semua Siswa (Seluruh Sekolah)</option>
+                        <option value="class">Khusus Kelas Tertentu</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                <!-- Dropdown Tingkat Kelas (grade_level) -->
+                <div class="md:col-span-3" id="grade_level_wrapper">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-layer-group text-purple-600 mr-1"></i> Pilih Tingkat:
+                    </label>
+                    <select name="grade_level" id="event_grade_level" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="10">Kelas 10 (Sepuluh)</option>
+                        <option value="11">Kelas 11 (Sebelas)</option>
+                        <option value="12">Kelas 12 (Dua Belas)</option>
+                    </select>
+                </div>
+
+                <!-- Dropdown Kelas Spesifik (school_class_id) -->
+                <div class="md:col-span-3 hidden" id="class_picker_wrapper">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-chalkboard text-purple-600 mr-1"></i> Pilih Kelas:
+                    </label>
+                    <select name="school_class_id" id="event_school_class_id" class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="">-- Pilih Kelas --</option>
+                        @foreach($classes as $c)
+                            <option value="{{ $c->id }}">{{ $c->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Tanggal Mulai -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-calendar-day text-emerald-600 mr-1"></i> Tanggal Mulai:
+                    </label>
+                    <input 
+                        type="date" 
+                        name="start_date" 
+                        id="event_start_date" 
+                        value="{{ date('Y-m-d') }}" 
+                        required 
+                        class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    >
+                </div>
+
+                <!-- Tanggal Selesai -->
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">
+                        <i class="fas fa-calendar-check text-emerald-600 mr-1"></i> Tanggal Selesai:
+                    </label>
+                    <input 
+                        type="date" 
+                        name="end_date" 
+                        id="event_end_date" 
+                        value="{{ date('Y-m-d') }}" 
+                        required 
+                        class="w-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    >
+                </div>
+
+                <!-- Tombol Submit -->
+                <div class="md:col-span-3 flex justify-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-2 rounded-lg text-sm shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fas fa-plus-circle"></i> Tambah Jadwal
+                    </button>
+                </div>
+            </div>
+
+            <!-- Checkbox Preserve Streak & Catatan -->
+            <div class="pt-2 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <label class="flex items-center cursor-pointer select-none">
+                    <input type="checkbox" name="preserve_streak" value="1" checked class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+                    <span class="ml-2 text-xs font-bold text-gray-700 flex items-center">
+                        <i class="fas fa-shield-alt text-emerald-600 mr-1"></i> Lindungi Streak Siswa
+                        <span class="text-[11px] font-normal text-gray-500 ml-1">(Hari ini dilewati saat hitung streak, tidak memutus rekor kehadiran)</span>
+                    </span>
+                </label>
+                <div class="w-full sm:w-auto">
+                    <input 
+                        type="text" 
+                        name="description" 
+                        id="event_description" 
+                        placeholder="Keterangan tambahan (opsional)" 
+                        class="w-full sm:w-72 p-1.5 text-xs bg-white border border-gray-300 rounded-lg text-gray-700 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                    >
+                </div>
+            </div>
+        </form>
+
+        <!-- Tabel Daftar Hari Khusus & Libur -->
+        <div>
+            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Daftar Hari Khusus & Libur Terjadwal ({{ $schoolEvents->count() }})</span>
+                @if($schoolEvents->count() > 0)
+                <span class="text-[11px] font-normal text-gray-400 lowercase">otomatis sinkron dengan perhitungan streak</span>
+                @endif
+            </h4>
+
+            @if($schoolEvents->count() > 0)
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-left text-xs text-gray-600">
+                    <thead class="bg-slate-100 text-gray-700 uppercase font-semibold text-[10px]">
+                        <tr>
+                            <th class="p-2.5">Kegiatan / Libur</th>
+                            <th class="p-2.5">Sasaran</th>
+                            <th class="p-2.5">Rentang Tanggal</th>
+                            <th class="p-2.5 text-center">Durasi</th>
+                            <th class="p-2.5 text-center">Status</th>
+                            <th class="p-2.5 text-center">Streak</th>
+                            <th class="p-2.5 text-center w-20">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @php
+                            $todayStr = \Carbon\Carbon::today('Asia/Jakarta')->toDateString();
+                        @endphp
+                        @foreach($schoolEvents as $event)
+                        @php
+                            $startStr = $event->start_date ? $event->start_date->toDateString() : '';
+                            $endStr = $event->end_date ? $event->end_date->toDateString() : '';
+                            $isActive = ($startStr <= $todayStr && $endStr >= $todayStr);
+                            $isUpcoming = ($startStr > $todayStr);
+                            $durationDays = $event->start_date && $event->end_date 
+                                ? $event->start_date->diffInDays($event->end_date) + 1 
+                                : 1;
+                        @endphp
+                        <tr class="hover:bg-slate-50 transition {{ $isActive ? 'bg-emerald-50/40' : '' }}">
+                            <td class="p-2.5">
+                                <div class="font-bold text-gray-800 text-xs flex items-center gap-1.5">
+                                    @if($event->type === 'holiday')
+                                        <span class="text-teal-600">🏖️</span>
+                                    @elseif($event->type === 'event')
+                                        <span class="text-emerald-600">🏕️</span>
+                                    @else
+                                        <span class="text-blue-600">📋</span>
+                                    @endif
+                                    {{ $event->title }}
+                                </div>
+                                @if($event->description)
+                                    <div class="text-[10px] text-gray-400 mt-0.5">{{ $event->description }}</div>
+                                @endif
+                            </td>
+                            <td class="p-2.5">
+                                @if($event->target_type === 'all')
+                                    <span class="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1">
+                                        <i class="fas fa-globe-asia text-[9px]"></i> Semua Siswa
+                                    </span>
+                                @elseif($event->target_type === 'grade')
+                                    <span class="bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1">
+                                        <i class="fas fa-layer-group text-[9px]"></i> Kelas {{ $event->grade_level }} Saja
+                                    </span>
+                                @elseif($event->target_type === 'class')
+                                    <span class="bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1">
+                                        <i class="fas fa-chalkboard text-[9px]"></i> {{ $event->schoolClass->name ?? 'Kelas Khusus' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="p-2.5 whitespace-nowrap font-medium text-gray-700">
+                                {{ $event->start_date ? $event->start_date->translatedFormat('d M Y') : '-' }} 
+                                <span class="text-gray-400">s/d</span> 
+                                {{ $event->end_date ? $event->end_date->translatedFormat('d M Y') : '-' }}
+                            </td>
+                            <td class="p-2.5 text-center font-bold font-mono text-gray-700">
+                                {{ $durationDays }} Hari
+                            </td>
+                            <td class="p-2.5 text-center whitespace-nowrap">
+                                @if($isActive)
+                                    <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10px] animate-pulse">
+                                        ● Berlangsung
+                                    </span>
+                                @elseif($isUpcoming)
+                                    <span class="bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                                        Akan Datang
+                                    </span>
+                                @else
+                                    <span class="bg-gray-100 text-gray-500 font-medium px-2 py-0.5 rounded-full text-[10px]">
+                                        Selesai
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="p-2.5 text-center">
+                                @if($event->preserve_streak)
+                                    <span class="text-emerald-600 font-semibold text-[11px] inline-flex items-center gap-0.5" title="Streak kehadiran terlindungi">
+                                        <i class="fas fa-shield-alt text-[10px]"></i> Aman
+                                    </span>
+                                @else
+                                    <span class="text-gray-400 text-[11px]">-</span>
+                                @endif
+                            </td>
+                            <td class="p-2.5 text-center">
+                                <form action="{{ route('school-events.destroy', $event->id) }}" method="POST" data-confirm="Hapus jadwal hari khusus '{{ $event->title }}'?" data-title="Hapus Hari Khusus" data-danger="true" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded text-xs transition" title="Hapus">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-gray-400">
+                <i class="fas fa-calendar-times text-2xl text-gray-300 block mb-1.5"></i>
+                Belum ada jadwal hari khusus, kegiatan kemah, atau libur panjang yang ditambahkan.<br>
+                Gunakan formulir atau tombol preset cepat di atas untuk menambahkan jadwal.
+            </div>
+            @endif
+        </div>
+    </div>
 
     <!-- Card Terpisah: Simulasi & Uji Coba Manual Streak Mode TV -->
     <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-indigo-100 border-l-4 border-l-indigo-600">
@@ -673,6 +954,84 @@
             input.value = sec;
             input.classList.add('ring-2', 'ring-purple-500');
             setTimeout(() => input.classList.remove('ring-2', 'ring-purple-500'), 600);
+        }
+    }
+
+    function handleTargetTypeChange(val) {
+        const gradeWrapper = document.getElementById('grade_level_wrapper');
+        const classWrapper = document.getElementById('class_picker_wrapper');
+
+        if (val === 'grade') {
+            gradeWrapper.classList.remove('hidden');
+            classWrapper.classList.add('hidden');
+        } else if (val === 'class') {
+            gradeWrapper.classList.add('hidden');
+            classWrapper.classList.remove('hidden');
+        } else {
+            // all
+            gradeWrapper.classList.add('hidden');
+            classWrapper.classList.add('hidden');
+        }
+    }
+
+    function fillEventPreset(preset) {
+        const today = new Date();
+        const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const titleInput = document.getElementById('event_title');
+        const typeSelect = document.getElementById('event_type');
+        const targetTypeSelect = document.getElementById('event_target_type');
+        const gradeSelect = document.getElementById('event_grade_level');
+        const startDateInput = document.getElementById('event_start_date');
+        const endDateInput = document.getElementById('event_end_date');
+        const descInput = document.getElementById('event_description');
+
+        const startDate = new Date(today);
+        let endDate = new Date(today);
+
+        if (preset === 'kemah_10') {
+            titleInput.value = 'Kemah Pramuka / Ekspram Kelas 10';
+            typeSelect.value = 'event';
+            targetTypeSelect.value = 'grade';
+            gradeSelect.value = '10';
+            endDate.setDate(startDate.getDate() + 2); // 3 hari
+            if (descInput) descInput.value = 'Kegiatan Kemah Khusus Kelas 10 (Streak kelas 10 tetap terjaga)';
+        } else if (preset === 'kemah_11') {
+            titleInput.value = 'Kemah / Kegiatan Luar Kelas 11';
+            typeSelect.value = 'event';
+            targetTypeSelect.value = 'grade';
+            gradeSelect.value = '11';
+            endDate.setDate(startDate.getDate() + 2); // 3 hari
+            if (descInput) descInput.value = 'Kegiatan Khusus Kelas 11 (Streak kelas 11 tetap terjaga)';
+        } else if (preset === 'libur_1w') {
+            titleInput.value = 'Libur Sekolah (1 Minggu)';
+            typeSelect.value = 'holiday';
+            targetTypeSelect.value = 'all';
+            endDate.setDate(startDate.getDate() + 6); // 7 hari
+            if (descInput) descInput.value = 'Libur sekolah bersama 1 minggu (Streak semua siswa aman)';
+        } else if (preset === 'libur_2w') {
+            titleInput.value = 'Libur Semester / Panjang (2 Minggu)';
+            typeSelect.value = 'holiday';
+            targetTypeSelect.value = 'all';
+            endDate.setDate(startDate.getDate() + 13); // 14 hari
+            if (descInput) descInput.value = 'Libur sekolah bersama 2 minggu (Streak semua siswa aman)';
+        }
+
+        startDateInput.value = formatDate(startDate);
+        endDateInput.value = formatDate(endDate);
+        handleTargetTypeChange(targetTypeSelect.value);
+
+        // Highlight form visual feedback
+        const form = document.getElementById('form-school-event');
+        if (form) {
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            form.classList.add('ring-2', 'ring-emerald-500');
+            setTimeout(() => form.classList.remove('ring-2', 'ring-emerald-500'), 1000);
         }
     }
 </script>

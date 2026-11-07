@@ -69,15 +69,13 @@ class ParentPortalTest extends TestCase
         $response->assertViewIs('parent.login');
         $response->assertSee('Portal Wali Murid');
         $response->assertSee('Verifikasi Akses Orang Tua');
-        $response->assertSee('XII RPL 1');
+        $response->assertSee('Nomor Induk Siswa (NIS)');
     }
 
-    public function test_parent_login_succeeds_with_valid_requirements(): void
+    public function test_parent_login_succeeds_with_valid_nis(): void
     {
         $response = $this->post(route('parent.select'), [
             'nis' => '12345',
-            'name' => 'Raditya Pratama',
-            'school_class_id' => $this->class->id,
         ]);
 
         $response->assertRedirect(route('parent.index'));
@@ -89,8 +87,6 @@ class ParentPortalTest extends TestCase
     {
         $response = $this->from(route('parent.index'))->post(route('parent.select'), [
             'nis' => '99999',
-            'name' => 'Raditya Pratama',
-            'school_class_id' => $this->class->id,
         ]);
 
         $response->assertRedirect(route('parent.index'));
@@ -98,30 +94,52 @@ class ParentPortalTest extends TestCase
         $this->assertNull(session('parent_student_id'));
     }
 
-    public function test_parent_login_fails_if_student_name_does_not_match(): void
+    public function test_parent_login_fails_if_nis_is_empty(): void
     {
         $response = $this->from(route('parent.index'))->post(route('parent.select'), [
-            'nis' => '12345',
-            'name' => 'Nama Yang Salah',
-            'school_class_id' => $this->class->id,
+            'nis' => '',
         ]);
 
         $response->assertRedirect(route('parent.index'));
-        $response->assertSessionHasErrors(['name']);
+        $response->assertSessionHasErrors(['nis']);
         $this->assertNull(session('parent_student_id'));
     }
 
-    public function test_parent_login_fails_if_class_does_not_match(): void
+    public function test_check_nis_returns_student_data_when_found(): void
     {
-        $response = $this->from(route('parent.index'))->post(route('parent.select'), [
-            'nis' => '12345',
-            'name' => 'Raditya Pratama',
-            'school_class_id' => $this->otherClass->id,
-        ]);
+        $response = $this->getJson(route('parent.check-nis', ['nis' => '12345']));
 
-        $response->assertRedirect(route('parent.index'));
-        $response->assertSessionHasErrors(['school_class_id']);
-        $this->assertNull(session('parent_student_id'));
+        $response->assertOk();
+        $response->assertJson([
+            'found' => true,
+            'student' => [
+                'id' => $this->student->id,
+                'nis' => '12345',
+                'name' => 'Raditya Pratama',
+                'class_name' => 'XII RPL 1',
+                'major_name' => 'Rekayasa Perangkat Lunak',
+            ],
+        ]);
+    }
+
+    public function test_check_nis_returns_not_found_when_student_does_not_exist(): void
+    {
+        $response = $this->getJson(route('parent.check-nis', ['nis' => '99999']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'found' => false,
+        ]);
+    }
+
+    public function test_check_nis_returns_not_found_when_empty(): void
+    {
+        $response = $this->getJson(route('parent.check-nis'));
+
+        $response->assertOk();
+        $response->assertJson([
+            'found' => false,
+        ]);
     }
 
     public function test_authenticated_parent_can_view_child_dashboard(): void
