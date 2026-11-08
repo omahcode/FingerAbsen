@@ -9,6 +9,7 @@
             <div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-xs font-semibold uppercase tracking-wider text-rose-100 mb-2 border border-white/20">
                     <i class="fas fa-flag text-yellow-300"></i> Presensi Upacara & Acara Sekolah
+                    <span class="ml-2 pl-2 border-l border-white/30 text-yellow-200 font-mono"><i class="fas fa-clock mr-1"></i> Jam Upacara: {{ $ceremonyStart ?? '06:00' }} - {{ $ceremonyEnd ?? '07:00' }} WIB</span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     Presensi Upacara Dewan Guru
@@ -37,26 +38,33 @@
         </div>
 
         <!-- Summary Stat Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/15">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-white/15">
             <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
                 <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Total Guru</div>
                 <div class="text-2xl font-black mt-0.5">{{ $teachers->count() }}</div>
             </div>
             <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
-                <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Hadir (Sudah Tap)</div>
-                <div class="text-2xl font-black text-emerald-200 mt-0.5">{{ $attendedCount }}</div>
+                <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Hadir Tepat Waktu</div>
+                <div class="text-2xl font-black text-emerald-200 mt-0.5">{{ $ontimeCount ?? $attendedCount }}</div>
+                <div class="text-[10px] text-emerald-100 font-mono mt-0.5">{{ $ceremonyStart }} - {{ $ceremonyEnd }}</div>
+            </div>
+            <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
+                <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Lewat Batas</div>
+                <div class="text-2xl font-black text-amber-200 mt-0.5">{{ $lateCount ?? 0 }}</div>
+                <div class="text-[10px] text-amber-100 font-mono mt-0.5">&gt; {{ $ceremonyEnd }}</div>
             </div>
             <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
                 <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Belum Tap</div>
-                <div class="text-2xl font-black text-amber-200 mt-0.5">{{ $unattendedCount }}</div>
+                <div class="text-2xl font-black text-rose-200 mt-0.5">{{ $unattendedCount }}</div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
+            <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10 col-span-2 sm:col-span-1">
                 <div class="text-[11px] text-rose-100 uppercase tracking-wider font-semibold">Persentase Hadir</div>
                 @php
                     $total = $teachers->count();
-                    $pct = $total > 0 ? round(($attendedCount / $total) * 100, 1) : 0;
+                    $pct = $total > 0 ? round((($ontimeCount ?? $attendedCount) / $total) * 100, 1) : 0;
                 @endphp
                 <div class="text-2xl font-black text-yellow-200 mt-0.5">{{ $pct }}%</div>
+                <div class="text-[10px] text-yellow-100 mt-0.5">{{ $attendedCount }}/{{ $total }} tap</div>
             </div>
         </div>
     </div>
@@ -79,7 +87,9 @@
                 </label>
                 <select name="status" onchange="this.form.submit()" class="w-full border border-gray-300 rounded-xl text-sm p-2.5 bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
                     <option value="" {{ empty($statusFilter) ? 'selected' : '' }}>-- Semua Guru (Sudah & Belum Tap) --</option>
-                    <option value="attended" {{ ($statusFilter === 'attended') ? 'selected' : '' }}>✓ Sudah Tap (Hadir)</option>
+                    <option value="ontime" {{ ($statusFilter === 'ontime') ? 'selected' : '' }}>✓ Hadir Tepat Waktu ({{ $ceremonyStart }} - {{ $ceremonyEnd }})</option>
+                    <option value="late" {{ ($statusFilter === 'late') ? 'selected' : '' }}>⚠️ Lewat Batas Upacara (&gt; {{ $ceremonyEnd }})</option>
+                    <option value="attended" {{ ($statusFilter === 'attended') ? 'selected' : '' }}>✓ Semua yang Sudah Tap</option>
                     <option value="unattended" {{ ($statusFilter === 'unattended') ? 'selected' : '' }}>✕ Belum Tap</option>
                 </select>
             </div>
@@ -154,9 +164,15 @@
                         <!-- STATUS -->
                         <td class="py-3.5 px-4 text-center">
                             @if($row['has_attended'])
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    <i class="fas fa-check-circle text-emerald-600"></i> Hadir Upacara
-                                </span>
+                                @if(!empty($row['is_ontime']))
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        <i class="fas fa-check-circle text-emerald-600"></i> Hadir Upacara
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                        <i class="fas fa-exclamation-triangle text-amber-600"></i> Lewat Jam Upacara
+                                    </span>
+                                @endif
                             @else
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                     <i class="fas fa-times-circle text-rose-500"></i> Belum Tap

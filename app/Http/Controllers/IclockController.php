@@ -482,6 +482,20 @@ class IclockController extends Controller
 
                     continue;
                 }
+
+                // Batas Jam Presensi Upacara Guru (Default 06:00 s.d 07:00)
+                $ceremonyStrict = Setting::get('ceremony_strict', '1');
+                if ($ceremonyStrict === '1' || $ceremonyStrict === 1 || $ceremonyStrict === true) {
+                    $ceremonyStart = Setting::get('ceremony_start', '06:00');
+                    $ceremonyEnd = Setting::get('ceremony_end', '07:00');
+                    if ($timeOnly < $ceremonyStart || $timeOnly > $ceremonyEnd) {
+                        Log::warning("ADMS Skip: Tap dari Guru {$teacher->name} pada mesin '{$device->name}' (Khusus Upacara Guru) ditolak karena di luar rentang jam upacara ({$ceremonyStart} - {$ceremonyEnd}). Jam tap: {$timeOnly}");
+                        self::recordAdmsLog('/iclock/cdata', 'POST', $sn, "Ditolak: Di luar jam upacara ({$ceremonyStart}-{$ceremonyEnd}) [Waktu: {$timeOnly}]");
+
+                        continue;
+                    }
+                }
+
                 $student = null;
             } elseif ($device->isForStudents()) {
                 // Mesin ini KHUSUS SISWA!

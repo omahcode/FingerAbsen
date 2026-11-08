@@ -7,6 +7,7 @@ use App\Imports\TeachersImport;
 use App\Models\AttendanceLog;
 use App\Models\Device;
 use App\Models\FingerprintTemplate;
+use App\Models\Setting;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -296,7 +297,10 @@ class TeacherController extends Controller
         $this->authorizeAccess();
 
         $date = $request->query('date', Carbon::today('Asia/Jakarta')->toDateString());
-        $statusFilter = $request->query('status'); // 'attended' | 'unattended' | ''
+        $statusFilter = $request->query('status'); // 'ontime' | 'late' | 'attended' | 'unattended' | ''
+
+        $ceremonyStart = Setting::get('ceremony_start', '06:00');
+        $ceremonyEnd = Setting::get('ceremony_end', '07:00');
 
         $teachers = Teacher::orderBy('name')->get();
 
@@ -308,21 +312,39 @@ class TeacherController extends Controller
             ->groupBy('teacher_id');
 
         $attendedCount = 0;
+        $ontimeCount = 0;
+        $lateCount = 0;
         $unattendedCount = 0;
 
-        $reportData = $teachers->map(function ($teacher) use ($logs, &$attendedCount, &$unattendedCount) {
+        $reportData = $teachers->map(function ($teacher) use ($logs, $ceremonyStart, $ceremonyEnd, &$attendedCount, &$ontimeCount, &$lateCount, &$unattendedCount) {
             $teacherLogs = $logs->get($teacher->id);
             $hasAttended = ! empty($teacherLogs) && $teacherLogs->isNotEmpty();
+
+            $isOntime = false;
+            $isLate = false;
 
             if ($hasAttended) {
                 $attendedCount++;
                 $firstLog = $teacherLogs->first();
+                $timeOnly = Carbon::parse($firstLog->timestamp)->format('H:i');
                 $tapTime = Carbon::parse($firstLog->timestamp)->format('H:i:s');
-                $status = 'Hadir';
+
+                if ($timeOnly >= $ceremonyStart && $timeOnly <= $ceremonyEnd) {
+                    $ontimeCount++;
+                    $isOntime = true;
+                    $status = 'Hadir Upacara (Tepat Waktu)';
+                    $statusKey = 'ontime';
+                } else {
+                    $lateCount++;
+                    $isLate = true;
+                    $status = ($timeOnly > $ceremonyEnd) ? 'Lewat Batas Upacara' : 'Di Luar Jam Upacara';
+                    $statusKey = 'late';
+                }
             } else {
                 $unattendedCount++;
                 $tapTime = '-';
                 $status = 'Belum Tap';
+                $statusKey = 'unattended';
             }
 
             return [
@@ -332,13 +354,20 @@ class TeacherController extends Controller
                 'category' => $teacher->category,
                 'device_user_id' => $teacher->device_user_id,
                 'has_attended' => $hasAttended,
+                'is_ontime' => $isOntime,
+                'is_late' => $isLate,
                 'tap_time' => $tapTime,
                 'status' => $status,
+                'status_key' => $statusKey,
             ];
         });
 
         // Filter berdasarkan status tap jika dipilih
-        if ($statusFilter === 'attended') {
+        if ($statusFilter === 'ontime') {
+            $reportData = $reportData->filter(fn ($r) => $r['is_ontime'])->values();
+        } elseif ($statusFilter === 'late') {
+            $reportData = $reportData->filter(fn ($r) => $r['is_late'])->values();
+        } elseif ($statusFilter === 'attended') {
             $reportData = $reportData->filter(fn ($r) => $r['has_attended'])->values();
         } elseif ($statusFilter === 'unattended') {
             $reportData = $reportData->filter(fn ($r) => ! $r['has_attended'])->values();
@@ -349,8 +378,12 @@ class TeacherController extends Controller
             'date',
             'statusFilter',
             'attendedCount',
+            'ontimeCount',
+            'lateCount',
             'unattendedCount',
-            'teachers'
+            'teachers',
+            'ceremonyStart',
+            'ceremonyEnd'
         ));
     }
 

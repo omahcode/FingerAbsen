@@ -311,4 +311,47 @@ class TeacherFeatureTest extends TestCase
             'student_id' => $student->id,
         ]);
     }
+
+    public function test_ceremony_machine_rejects_teacher_tap_outside_ceremony_hours(): void
+    {
+        \App\Models\Setting::set('ceremony_start', '06:00');
+        \App\Models\Setting::set('ceremony_end', '07:00');
+        \App\Models\Setting::set('ceremony_strict', '1');
+
+        $device = Device::create([
+            'name' => 'Mesin Upacara Guru',
+            'serial_number' => 'DEV-UPACARA-003',
+            'ip_address' => '192.168.1.197',
+            'port' => 4370,
+            'purpose' => 'teachers',
+            'status' => 'online',
+        ]);
+
+        $teacher = Teacher::create([
+            'nip' => '198801012015011002',
+            'name' => 'Ibu Siti Khodijah',
+            'category' => 'GURU BK',
+            'device_user_id' => '198801012015011002',
+        ]);
+
+        $today = Carbon::today('Asia/Jakarta')->toDateString();
+
+        // 1. Guru mencoba tap setelah jam 07:00 (misal 07:15:00) di mesin upacara
+        $attlogBodyLate = "198801012015011002\t{$today} 07:15:00\t0\t1\n";
+        $this->call('POST', '/iclock/cdata?SN=DEV-UPACARA-003&table=ATTLOG', [], [], [], [], $attlogBodyLate);
+
+        $this->assertDatabaseMissing('attendance_logs', [
+            'teacher_id' => $teacher->id,
+            'device_user_id' => '198801012015011002',
+        ]);
+
+        // 2. Guru tap dalam batas jam upacara (misal 06:40:00)
+        $attlogBodyOntime = "198801012015011002\t{$today} 06:40:00\t0\t1\n";
+        $this->call('POST', '/iclock/cdata?SN=DEV-UPACARA-003&table=ATTLOG', [], [], [], [], $attlogBodyOntime);
+
+        $this->assertDatabaseHas('attendance_logs', [
+            'teacher_id' => $teacher->id,
+            'device_user_id' => '198801012015011002',
+        ]);
+    }
 }

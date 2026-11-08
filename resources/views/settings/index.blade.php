@@ -200,6 +200,68 @@
                 </div>
             </div>
 
+            <!-- Card: Pengaturan Jam Presensi Upacara -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-amber-500">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-flag text-amber-500 mr-2"></i> Rentang Jam Presensi Upacara Guru
+                        </h3>
+                        <p class="text-xs text-gray-500">Tentukan batas jam pelaksanaan upacara bendera hari Senin atau kegiatan apel dewan guru.</p>
+                    </div>
+                    <span class="bg-amber-50 text-amber-700 text-xs font-bold px-2.5 py-1 rounded border border-amber-200">
+                        Presensi Upacara
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Jam Mulai Upacara -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">
+                            <i class="far fa-clock text-gray-400 mr-1"></i> Jam Mulai Upacara
+                        </label>
+                        <input 
+                            type="time" 
+                            name="ceremony_start" 
+                            value="{{ old('ceremony_start', $settings['ceremony_start'] ?? '06:00') }}" 
+                            required 
+                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        >
+                        <p class="text-[11px] text-gray-400 mt-1">Jam mulai presensi upacara dibuka (Contoh: 06:00).</p>
+                    </div>
+
+                    <!-- Batas Jam Selesai / Tepat Waktu Upacara -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">
+                            <i class="fas fa-flag-checkered text-amber-500 mr-1"></i> Batas Akhir Presensi Upacara
+                        </label>
+                        <input 
+                            type="time" 
+                            name="ceremony_end" 
+                            value="{{ old('ceremony_end', $settings['ceremony_end'] ?? '07:00') }}" 
+                            required 
+                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        >
+                        <p class="text-[11px] text-gray-400 mt-1">Batas toleransi hadir upacara tepat waktu (Contoh: 07:00).</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <label class="flex items-center space-x-2.5 cursor-pointer select-none">
+                        <input 
+                            type="checkbox" 
+                            name="ceremony_strict" 
+                            value="1" 
+                            class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 h-4 w-4"
+                            {{ old('ceremony_strict', $settings['ceremony_strict'] ?? '1') == '1' ? 'checked' : '' }}
+                        >
+                        <span class="text-xs font-semibold text-gray-700">
+                            Batas Ketat Mesin (Mesin khusus upacara guru otomatis menolak tap di luar jam upacara)
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             <!-- Card 4: Pengaturan Mode TV Layar Absen (Leaderboard) -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-purple-600">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-100 gap-3">

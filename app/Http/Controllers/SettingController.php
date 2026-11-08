@@ -26,6 +26,11 @@ class SettingController extends Controller
             'checkout_start' => Setting::get('checkout_start', '14:00'),
             'checkout_end' => Setting::get('checkout_end', '18:00'),
 
+            // Jam Presensi Upacara Guru
+            'ceremony_start' => Setting::get('ceremony_start', '06:00'),
+            'ceremony_end' => Setting::get('ceremony_end', '07:00'),
+            'ceremony_strict' => Setting::get('ceremony_strict', '1'),
+
             // TV Mode Settings
             'tv_title' => Setting::get('tv_title', 'SELAMAT DATANG DI JURUSAN PENGEMBANGAN PERANGKAT LUNAK DAN GIM'),
             'tv_subtitle' => Setting::get('tv_subtitle', 'Sistem Informasi Presensi Biometrik Fingerprint'),
@@ -73,6 +78,9 @@ class SettingController extends Controller
             'checkin_late_end' => 'required|date_format:H:i|after:checkin_end',
             'checkout_start' => 'required|date_format:H:i',
             'checkout_end' => 'required|date_format:H:i|after:checkout_start',
+            'ceremony_start' => 'required|date_format:H:i',
+            'ceremony_end' => 'required|date_format:H:i|after:ceremony_start',
+            'ceremony_strict' => 'nullable|in:0,1',
             'tv_title' => 'nullable|string|max:150',
             'tv_subtitle' => 'nullable|string|max:200',
             'tv_running_text' => 'nullable|string|max:500',
@@ -90,6 +98,9 @@ class SettingController extends Controller
         Setting::set('checkin_late_end', $request->checkin_late_end, 'Batas Maksimal Masuk Terlambat');
         Setting::set('checkout_start', $request->checkout_start, 'Jam Mulai Absen Pulang');
         Setting::set('checkout_end', $request->checkout_end, 'Batas Akhir Absen Pulang');
+        Setting::set('ceremony_start', $request->ceremony_start, 'Jam Mulai Presensi Upacara');
+        Setting::set('ceremony_end', $request->ceremony_end, 'Batas Akhir Presensi Upacara');
+        Setting::set('ceremony_strict', $request->has('ceremony_strict') ? '1' : '0', 'Batas Ketat Jam Upacara di Mesin');
 
         // Hari Efektif Masuk Sekolah
         $schoolDays = $request->input('school_days', []);
